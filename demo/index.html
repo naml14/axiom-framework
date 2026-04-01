@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Axiom — Two-Phase Rendering Demo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Controls — static HTML, event listeners in app.ts -->
+  <header class="demo-header">
+    <div class="brand">
+      <span class="brand-icon">⚡</span>
+      <h1>AXIOM</h1>
+    </div>
+    <p class="tagline">"El DOM es solo la pantalla de salida"</p>
+    <div class="controls">
+      <label>
+        Ancho: <strong id="width-display">800px</strong>
+        <input type="range" id="width-slider" min="320" max="1400" step="8" value="800">
+      </label>
+      <label>
+        Items: <strong id="items-display">20</strong>
+        <input type="range" id="items-slider" min="5" max="60" step="5" value="20">
+      </label>
+      <button id="anim-btn" class="btn-toggle active">▶ Animación</button>
+      <button id="metrics-btn" class="btn-toggle active">📊 Métricas</button>
+    </div>
+  </header>
+
+  <!-- Framework canvas — Axiom renders here -->
+  <div id="app"></div>
+
+  <!-- Metrics panel — updated directly, NOT through the framework -->
+  <footer class="metrics-footer" id="metrics-footer">
+    <div class="metric-item">
+      <span class="metric-label">prepare</span>
+      <span class="metric-value" id="m-prepare">—</span>
+    </div>
+    <div class="metric-item highlight">
+      <span class="metric-label">reflow</span>
+      <span class="metric-value" id="m-reflow">—</span>
+    </div>
+    <div class="metric-item">
+      <span class="metric-label">commit</span>
+      <span class="metric-value" id="m-commit">—</span>
+    </div>
+    <div class="metric-item total">
+      <span class="metric-label">TOTAL</span>
+      <span class="metric-value" id="m-total">—</span>
+    </div>
+    <div class="metric-item fps">
+      <span class="metric-label">FPS</span>
+      <span class="metric-value" id="m-fps">—</span>
+    </div>
+    <span class="metric-badge">0 DOM reads en hot path</span>
+  </footer>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

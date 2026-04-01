@@ -1,0 +1,274 @@
+/* ============================================================
+   Axiom Demo — Dark Editorial Theme
+   Framework handles layout (position/size).
+   CSS handles everything visual (colors, fonts, shadows).
+   ============================================================ */
+
+:root {
+  --bg: #0a0a14;
+  --surface: #12121f;
+  --surface-2: #1a1a2e;
+  --border: #2a2a4a;
+  --text: #e2e2f0;
+  --text-muted: #7070a0;
+  --accent-violet: #7c3aed;
+  --accent-teal: #0d9488;
+  --accent-amber: #d97706;
+  --accent-rose: #e11d48;
+  --accent-sky: #0284c7;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+  padding-bottom: 70px; /* Space for metrics footer */
+}
+
+/* ============================================================
+   Header & Controls
+   ============================================================ */
+
+.demo-header {
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.brand h1 {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 4px;
+}
+
+.brand-icon { font-size: 24px; }
+
+.tagline {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
+.controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.controls label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.controls input[type="range"] {
+  width: 160px;
+  accent-color: var(--accent-violet);
+}
+
+.controls strong {
+  color: var(--accent-violet);
+  min-width: 52px;
+  display: inline-block;
+}
+
+.btn-toggle {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.btn-toggle:hover {
+  border-color: var(--accent-violet);
+  color: var(--text);
+}
+
+.btn-toggle.active {
+  border-color: var(--accent-violet);
+  color: var(--accent-violet);
+  background: rgba(124, 58, 237, 0.1);
+}
+
+/* ============================================================
+   App Canvas — Framework renders here
+   ============================================================ */
+
+#app {
+  margin: 24px auto;
+  position: relative;
+  transition: none; /* Framework handles all positioning */
+}
+
+/* ============================================================
+   Masonry Layout — Framework handles positioning
+   ============================================================ */
+
+.masonry-grid {
+  display: block; /* Framework positions children absolutely */
+}
+
+.masonry-col {
+  display: block; /* Framework positions children absolutely */
+}
+
+/* ============================================================
+   Tags Cloud
+   ============================================================ */
+
+.tags-cloud {
+  display: block;
+  margin-bottom: 24px;
+}
+
+/* ============================================================
+   Cards — Framework controls position/size via absolute+translate
+   ============================================================ */
+
+.card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.card-hero {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(13, 148, 136, 0.15));
+  border-color: rgba(124, 58, 237, 0.4);
+  box-shadow: 0 8px 32px rgba(124, 58, 237, 0.15);
+}
+
+.hero-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--accent-violet);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.hero-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  line-height: 1.3;
+}
+
+.hero-body {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.card-body {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Accent variants — top border color */
+.accent-violet { border-top: 3px solid var(--accent-violet); }
+.accent-teal   { border-top: 3px solid var(--accent-teal); }
+.accent-amber  { border-top: 3px solid var(--accent-amber); }
+.accent-rose   { border-top: 3px solid var(--accent-rose); }
+.accent-sky    { border-top: 3px solid var(--accent-sky); }
+
+/* ============================================================
+   Tag Bubbles
+   ============================================================ */
+
+.tag-bubble {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  letter-spacing: 0.5px;
+}
+
+.tag-violet { border-color: var(--accent-violet); color: var(--accent-violet); }
+.tag-teal   { border-color: var(--accent-teal);   color: var(--accent-teal); }
+.tag-amber  { border-color: var(--accent-amber);  color: var(--accent-amber); }
+.tag-rose   { border-color: var(--accent-rose);   color: var(--accent-rose); }
+.tag-sky    { border-color: var(--accent-sky);    color: var(--accent-sky); }
+
+/* ============================================================
+   Metrics Footer
+   ============================================================ */
+
+.metrics-footer {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 12px 32px;
+  background: var(--surface);
+  border-top: 2px solid var(--accent-violet);
+  font-family: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', monospace, system-ui;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.metric-item {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.metric-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.metric-item.highlight .metric-value { color: var(--accent-teal); }
+.metric-item.total .metric-value { color: var(--accent-violet); font-size: 16px; }
+.metric-item.fps .metric-value { color: var(--accent-amber); }
+
+.metric-badge {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  background: rgba(13, 148, 136, 0.15);
+  border: 1px solid var(--accent-teal);
+  color: var(--accent-teal);
+  white-space: nowrap;
+}
