@@ -143,7 +143,8 @@ const App = defineComponent(() => {
   const width = containerWidth.value
   const count = itemCount.value
   const cols = computeColumns(width)
-  const colWidth = Math.floor((width - (cols - 1) * 16) / cols)
+  const availableWidth = width - 32
+  const colWidth = Math.floor((availableWidth - (cols - 1) * 4) / cols)
 
   // Generate items with estimated heights for masonry distribution
   const items = Array.from({ length: count }, (_, i) => {
