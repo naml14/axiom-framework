@@ -94,7 +94,8 @@ function layoutNode(
   }
 
   // Bottom-up: parent height = sum of children heights (column) or max (row)
-  if (ownHeight === 0) {
+  // Only calculate if not already set by the layout function (measureFlex/measureSimple)
+  if (ownHeight === 0 && result.height[idx] === 0) {
     const flexDirection = layout?.flexDirection ?? 'column'
     if (flexDirection === 'column') {
       let totalHeight = 0

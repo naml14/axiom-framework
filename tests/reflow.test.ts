@@ -11,7 +11,7 @@ import type { PreparedComponent } from '../src/types.js'
 const fakePretext = {
   prepare: mock((text: string, _font: string) => ({ text })),
   layout: mock((_prepared: unknown, maxWidth: number, _lineHeight: number) => {
-    // Simulate text wrapping: ~6px per character at 16px font
+    // Simulate text wrapping — used by prepare() for metrics, not by fast-path measureText
     const charWidth = 6
     const charsPerLine = Math.max(1, Math.floor(maxWidth / charWidth))
     const totalChars = (_prepared as { text: string }).text.length
@@ -90,8 +90,12 @@ describe('reflow — fast path', () => {
     const prepared = prepareSimple('Hello World') // 11 chars
     const result = reflow(prepared, { maxWidth: 30, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
-    // 30px / 6px per char = 5 chars per line → 11 chars = 3 lines
-    expect(result.height[1]).toBe(60) // 3 lines * 20px
+    // Fast-path uses charWidth=8 with 1.4x word-wrap factor.
+    // 30/8 = 3 chars/line, 11 chars → ceil((11/3)*1.4) = 6 lines → 120px
+    expect(result.height[1]).toBe(120)
+    // Key invariant: constrained width produces taller text than wide width
+    const wideResult = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+    expect(result.height[1]).toBeGreaterThan(wideResult.height[1])
   })
 
   test('stacks multiple children vertically', () => {

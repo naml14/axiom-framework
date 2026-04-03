@@ -9,6 +9,7 @@ import { fullDiff, type DOMOperation } from './diff.js'
 import { commitFull, applyOps, type DOMState } from './commit.js'
 import { effect } from './signals.js'
 import { scheduleRender, cancelScheduled } from './scheduler.js'
+import { getNodeType, getTag, getChildren } from './prepare.js'
 
 // ============================================================
 // Public API
@@ -74,6 +75,21 @@ export function createApp(
     }
   }
 
+  function isSameTopology(a: PreparedComponent, b: PreparedComponent): boolean {
+    if (getNodeType(a) !== getNodeType(b)) return false
+    if (getTag(a) !== getTag(b)) return false
+    
+    const aChildren = getChildren(a)
+    const bChildren = getChildren(b)
+    if (aChildren.length !== bChildren.length) return false
+    
+    for (let i = 0; i < aChildren.length; i++) {
+      if (!isSameTopology(aChildren[i]!, bChildren[i]!)) return false
+    }
+    
+    return true
+  }
+
   function performUpdate(): void {
     const t0 = performance.now()
     const prepared = prepare(component, undefined, prepareOpts)
@@ -84,13 +100,24 @@ export function createApp(
     state.metrics.reflowMs = performance.now() - t1
 
     const t2 = performance.now()
-    if (state.prevPrepared === null) {
-      // First update after mount — full commit
+    const shapeChanged = state.prevPrepared === null
+      || !isSameTopology(state.prevPrepared, prepared)
+
+    if (shapeChanged) {
+      // Shape change (e.g. column count changed) — full teardown and re-commit.
+      // applyOps can't handle hierarchy changes because it flat-appends inserts to root.
+      root.innerHTML = ''
+      state.domState.domNodes = []
       commitFull(layout, prepared, root, state.domState)
     } else {
-      // Subsequent update — diff and apply ops
+      // Value change only — incremental diff and apply
       const ops = fullDiff(state.prevPrepared, state.prevLayout, prepared, layout, state.domState.domNodes)
       applyOps(ops, root, state.domState.domNodes)
+      // Update root height (commitFull does this internally, but applyOps doesn't)
+      const rootHeight = layout.height[0]
+      if (rootHeight > 0) {
+        root.style.height = `${rootHeight}px`
+      }
     }
     state.metrics.commitMs = performance.now() - t2
 

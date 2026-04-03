@@ -7,7 +7,10 @@ import {
   getNodeType,
   getTextHandle,
   getTextContent,
+  getLayoutProps,
 } from './prepare.js'
+
+import { measureFlex } from './flex.js'
 
 // ============================================================
 // Fast Path — simple top-to-bottom block layout
@@ -22,9 +25,12 @@ export function measureSimple(
 ): void {
   const children = getPreparedChildren(prepared)
   const parentIdx = getNodeIndex(prepared)
+  const layout = getLayoutProps(prepared)
+  const gap = layout?.gap ?? 0
   let offsetY = 0
 
-  for (const child of children) {
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]!
     const childIdx = getNodeIndex(child)
     const childWidth = availableWidth
 
@@ -37,6 +43,9 @@ export function measureSimple(
     layoutChild(child, childWidth, result, lineHeight)
 
     offsetY += result.height[childIdx]
+    if (i < children.length - 1) {
+      offsetY += gap
+    }
   }
 
   // Set parent height if not already set
@@ -62,7 +71,15 @@ function layoutChild(
 
   if (children.length > 0) {
     const metrics = getMetrics(prepared)
-    if (metrics.simpleLayout) {
+    const childLayout = getLayoutProps(prepared)
+    const hasFlexProps = childLayout?.flexDirection !== undefined
+      || childLayout?.gap !== undefined
+      || childLayout?.justifyContent !== undefined
+      || childLayout?.alignItems !== undefined
+
+    if (hasFlexProps) {
+      measureFlex(prepared, availableWidth, 0, result, lineHeight, childLayout)
+    } else if (metrics.simpleLayout) {
       measureSimple(prepared, availableWidth, result, lineHeight)
     }
   }
@@ -86,9 +103,11 @@ function measureText(
   }
 
   if (text !== undefined && text.length > 0) {
-    const charWidth = 6
+    const charWidth = 8
     const charsPerLine = Math.max(1, Math.floor(availableWidth / charWidth))
-    const lineCount = Math.max(1, Math.ceil(text.length / charsPerLine))
+    // Word-wrap factor: real text wraps at word boundaries before char limit.
+    // Long words cause early line breaks. 1.4x provides sufficient margin for prose.
+    const lineCount = Math.max(1, Math.ceil((text.length / charsPerLine) * 1.4))
     result.height[idx] = lineCount * lineHeight
     result.width[idx] = availableWidth
   }

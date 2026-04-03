@@ -12,7 +12,7 @@ export interface SignalOptions {
 
 export interface Signal<T> {
   get value(): T
-  set value(v: T): void
+  set value(v: T)
 }
 
 export interface ComputedSignal<T> extends Signal<T> {

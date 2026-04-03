@@ -6,13 +6,15 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "demo:build": "bun build demo/app.ts --outfile demo/app.js --target browser",
+    "demo:build": "bun build demo/main.ts --outfile demo/main.js --target browser",
     "run:demo": "bun run demo/server.ts --no-build",
     "demo": "bun run demo:build && bun run run:demo",
     "demo:watch": "bun run demo/server.ts --watch"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "happy-dom": "^20.8.9"
+    "@types/jsdom": "^28.0.1",
+    "happy-dom": "^20.8.9",
+    "jsdom": "^29.0.1"
   }
 }

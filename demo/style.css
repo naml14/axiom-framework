@@ -137,7 +137,6 @@ body {
 
 .tags-cloud {
   display: block;
-  margin-bottom: 24px;
 }
 
 /* ============================================================
@@ -205,6 +204,7 @@ body {
    ============================================================ */
 
 .tag-bubble {
+  /* margin: 12px 0px; */
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 11px;

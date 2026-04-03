@@ -10,6 +10,8 @@ import {
   getLayoutProps,
 } from './prepare.js'
 
+import { measureSimple } from './fast-path.js'
+
 // ============================================================
 // FlexAxis Abstraction
 // ============================================================
@@ -123,7 +125,7 @@ export function measureFlex(
       const childIdx = getNodeIndex(children[i]!)
       const pos = axis.compose(
         mainOffset,
-        getCrossOffset(alignItems, childSizes[i]!, crossAxisSize, padding)
+        getCrossOffset(alignItems, childSizes[i]!, crossAxisSize, padding, direction)
       )
       result.x[childIdx] = pos.x
       result.y[childIdx] = pos.y
@@ -140,12 +142,27 @@ export function measureFlex(
 
     const pos = axis.compose(
       mainOffset,
-      getCrossOffset(alignItems, size, crossAxisSize, padding)
+      getCrossOffset(alignItems, size, crossAxisSize, padding, direction)
     )
     result.x[childIdx] = pos.x
     result.y[childIdx] = pos.y
 
     mainOffset += axis.main(size) + gap
+  }
+
+  // Calculate parent dimensions (bottom-up)
+  if (result.height[parentIdx] === 0) {
+    if (direction === 'column') {
+      result.height[parentIdx] = totalMain + padding * 2
+    } else {
+      // Row: parent height = max child height + padding
+      let maxCross = 0
+      for (const size of childSizes) {
+        const childCross = axis.cross(size)
+        if (childCross > maxCross) maxCross = childCross
+      }
+      result.height[parentIdx] = maxCross + padding * 2
+    }
   }
 }
 
@@ -153,9 +170,10 @@ function getCrossOffset(
   alignItems: AlignItems,
   childSize: Size,
   crossSize: number,
-  padding: number
+  padding: number,
+  direction: FlexDirection
 ): number {
-  const childCross = childSize.height // simplified
+  const childCross = direction === 'row' ? childSize.height : childSize.width
   if (alignItems === 'center') {
     return padding + (crossSize - childCross) / 2
   }
@@ -184,9 +202,12 @@ function measureTextChild(
   }
 
   if (text !== undefined && text.length > 0) {
-    const charWidth = 6
+    const charWidth = 8
     const charsPerLine = Math.max(1, Math.floor(availableWidth / charWidth))
-    const lineCount = Math.max(1, Math.ceil(text.length / charsPerLine))
+    // Word-wrap factor: real text wraps at word boundaries before char limit.
+    // Long words (demonstrates, measurement, etc.) cause early line breaks.
+    // 1.4x provides sufficient margin for prose text in system-ui.
+    const lineCount = Math.max(1, Math.ceil((text.length / charsPerLine) * 1.4))
     result.height[idx] = lineCount * lineHeight
     result.width[idx] = availableWidth
   }
@@ -198,23 +219,6 @@ function layoutChildFast(
   result: LayoutResult,
   lineHeight: number
 ): void {
-  const children = getPreparedChildren(prepared)
-  const parentIdx = getNodeIndex(prepared)
-  let offsetY = 0
-
-  for (const child of children) {
-    const childIdx = getNodeIndex(child)
-    result.x[childIdx] = 0
-    result.y[childIdx] = offsetY
-    result.width[childIdx] = availableWidth
-
-    if (getNodeType(child) === 'text') {
-      measureTextChild(child, availableWidth, result, lineHeight)
-    }
-    offsetY += result.height[childIdx]
-  }
-
-  if (result.height[parentIdx] === 0) {
-    result.height[parentIdx] = offsetY
-  }
+  // Delegate to measureSimple which properly handles nested elements with text
+  measureSimple(prepared, availableWidth, result, lineHeight)
 }

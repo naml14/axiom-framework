@@ -32,6 +32,12 @@ export function commitFull(
 ): void {
   // Setup root container
   root.style.position = 'relative'
+  // Apply computed height to root so content is visible
+  const rootIdx = 0
+  const rootHeight = layout.height[rootIdx]
+  if (rootHeight > 0) {
+    root.style.height = `${rootHeight}px`
+  }
   // NOTE: do NOT set overflow:hidden — the framework measures and sets explicit
   // heights on containers, but the root itself must let content be visible.
 

@@ -73,7 +73,9 @@ describe('createApp', () => {
 
     expect(root.childNodes.length).toBe(1)
     expect(root.style.position).toBe('relative')
-    expect(root.style.overflow).toBe('hidden')
+    // overflow is NOT set to hidden — the framework measures and sets explicit
+    // heights on containers, but the root must let content be visible.
+    expect(root.style.overflow).toBe('')
   })
 
   test('unmount() cleans up DOM', () => {
