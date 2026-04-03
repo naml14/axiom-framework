@@ -36,6 +36,21 @@ function computeColumns(width: number): number {
   return 4
 }
 
+function getTagWidth(label: string): number {
+  // Las mayúsculas son más anchas (aprox 8.5px), minúsculas y otros (aprox 6.5px).
+  // +26px incluye padding y margen visual seguro.
+  let textWidth = 0;
+  for (let i = 0; i < label.length; i++) {
+    const char = label[i]!;
+    if (char >= 'A' && char <= 'Z') {
+      textWidth += 8.5;
+    } else {
+      textWidth += 6.5;
+    }
+  }
+  return Math.ceil(textWidth) + 26;
+}
+
 function distributeToColumns<T extends { estimatedHeight: number }>(
   items: T[],
   cols: number
@@ -56,12 +71,17 @@ function distributeToColumns<T extends { estimatedHeight: number }>(
 // Components
 // ============================================================
 
-const TagBubble = defineComponent((props: { label: string; color: string }) => ({
-  type: 'element' as const,
-  tag: 'span',
-  classes: ['tag-bubble', `tag-${props.color}`],
-  children: [{ type: 'text' as const, content: props.label }],
-}))
+const TagBubble = defineComponent((props: { label: string; color: string }) => {
+  const calcWidth = getTagWidth(props.label);
+  
+  return {
+    type: 'element' as const,
+    tag: 'span',
+    layout: { width: calcWidth, height: 20 },
+    classes: ['tag-bubble', `tag-${props.color}`],
+    children: [{ type: 'text' as const, content: props.label }],
+  }
+})
 
 const Card = defineComponent((props: {
   title: string
@@ -70,6 +90,7 @@ const Card = defineComponent((props: {
 }) => ({
   type: 'element' as const,
   tag: 'article',
+  layout: { flexDirection: 'column', gap: 5, padding: 10 },
   classes: ['card', props.colorClass],
   children: [
     {
@@ -90,6 +111,7 @@ const Card = defineComponent((props: {
 const HeroCard = defineComponent((props: { title: string; body: string }) => ({
   type: 'element' as const,
   tag: 'div',
+  layout: { flexDirection: 'column', gap: 5, padding: 10 },
   classes: ['card', 'card-hero'],
   children: [
     {
@@ -146,6 +168,7 @@ const App = defineComponent(() => {
     type: 'element' as const,
     tag: 'div',
     classes: ['masonry-col'],
+    layout: { flexDirection: 'column', gap: 6, width: colWidth },
     children: colItems.map((item) =>
       Card({
         title: item.title,
@@ -159,15 +182,37 @@ const App = defineComponent(() => {
     type: 'element' as const,
     tag: 'div',
     classes: ['app-canvas'],
+    layout: { flexDirection: 'column', gap: 16, padding: 16 },
     children: [
-      // Tag cloud row
+      // Tag cloud (Bento style dynamic wrapping)
       {
         type: 'element' as const,
         tag: 'div',
         classes: ['tags-cloud'],
-        children: TAGS.map((label, i) =>
-          TagBubble({ label, color: COLORS[i % COLORS.length]! })
-        ),
+        layout: { flexDirection: 'column', gap: 4 },
+        children: (() => {
+          const rows: ComponentNode[][] = [[]];
+          let currentLineWidth = 0;
+          const MAX_W = width - 32; // container width minus padding (16*2)
+
+          TAGS.forEach((label, i) => {
+            const tagW = getTagWidth(label);
+            // Si no entra en la línea y ya hay algo, bajamos (wrap)
+            if (currentLineWidth + tagW > MAX_W && rows[rows.length - 1]!.length > 0) {
+              rows.push([]);
+              currentLineWidth = 0;
+            }
+            rows[rows.length - 1]!.push(TagBubble({ label, color: COLORS[i % COLORS.length]! }));
+            currentLineWidth += tagW + 2; // + gap
+          });
+
+          return rows.map(rowTags => ({
+            type: 'element' as const,
+            tag: 'div',
+            layout: { flexDirection: 'row', gap: 2 },
+            children: rowTags
+          }));
+        })(),
       },
       // Hero card
       HeroCard({
@@ -179,6 +224,7 @@ const App = defineComponent(() => {
         type: 'element' as const,
         tag: 'div',
         classes: ['masonry-grid'],
+        layout: { flexDirection: 'row', gap: 4 },
         children: columnNodes,
       },
     ],
