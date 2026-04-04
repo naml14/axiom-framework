@@ -68,6 +68,18 @@ export function createApp(
 
   const scheduler = options?.scheduler
 
+  /**
+   * Read the current container dimensions from the DOM.
+   *
+   * This is the ONLY intentional DOM read in the framework.
+   * It runs once per update cycle (not per frame, not in the hot path)
+   * to establish the layout constraints before prepare/reflow begin.
+   *
+   * This read does NOT violate the zero-DOM-reads invariant because:
+   * 1. It happens BEFORE reflow() — it provides input, not feedback
+   * 2. It is a single read, not interleaved with writes
+   * 3. The result is passed as a plain value into the pure arithmetic pipeline
+   */
   function getConstraints(): LayoutConstraints {
     return {
       maxWidth: root.clientWidth || 800,
@@ -165,7 +177,9 @@ export function createApp(
       state.mounted = false
       state.prevPrepared = null
       state.prevLayout = null
-      state.domState.domNodes.fill(null)
+      // Replace the array reference (not just fill) to release all DOM node references
+      // and allow the GC to collect them, preventing memory leaks in long-lived apps.
+      state.domState.domNodes = []
     },
 
     getMetrics(): RenderMetrics {
