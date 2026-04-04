@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.2.2](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.1...axiom-framework-v0.2.2) (2026-04-04)
+
+
+### Bug Fixes
+
+* **ci:** configure npm auth via registry-url and opt into Node.js 24 for release-please ([304e027](https://github.com/naml14/axiom-framework/commit/304e027c09b694b145ceb27bfac518ff04313d20))
+* **ci:** use registries input instead of deprecated registry-url in setup-bun ([717b6ca](https://github.com/naml14/axiom-framework/commit/717b6ca139cd443ccf74fea6831a1c08b9c25adc))
+
 ## [0.2.1](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.0...axiom-framework-v0.2.1) (2026-04-04)
 
 
