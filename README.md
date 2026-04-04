@@ -295,7 +295,7 @@ All positions (`x`, `y`) are **relative to the direct parent** — not absolute 
 | Layout algorithm | **In-memory arithmetic** | Browser CSS | Browser CSS | Browser CSS |
 | Masonry layout | **Native** | CSS hack | CSS hack | CSS hack |
 | Signals | **Built-in** | useState/Zustand | ref/reactive | Stores |
-| Bundle size | **~5KB** | ~40KB | ~34KB | ~2KB |
+| Bundle size | **~12KB min / ~4KB gzip** | ~40KB | ~34KB | ~2KB |
 | TypeScript | **First-class** | Yes | Yes | Yes |
 
 > **Note**: axiom-framework is a low-level layout engine, not a full-stack application framework. It excels at compute-heavy layouts where precise control over positioning is needed.

@@ -8,7 +8,9 @@ dist/
 
 # --- Dependencies ---
 node_modules/
-bun.lock
+
+# --- Dev Scripts (internal exploration scripts, not part of public API) ---
+scripts/
 
 # --- Editor / IDE ---
 .vscode/

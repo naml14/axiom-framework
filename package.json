@@ -20,6 +20,10 @@
     "CHANGELOG.md"
   ],
   "sideEffects": false,
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
+  },
   "scripts": {
     "build": "bunx tsc",
     "typecheck": "bunx tsc --noEmit",

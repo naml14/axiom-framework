@@ -1,0 +1,73 @@
+name: Feature Request
+description: Propose a new feature or enhancement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a feature request, please check:
+        - Existing [issues](https://github.com/naml14/axiom-framework/issues) and [discussions](https://github.com/naml14/axiom-framework/discussions)
+        - The [project roadmap](https://github.com/naml14/axiom-framework/blob/main/docs/PLAN-DESARROLLO.md)
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the use case. What are you trying to do that is currently not possible or difficult?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API / behavior
+      description: How would this look from the consumer's perspective?
+      render: typescript
+      placeholder: |
+        // Example of what the new API might look like:
+        import { signal, batch } from 'axiom-framework'
+
+        const a = signal(0)
+        const b = signal(0)
+
+        // Proposed: update both signals, trigger only one render
+        batch(() => {
+          a.value = 1
+          b.value = 2
+        })
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you consider? Why are they insufficient?
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Which part of the system does this affect?
+      options:
+        - Signals (signal / computed / effect)
+        - prepare() — tree analysis
+        - reflow() — layout engine
+        - commit() — DOM writes
+        - diff — reconciliation
+        - scheduler — batching
+        - App API (createApp / mount / unmount)
+        - TypeScript types
+        - Demo
+        - Other / unsure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints check
+      description: Please confirm this proposal respects the core invariants.
+      options:
+        - label: The hot path (reflow + commit) remains free of DOM reads
+        - label: This does not introduce runtime dependencies
+        - label: This does not break the existing public API (or I've noted the breaking change above)
