@@ -1,0 +1,67 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Run weekly to catch newly disclosed vulnerabilities even without code changes
+  schedule:
+    - cron: '0 8 * * 1'  # Every Monday at 08:00 UTC
+
+permissions:
+  contents: read
+  security-events: write  # Required to upload SARIF results to GitHub Security tab
+
+jobs:
+  # ============================================================
+  # 1. Dependency audit — checks for known CVEs in dependencies
+  # ============================================================
+  audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Audit dependencies
+        # bun audit exits with non-zero if any high/critical vulnerabilities are found.
+        # This fails the workflow and blocks merges when a vulnerable dep is detected.
+        run: bun audit
+
+  # ============================================================
+  # 2. CodeQL — static analysis for security vulnerabilities in source code
+  # ============================================================
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    # CodeQL supports: javascript, typescript, python, go, java, csharp, cpp, ruby
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # Security-and-quality queries: broader than default security-only queries.
+          # Detects XSS, prototype pollution, injection, insecure randomness, etc.
+          queries: security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:${{ matrix.language }}'

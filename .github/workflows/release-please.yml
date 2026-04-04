@@ -1,0 +1,57 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+# release-please needs write access to open PRs and create releases
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # Uses release-please-config.json + .release-please-manifest.json
+          # instead of release-type: node to have explicit control over the package name.
+          # On each push to main, release-please:
+          #   1. Parses conventional commits since last release
+          #   2. Opens/updates a "Release PR" with bumped version + CHANGELOG entry
+          #   3. When that PR is merged, creates the GitHub Release + tag automatically
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Publish to npm only when release-please actually creates a release
+  publish:
+    name: Publish to npm
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      # prepublishOnly script runs: typecheck → tests → build
+      # This guarantees the published artifact is always verified
+      - name: Publish to npm
+        run: bun publish --access public
+        env:
+          # Create this secret in GitHub: Settings → Secrets → NPM_TOKEN
+          # Generate at: https://www.npmjs.com/settings/<user>/tokens (Automation token)
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          BUN_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

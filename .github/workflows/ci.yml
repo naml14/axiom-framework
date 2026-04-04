@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# Minimal permissions — CI only reads, never writes
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test
