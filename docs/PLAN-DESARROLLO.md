@@ -19,21 +19,22 @@ Construir un framework web donde el DOM es **solo la pantalla de salida**, nunca
 Un axioma es una verdad fundamental que no necesita demostración. La filosofía de este framework debería ser axiomática en el desarrollo web: **separar el trabajo costoso del barato es la base sobre la que se construye software eficiente**.
 
 Viene de la mentalidad de sistemas embebidos donde cada byte y cada ciclo de CPU cuentan desde el diseño — no hay "después optimizamos". El principio es simple:
+
 - **Todo puede fallar** — cada lectura del DOM es un punto de falla potencial (layout thrashing, reflows inesperados)
 - **Optimizar desde el diseño** — no como parche posterior, sino como axioma arquitectónico
 
 ### Roadmap a largo plazo
 
-| Fase | Qué | Por qué |
-|------|-----|---------|
-| **Fase 1-3 (este plan)** | Runtime puro | Demostrar el principio, validar la arquitectura |
-| **Fase 4+ (futuro)** | Compilador + Runtime | Transformar templates/JSX en código optimizado que separe prepare-time de layout-time automáticamente (como Svelte hace con reactividad) |
+| Fase                      | Qué                   | Por qué                                                                                                                                       |
+|---------------------------|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| **Fase 1-3 (este plan)**  | Runtime puro          | Demostrar el principio, validar la arquitectura                                                                                               |
+| **Fase 4+ (futuro)**      | Compilador + Runtime  | Transformar templates/JSX en código optimizado que separe prepare-time de layout-time automáticamente (como Svelte hace con reactividad)      |
 
 ---
 
 ## Arquitectura del Sistema
 
-```
+```Text
 ┌──────────────────────────────────────────────────────────────────┐
 │                     PUBLIC API                                    │
 │  defineComponent()  signal()  computed()  createApp()  mount()   │
@@ -57,7 +58,7 @@ Viene de la mentalidad de sistemas embebidos donde cada byte y cada ciclo de CPU
 
 ### El ciclo de actualización
 
-```
+```Text
 Estado cambia (signal.set())
         │
         ▼
@@ -138,6 +139,7 @@ const items = signal<Item[]>([])  // Signal<Item[]> — si cambia length, re-pre
 ```
 
 El framework clasifica automáticamente:
+
 - **Cambios de valor** → el DOM node existe, solo cambia texto/atributo → reflow
 - **Cambios de forma** → agregan/remueven nodos → re-prepare + reflow
 
@@ -148,7 +150,7 @@ El framework clasifica automáticamente:
 Todos los nombres de la API siguen una convención intuitiva que se mantiene a lo largo de todo el desarrollo:
 
 | Patrón | Ejemplos | Por qué |
-|--------|----------|---------|
+| -------- | ---------- | --------- |
 | **`signal`** | `signal()`, `computed()`, `effect()` | Término universal de reactividad — cualquier dev lo entiende |
 | **`define`** | `defineComponent()` | Patrón conocido (Vue, Vue Router, Pinia) — "definir algo que luego se usa" |
 | **`create`** | `createApp()` | Patrón conocido (Vue, ReactDOM) — "instanciar y configurar" |
@@ -162,7 +164,7 @@ Todos los nombres de la API siguen una convención intuitiva que se mantiene a l
 
 ## Estructura de Archivos
 
-```
+```Text
 src/
   signals.ts        — Signal primitives con dependency tracking
   component.ts      — defineComponent(), PreparedComponent type
@@ -186,7 +188,7 @@ demo/
 
 **Objetivo:** Tener un sistema de signals funcional y la capacidad de definir componentes preparados.
 
-#### Tareas
+#### Tareas Fase 1
 
 - [ ] **1.1** Implementar `signal<T>(initialValue)` con dependency tracking
   - `signal.value` getter (registra dependencia)
@@ -194,7 +196,7 @@ demo/
   - `computed(fn)` — derived signals con caching
   - `effect(fn)` — side effects con auto-tracking
 
-- [ ] **1.2** Implementar `defineComponent(fn)` 
+- [ ] **1.2** Implementar `defineComponent(fn)`
   - Función que retorna un descriptor de componente
   - Separa props "estáticas" (shape) de props "dinámicas" (value)
   - Retorna un `ComponentDefinition`
@@ -217,7 +219,7 @@ demo/
 
 **Objetivo:** Calcular posiciones y tamaños de componentes preparados sin tocar el DOM.
 
-#### Tareas
+#### Tareas Fase 2
 
 - [ ] **2.1** Implementar `reflow(prepared, constraints)`
   - Entrada: `PreparedComponent` + `{ width, height }` del viewport
@@ -253,7 +255,7 @@ demo/
 
 **Objetivo:** Aplicar cambios al DOM en un solo batch sin lecturas intercaladas.
 
-#### Tareas
+#### Tareas Fase 3
 
 - [ ] **3.1** Implementar `commit(layoutResult, rootElement)`
   - Generar plan de cambios DOM (diff entre estado anterior y nuevo)
@@ -302,7 +304,7 @@ No es una lista aburrida. Es una **dashboard editorial interactiva** que hace co
 
 #### Layout del Demo
 
-```
+```Text
 ┌──────────────────────────────────────────────────────────────┐
 │  🚀 FRAMEWORK NAME                                           │
 │  "El DOM es solo la pantalla de salida"                      │
@@ -622,6 +624,7 @@ interface App {
 ### Por qué signals y no virtual DOM
 
 Signals son la elección natural porque:
+
 1. **Granularidad** — cada signal sabe exactamente quién depende de él
 2. **Sin diffing innecesario** — solo re-renderiza lo que cambió
 3. **Compatible con la filosofía** — signals de "valor" → reflow; signals de "forma" → re-prepare
@@ -643,6 +646,7 @@ Signals son la elección natural porque:
 ### Cómo se integra pretext
 
 Pretext se usa para el sub-problema de medición de texto dentro del framework:
+
 - `prepare(text, font)` se llama durante la fase de preparación del componente
 - `layout(prepared, width, lineHeight)` se llama durante el reflow
 - El cache de pretext es compartido entre todos los componentes de texto
@@ -652,7 +656,7 @@ Pretext se usa para el sub-problema de medición de texto dentro del framework:
 ## Invariantes de Performance
 
 | Operación | Target | Restricciones |
-|-----------|--------|---------------|
+| ----------- | -------- | --------------- |
 | `prepare()` por componente | < 5ms | Una vez por cambio de forma |
 | `reflow()` por componente | < 0.5ms | Sin DOM, sin strings, sin allocations |
 | `commit()` por update | < 2ms | Escrituras secuenciales, sin lecturas |
@@ -705,6 +709,7 @@ Pretext se usa para el sub-problema de medición de texto dentro del framework:
 ### Futuro: Compilador (Fase 4+)
 
 Cuando llegue el momento del compilador:
+
 - Transformar templates/JSX en llamadas a `defineComponent()`
 - Analizar estáticamente qué props son "shape" vs "value"
 - Generar código de reflow especializado por componente

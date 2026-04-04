@@ -9,14 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.1] - 2026-03-15
 
-### Added
+### Added in 0.1.1
+
 - Masonry demo with tag cloud, hero card, and multi-column layout
 - Demo controls: container width slider, item count slider
 - Live metrics panel (prepare/reflow/commit timings)
 
 ## [0.1.0] - 2026-03-01
 
-### Added
+### Added in 0.1.0
+
 - **Phase 1 — Signals**: `signal()`, `computed()`, `effect()` with dependency tracking, circular detection, cleanup functions
 - **Phase 2 — Reflow Engine**: `prepare()`, `reflow()` with flex layout (row/column, gap, justify, align, padding) and fast path for simple block layouts
 - **Phase 3 — Commit Engine**: `commitFull()`, `applyOps()`, `fullDiff()`, `fastDiff()` with key-based reconciliation
@@ -26,6 +28,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Float32Array** layout buffers — zero unnecessary allocations in the hot path
 - **146 unit + integration tests**
 
-[0.2.0]: https://github.com/naml14/axiom-framework/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/naml14/axiom-framework/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/naml14/axiom-framework/releases/tag/v0.1.0

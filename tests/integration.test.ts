@@ -1,8 +1,8 @@
 import { describe, test, expect, mock } from 'bun:test'
-import { signal, computed, effect } from '../src/signals.js'
-import { defineComponent } from '../src/component.js'
-import { prepare } from '../src/prepare.js'
-import type { ComponentNode } from '../src/types.js'
+// Public API imports only — validates that the integration tests work
+// against the same surface that consumers see
+import { signal, computed, effect, defineComponent, prepare } from '../src/index.js'
+import type { ComponentNode } from '../src/index.js'
 
 // ============================================================
 // Fake pretext

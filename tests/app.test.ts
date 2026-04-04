@@ -1,18 +1,20 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
 import { Window } from 'happy-dom'
-import { createApp, type App } from '../src/app.js'
-import { defineComponent } from '../src/component.js'
-import { signal } from '../src/signals.js'
-import { scheduleRender, resetScheduler } from '../src/scheduler.js'
+// Public API imports — these are the only things consumers can use
+import { createApp, defineComponent, signal } from '../src/index.js'
+import type { App } from '../src/index.js'
+// Internal import — resetScheduler is not public API but is required to make
+// the reactive test deterministic (controls rAF scheduling in test environment)
+import { resetScheduler } from '../src/scheduler.js'
 
 // Setup happy-dom
 let win: ReturnType<typeof setupDOM>
 
 function setupDOM() {
   const window = new Window()
-  globalThis.document = window.document
-  globalThis.HTMLElement = window.HTMLElement as typeof HTMLElement
-  globalThis.Text = window.Text as typeof Text
+  globalThis.document = window.document as unknown as Document
+  globalThis.HTMLElement = window.HTMLElement as unknown as typeof HTMLElement
+  globalThis.Text = window.Text as unknown as typeof Text
   globalThis.requestAnimationFrame = ((cb: () => void) => {
     cb()
     return 0

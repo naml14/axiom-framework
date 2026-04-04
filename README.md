@@ -16,7 +16,7 @@ Every time a signal changes, most frameworks re-render and let the browser figur
 
 Axiom separates the **expensive work** (done once, when data changes) from the **cheap work** (done every frame, when the viewport changes):
 
-```
+```Text
 prepare()  → analyze structure, cache metrics         (expensive — once per shape change)
 reflow()   → pure arithmetic: positions, sizes        (cheap — every frame, zero DOM reads)
 commit()   → batched DOM writes: removes→updates→inserts (final step — write-only)
@@ -83,7 +83,7 @@ When `count.value` changes, Axiom automatically re-runs `prepare → reflow → 
 
 ## Architecture
 
-```
+```Text
 ┌─────────────────────────────────────────────────────────────┐
 │                     PUBLIC API                               │
 │  signal()  computed()  effect()  defineComponent()  createApp() │
@@ -104,7 +104,7 @@ When `count.value` changes, Axiom automatically re-runs `prepare → reflow → 
 
 ### The Update Cycle
 
-```
+```Text
 Signal changes
     │
     ▼
@@ -241,7 +241,7 @@ const { prepareMs, reflowMs, commitMs } = app.getMetrics()
 Axiom automatically routes nodes to the most efficient layout algorithm:
 
 | Condition | Path | What it does |
-|-----------|------|-------------|
+| ----------- | ------ | ------------- |
 | No `layout` props + simple children | **Fast path** | Top-to-bottom block layout. No allocations. |
 | Has `layout` props (flex/gap/etc.) | **Flex path** | Full flex engine with justify/align/padding. |
 
@@ -260,7 +260,7 @@ All positions (`x`, `y`) are **relative to the direct parent** — not absolute 
 ## Performance Invariants
 
 | Operation | Target | Constraint |
-|-----------|--------|------------|
+| ----------- | -------- | ------------ |
 | `prepare()` per component | < 5ms | Once per shape change |
 | `reflow()` per component | < 0.5ms | No DOM, no strings, no allocations |
 | `commit()` per update | < 2ms | Sequential writes, zero reads |
@@ -268,7 +268,7 @@ All positions (`x`, `y`) are **relative to the direct parent** — not absolute 
 
 ### What the hot path NEVER does
 
-```
+```Text
 ❌ DOM reads  (getBoundingClientRect, offsetHeight, clientWidth)
 ❌ String operations  (concat, split, template literals)
 ❌ Unnecessary allocations  (new arrays, temporary objects)
@@ -278,7 +278,7 @@ All positions (`x`, `y`) are **relative to the direct parent** — not absolute 
 
 ### What the hot path DOES
 
-```
+```Text
 ✅ Arithmetic on Float32Array
 ✅ Map/Set lookups
 ✅ Comparisons
@@ -290,7 +290,7 @@ All positions (`x`, `y`) are **relative to the direct parent** — not absolute 
 ## Comparison
 
 | Feature | axiom-framework | React | Vue | Svelte |
-|---------|----------------|-------|-----|--------|
+| --------- | ---------------- | ------- | ----- | -------- |
 | DOM reads in hot path | **0** | Yes (reconciler) | Yes (reconciler) | Minimal |
 | Layout algorithm | **In-memory arithmetic** | Browser CSS | Browser CSS | Browser CSS |
 | Masonry layout | **Native** | CSS hack | CSS hack | CSS hack |
@@ -321,4 +321,4 @@ Tests use [Bun's built-in test runner](https://bun.sh/docs/cli/test) and [Happy 
 
 ## License
 
-[MIT](./LICENSE) © naml14
+[MIT](./LICENSE) © Nelson Andrés Mora López (naml14)

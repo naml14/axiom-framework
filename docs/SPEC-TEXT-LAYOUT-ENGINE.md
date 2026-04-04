@@ -3,7 +3,7 @@
 **Basado en:** `@chenglou/pretext` — análisis profundo del código fuente  
 **Propósito:** Documento de referencia para diseñar un framework de desarrollo web cuyo principio central es **eliminar el trabajo redundante del hot path de renderizado**, inspirado en la arquitectura de dos fases que `pretext` aplica al texto. El objetivo no es solo medir texto — es extender ese mismo patrón a todo el ciclo de actualización de la UI: separar el trabajo de análisis y preparación (costoso, hecho una vez) del trabajo de aplicación de cambios (barato, sin efectos secundarios, ejecutable en cualquier momento y con máxima frecuencia).
 
-### El insight central que motiva el framework
+## El insight central que motiva el framework
 
 `pretext` resolvió un problema de performance del DOM con un principio simple pero poderoso:
 
@@ -44,6 +44,7 @@ El mismo patrón de interleaving que destruye el performance en medición de tex
 ### 1.3 Por qué esta solución es posible ahora
 
 `pretext` demostró que el browser ya tiene las primitivas necesarias:
+
 - `canvas.measureText()` accede al font engine sin pasar por el DOM layout
 - `Intl.Segmenter` permite segmentar texto unicode correctamente sin DOM
 - `OffscreenCanvas` permite hacer trabajo de medición en un Web Worker
@@ -54,7 +55,7 @@ El framework extiende esa intuición: el browser expone suficientes APIs de bajo
 
 ## 2. Arquitectura del Sistema
 
-```
+```Text
 ┌─────────────────────────────────────────────────────────────┐
 │                         PUBLIC API                           │
 │  prepare() / prepareWithSegments()    layout() / layoutWithLines() │
@@ -98,7 +99,7 @@ El framework extiende esa intuición: el browser expone suficientes APIs de bajo
 El modelo interno distingue **8 tipos de quiebre** de segmento:
 
 | Kind | Descripción | Comportamiento |
-|------|-------------|----------------|
+| ------ | ------------- | ---------------- |
 | `text` | Texto word-like normal | Unidad de medición y quiebre |
 | `space` | Espacio colapsable (CSS `normal`) | Se cuelga al final de línea, no dispara quiebre |
 | `preserved-space` | Espacio preservado (modo `pre-wrap`) | Visible, cuelga al final de línea |
@@ -112,7 +113,7 @@ El modelo interno distingue **8 tipos de quiebre** de segmento:
 
 ### 3.2 Pipeline de análisis (en orden de ejecución)
 
-```
+```Text
 texto crudo
     │
     ▼
@@ -220,7 +221,7 @@ function getMeasureContext(): CanvasRenderingContext2D | OffscreenCanvasRenderin
 
 ### 4.2 Estructura del cache
 
-```
+```typescript
 segmentMetricCaches: Map<string (font), Map<string (segmento), SegmentMetrics>>
 
 SegmentMetrics {
@@ -313,7 +314,7 @@ El tipo `PreparedText` es **opaco** por diseño — usa un brand type (`declare 
 
 ### 5.2 Pipeline de `prepare()`
 
-```
+```Text
 prepare(text, font, options?)
     │
     ▼
@@ -347,6 +348,7 @@ export function layout(prepared: PreparedText, maxWidth: number, lineHeight: num
 ```
 
 **Garantías del hot path:**
+
 - Cero accesos al DOM
 - Cero llamadas a canvas
 - Cero operaciones sobre strings
@@ -387,7 +389,7 @@ type LayoutCursor = {
 
 ### 6.2 Algoritmo de greedy line breaking
 
-```
+```Text
 Para cada segmento i en el chunk:
   
   lineW = ancho acumulado en línea actual
@@ -431,7 +433,7 @@ function getTabAdvance(lineWidth: number, tabStopAdvance: number): number {
 
 Para segmentos cuyo ancho individual excede `maxWidth`, se usan los `breakableWidths` (anchos por grapheme) para quiebre de emergencia a nivel de grapheme.
 
-```
+```Text
 Para cada grapheme g en el segmento breakable:
   si lineW + gw > maxWidth + epsilon:
     emitLine()
@@ -452,7 +454,7 @@ El módulo provee metadata bidi (niveles de embedding Unicode) para el rich path
 
 Implementación simplificada del algoritmo Unicode Bidirectional (UBA) basada en pdf.js:
 
-```
+```Text
 1. Clasificar cada caracter en tipo bidi (L, R, AL, AN, EN, etc.)
 2. Si numBidi/len < 0.3 → startLevel = 1 (texto predominantemente RTL)
    Si no → startLevel = 0 (texto predominantemente LTR)
@@ -470,7 +472,7 @@ Los niveles se exponen como `Int8Array | null` en `PreparedTextWithSegments.segL
 
 ### 8.1 `normal` (default)
 
-```
+```Text
 CSS equivalente:
   white-space: normal
   word-break: normal
@@ -487,7 +489,7 @@ Comportamiento:
 
 ### 8.2 `pre-wrap`
 
-```
+```Text
 CSS equivalente:
   white-space: pre-wrap
   word-break: normal
@@ -579,7 +581,7 @@ function setLocale(locale?: string): void
 ## 10. Invariantes de Performance
 
 | Operación | Costo | Restricciones |
-|-----------|-------|---------------|
+| ----------- | ------- | --------------- |
 | `prepare()` 500 textos | ~19ms | Una vez por texto |
 | `layout()` 500 textos | ~0.09ms | Sin DOM, sin canvas, sin strings |
 | `getSegmentMetrics()` cached | O(1) | Map lookup |
@@ -588,6 +590,7 @@ function setLocale(locale?: string): void
 | Soft-hyphen break | O(graphemes) | Solo cuando aplica |
 
 **Garantía del hot path `layout()`:**
+
 - No DOM reads
 - No canvas calls  
 - No string operations
@@ -697,7 +700,7 @@ while (true) {
 ### 12.1 Cobertura garantizada
 
 | Script | Estado | Notas |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | Latín/ASCII | ✅ Exacto | Incluye URLs, números, puntuación |
 | CJK (Chino, Japonés, Coreano) | ✅ Exacto en Safari; ~99% en Chrome | Queda un campo de kinsoku en Chrome |
 | Árabe | ✅ Coarse corpus limpio | Tolerancia ε para fine-width edge cases |
@@ -737,6 +740,7 @@ line-break: auto;
 ```
 
 **Explícitamente fuera de scope (por ahora):**
+
 - `word-break: break-all`
 - `word-break: keep-all`
 - `line-break: strict` / `loose`
@@ -757,6 +761,7 @@ import { prepare, layout } from '@chenglou/pretext'
 ```
 
 Para SSR (Next.js, Astro en modo SSR): `getMeasureContext()` requiere `OffscreenCanvas` o `document`. En server-side:
+
 - No está disponible canvas nativo
 - Opción 1: Polyfill con `node-canvas` (`npm install canvas`)
 - Opción 2: Pasar alturas estimadas en SSR y recalcular en hydration (layout shift aceptado)
@@ -801,7 +806,7 @@ self.onmessage = ({ data: { texts, font, maxWidth, lineHeight } }) => {
 
 El parámetro `font` usa el **mismo formato que `canvas.context.font`** — que es el mismo que el shorthand CSS `font`:
 
-```
+```Text
 "<weight>? <style>? <size><unit> <family>"
 
 Ejemplos válidos:
@@ -867,10 +872,10 @@ En modo `pre-wrap`, el texto se divide en `chunks` — uno por cada párrafo sep
 
 ## 18. Benchmarks de Referencia
 
-*(Medidos en Chrome, en un batch de 500 textos con el corpus de test)*
+***(Medidos en Chrome, en un batch de 500 textos con el corpus de test)***
 
 | Operación | Tiempo |
-|-----------|--------|
+| ----------- | -------- |
 | `prepare()` 500 textos | ~19ms total |
 | `layout()` 500 textos | ~0.09ms total |
 | `layout()` por texto | ~0.0002ms |
@@ -881,7 +886,7 @@ El ratio prepare/layout es ~211x. El diseño asume que `layout()` se llama mucha
 
 ## 19. Estructura de Archivos del Engine
 
-```
+```Text
 src/
   layout.ts       — API pública + measureAnalysis() + builders de líneas materializadas
   analysis.ts     — Normalización, segmentación Intl.Segmenter, reglas de fusión
@@ -891,7 +896,8 @@ src/
 ```
 
 **Dependencias:**
-```
+
+```Text
 layout.ts → analysis.ts + measurement.ts + line-break.ts + bidi.ts
 line-break.ts → analysis.ts (types) + measurement.ts (getEngineProfile)
 measurement.ts → analysis.ts (isCJK)
@@ -903,7 +909,7 @@ bidi.ts → (independiente)
 ## 20. Glossary
 
 | Término | Definición |
-|---------|------------|
+| --------- | ------------ |
 | **Segment** | Unidad mínima de texto con un `SegmentBreakKind` único. Ej: "hello", " ", "world" |
 | **Grapheme** | Unidad perceptible más pequeña del texto. Ej: "á" = 'a' + combining accent = 1 grapheme |
 | **Prepared handle** | Resultado opaco de `prepare()` — contiene anchos y metadata, no el texto original |
@@ -925,7 +931,7 @@ Esta sección extrae las meta-lecciones de `pretext` que aplican al diseño de u
 
 ### 21.1 El principio central: Separación de fases por tipo de dependencia
 
-```
+```Text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  FASE DE PREPARACIÓN                                                    │
 │  ─────────────────                                                      │
@@ -973,7 +979,7 @@ Esta sección extrae las meta-lecciones de `pretext` que aplican al diseño de u
 ### 21.2 Lecciones de pretext aplicables al framework
 
 | Lección de pretext | Aplicación al framework |
-|-------------------|-------------------------|
+| ------------------- | ------------------------- |
 | `prepare()` hace todo el trabajo que puede hacerse sin conocer el ancho | Los componentes pre-calculan su "forma de reaccionar" a distintos constraints, no recalculan desde cero |
 | Canvas `measureText()` evita DOM layout porque va directo al font engine | El framework debe exponer APIs que eviten reflows — no depender de `getBoundingClientRect()` en loops |
 | Cache `Map<font, Map<segment, metrics>>` evita re-medir | El framework debe cachear agresivamente resultados de preparación, no solo memoizar renders |
@@ -988,7 +994,7 @@ Esta sección extrae las meta-lecciones de `pretext` que aplican al diseño de u
 Estos son los patterns que **fallaron** en pretext y que el framework debe evitar:
 
 | Anti-pattern | Por qué falló | Equivalente en un framework |
-|--------------|---------------|----------------------------|
+| -------------- | --------------- | ---------------------------- |
 | Medición de strings en `layout()` | Reintroduce canvas al hot path | Leer DOM dimensions en el loop de actualización |
 | Pair correction models | Demasiado local, no movía los misses reales | Micro-optimizaciones que no atacan el cuello de botella real |
 | Lookup tables para system-ui | No confiables cross-browser/version | Hardcodear valores que dependen de ambiente |
@@ -1005,17 +1011,19 @@ De `thoughts.md`:
 **Traducción para el framework:**
 
 El DOM no debe ser:
+
 - ❌ La fuente de verdad para dimensiones y posiciones
 - ❌ El lugar donde se hace diffing para detectar cambios
 - ❌ El sistema de reactividad (via MutationObserver etc.)
 
 El DOM debe ser:
+
 - ✅ El destino final de escrituras batcheadas
 - ✅ Write-only output después de que todos los cálculos terminaron
 
 ### 21.5 El patrón completo para un update cycle
 
-```
+```Text
 ┌──────────────────────────────────────────────────────────────────┐
 │                    ESTADO DE LA APLICACIÓN                        │
 │            (observable store, signals, atoms, etc.)               │
@@ -1071,7 +1079,7 @@ El DOM debe ser:
 ### 21.6 Mapeo de conceptos pretext → framework
 
 | Concepto pretext | Concepto framework | Descripción |
-|------------------|-------------------|-------------|
+| ------------------ | ------------------- | ------------- |
 | `PreparedText` | `PreparedComponent` | Handle opaco con todo lo necesario para calcular layout |
 | `prepare(text, font)` | `prepare(props, context)` | Análisis y pre-cálculo que solo depende de los datos |
 | `layout(prepared, maxWidth, lineHeight)` | `reflow(prepared, constraints)` | Aritmética pura que depende del viewport actual |
@@ -1156,7 +1164,7 @@ El framework debería seguir el mismo camino: usar las primitivas disponibles de
 
 Un framework construido sobre estos principios tendría este contrato:
 
-```
+```Text
 DADO: un árbol de componentes con su estado actual
 Y: un cambio en el estado de la aplicación
 Y: las constraints del viewport (width, height, scroll position)
