@@ -13,9 +13,9 @@ import type { LayoutConstraints } from '../src/types.js'
 
 beforeAll(() => {
   const window = new Window()
-  globalThis.document = window.document
-  globalThis.HTMLElement = window.HTMLElement as typeof HTMLElement
-  globalThis.Text = window.Text as typeof Text
+  globalThis.document = window.document as unknown as Document
+  globalThis.HTMLElement = window.HTMLElement as unknown as typeof HTMLElement
+  globalThis.Text = window.Text as unknown as typeof Text
 })
 
 const CONSTRAINTS: LayoutConstraints = { maxWidth: 800, maxHeight: 600 }
