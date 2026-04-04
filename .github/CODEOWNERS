@@ -1,0 +1,22 @@
+# CODEOWNERS
+# These owners will be requested for review when someone opens a pull request.
+# GitHub will only request reviews from the last matching pattern.
+
+# Default owner for all files
+* @naml14
+
+# CI workflows
+.github/workflows/ @naml14
+
+# Source code
+src/ @naml14
+
+# Tests
+tests/ @naml14
+
+# Demo
+demo/ @naml14
+
+# Documentation
+docs/ @naml14
+README.md @naml14

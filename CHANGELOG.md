@@ -27,6 +27,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Brand types**: Opaque `PreparedComponent` handle — consumers cannot accidentally access internal structure
 - **Float32Array** layout buffers — zero unnecessary allocations in the hot path
 - **146 unit + integration tests**
-
-[0.1.1]: https://github.com/naml14/axiom-framework/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/naml14/axiom-framework/releases/tag/v0.1.0

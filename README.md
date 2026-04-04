@@ -304,6 +304,9 @@ All positions (`x`, `y`) are **relative to the direct parent** — not absolute 
 
 ## Contributing
 
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for detailed guidelines, architecture constraints, and commit conventions.
+Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ```bash
 git clone https://github.com/naml14/axiom-framework.git
 cd axiom-framework
