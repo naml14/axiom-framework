@@ -3,6 +3,8 @@ name: Release Please
 on:
   push:
     branches: [main]
+  # Allow manual runs from the GitHub UI (Actions → Release Please → Run workflow)
+  workflow_dispatch:
 
 # release-please needs write access to open PRs and create releases
 permissions:
@@ -36,7 +38,7 @@ jobs:
     if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
