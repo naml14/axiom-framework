@@ -67,30 +67,8 @@ const App = defineComponent(() => {
         type: 'element' as const,
         tag: 'div',
         classes: ['tags-cloud'],
-        layout: { flexDirection: 'column', gap: 4 },
-        children: (() => {
-          const rows: ComponentNode[][] = [[]];
-          let currentLineWidth = 0;
-          const MAX_W = width - 32; // container width minus padding (16*2)
-
-          TAGS.forEach((label, i) => {
-            const tagW = getTagWidth(label);
-            // Si no entra en la línea y ya hay algo, bajamos (wrap)
-            if (currentLineWidth + tagW > MAX_W && rows[rows.length - 1]!.length > 0) {
-              rows.push([]);
-              currentLineWidth = 0;
-            }
-            rows[rows.length - 1]!.push(TagBubble({ label, color: COLORS[i % COLORS.length]! }));
-            currentLineWidth += tagW + 2; // + gap
-          });
-
-          return rows.map(rowTags => ({
-            type: 'element' as const,
-            tag: 'div',
-            layout: { flexDirection: 'row', gap: 2 },
-            children: rowTags
-          }));
-        })(),
+        layout: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+        children: TAGS.map((label, i) => TagBubble({ label, color: COLORS[i % COLORS.length]! })),
       },
       // Hero card
       HeroCard({

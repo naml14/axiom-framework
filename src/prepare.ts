@@ -34,6 +34,7 @@ interface PreparedInternal {
   tag?: string
   classes?: string[]
   attrs?: Record<string, string>
+  on?: Record<string, EventListener>
   layout?: import('./types.js').LayoutProps
   textContent?: string
   textHandle?: unknown
@@ -139,6 +140,7 @@ function prepareElementNode(node: ElementNode, options?: PrepareOptions): Prepar
     tag: node.tag,
     classes: node.classes,
     attrs: node.attrs,
+    on: node.on,
     layout: node.layout,
     children,
     metrics: {
@@ -248,6 +250,10 @@ export function getClasses(prepared: PreparedComponent): string[] | undefined {
 
 export function getAttrs(prepared: PreparedComponent): Record<string, string> | undefined {
   return unbrandPrepared(prepared).attrs
+}
+
+export function getOn(prepared: PreparedComponent): Record<string, EventListener> | undefined {
+  return unbrandPrepared(prepared).on
 }
 
 export function getTextContent(prepared: PreparedComponent): string | undefined {

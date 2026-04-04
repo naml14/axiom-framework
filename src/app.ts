@@ -6,7 +6,7 @@ import type { ReflowOptions } from './reflow.js'
 import { prepare, resetIndexCounter } from './prepare.js'
 import { reflow, createLayoutResult } from './reflow.js'
 import { fullDiff, type DOMOperation } from './diff.js'
-import { commitFull, applyOps, type DOMState } from './commit.js'
+import { commitFull, applyOps, fireUnmountEvents, type DOMState } from './commit.js'
 import { effect } from './signals.js'
 import { scheduleRender, cancelScheduled } from './scheduler.js'
 import { getNodeType, getTag, getChildren } from './prepare.js'
@@ -118,6 +118,7 @@ export function createApp(
     if (shapeChanged) {
       // Shape change (e.g. column count changed) — full teardown and re-commit.
       // applyOps can't handle hierarchy changes because it flat-appends inserts to root.
+      fireUnmountEvents(state.domState.domNodes)
       root.innerHTML = ''
       state.domState.domNodes = []
       commitFull(layout, prepared, root, state.domState)
@@ -173,6 +174,7 @@ export function createApp(
     unmount(): void {
       state.stopEffect?.()
       cancelScheduled()
+      fireUnmountEvents(state.domState.domNodes)
       root.innerHTML = ''
       state.mounted = false
       state.prevPrepared = null

@@ -11,6 +11,7 @@ import {
   getTextContent,
   getClasses,
   getAttrs,
+  getOn,
   forEachNode,
   countNodes,
   getPreparedChildren,
@@ -29,6 +30,7 @@ export interface DOMOperation {
   textContent?: string
   classes?: string[]
   attrs?: Record<string, string>
+  on?: Record<string, EventListener>
   key?: string
   // For update/move
   x?: number
@@ -36,6 +38,7 @@ export interface DOMOperation {
   width?: number
   height?: number
   newTextContent?: string
+  newOn?: Record<string, EventListener>
 }
 
 // ============================================================
@@ -82,6 +85,7 @@ export function fullDiff(
         op.tag = getTag(node)
         op.classes = getClasses(node)
         op.attrs = getAttrs(node)
+        op.on = getOn(node)
         op.key = getKey(node)
       } else if (nodeType === 'text') {
         op.textContent = getTextContent(node)
@@ -106,6 +110,13 @@ export function fullDiff(
         if (newText !== oldText && !changed.includes(idx)) {
           changed.push(idx)
         }
+      } else if (getNodeType(node) === 'element') {
+        const oldNode = findNodeByIndex(prevPrepared, idx)
+        const newOn = getOn(node)
+        const oldOn = oldNode ? getOn(oldNode) : undefined
+        if (newOn !== oldOn && !changed.includes(idx)) {
+          changed.push(idx)
+        }
       }
     })
 
@@ -127,6 +138,13 @@ export function fullDiff(
         const oldText = oldNode ? getTextContent(oldNode) : undefined
         if (newText !== oldText) {
           op.newTextContent = newText
+        }
+      } else if (newNode && getNodeType(newNode) === 'element') {
+        const newOn = getOn(newNode)
+        const oldNode = findNodeByIndex(prevPrepared, idx)
+        const oldOn = oldNode ? getOn(oldNode) : undefined
+        if (newOn !== oldOn) {
+          op.newOn = newOn
         }
       }
 
@@ -207,6 +225,7 @@ function fullTreeDiff(
         op.tag = getTag(node)
         op.classes = getClasses(node)
         op.attrs = getAttrs(node)
+        op.on = getOn(node)
         op.key = getKey(node)
       } else if (nodeType === 'text') {
         op.textContent = getTextContent(node)
@@ -223,6 +242,9 @@ function fullTreeDiff(
 
       let textChanged = false
       let newTextContent: string | undefined
+      let onChanged = false
+      let newOn: Record<string, EventListener> | undefined
+
       if (nodeType === 'text') {
         const oldNode = findNodeByIndex(prevPrepared, idx)
         const oldText = oldNode ? getTextContent(oldNode) : undefined
@@ -231,9 +253,17 @@ function fullTreeDiff(
           textChanged = true
           newTextContent = newText
         }
+      } else if (nodeType === 'element') {
+        const oldNode = findNodeByIndex(prevPrepared, idx)
+        const oldOn = oldNode ? getOn(oldNode) : undefined
+        const currentOn = getOn(node)
+        if (currentOn !== oldOn) {
+          onChanged = true
+          newOn = currentOn
+        }
       }
 
-      if (layoutChanged || textChanged) {
+      if (layoutChanged || textChanged || onChanged) {
         const op: DOMOperation = {
           type: 'update',
           index: idx,
@@ -246,6 +276,9 @@ function fullTreeDiff(
         }
         if (textChanged) {
           op.newTextContent = newTextContent
+        }
+        if (onChanged) {
+          op.newOn = newOn
         }
         ops.push(op)
       }

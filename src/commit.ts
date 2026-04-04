@@ -16,6 +16,7 @@ import {
   getTextContent,
   getClasses,
   getAttrs,
+  getOn,
   forEachNode,
   getPreparedChildren,
 } from './prepare.js'
@@ -42,16 +43,36 @@ export function commitFull(
   if (rootHeight > 0) {
     root.style.height = `${rootHeight}px`
   }
-  // NOTE: do NOT set overflow:hidden — the framework measures and sets explicit
-  // heights on containers, but the root itself must let content be visible.
 
-  // Ensure domNodes array is sized correctly
   while (state.domNodes.length < layout.nodeCount) {
     state.domNodes.push(null)
   }
 
-  // Create DOM tree from prepared component
   buildDOMTree(prepared, layout, root, state)
+  fireMountEvents(state.domNodes)
+}
+
+export function fireMountEvents(domNodes: Array<HTMLElement | Text | null>): void {
+  for (const node of domNodes) {
+    if (node instanceof HTMLElement) {
+      const listeners = (node as any)._listeners
+      if (listeners && listeners.mount) {
+        listeners.mount({ type: 'mount', target: node } as unknown as Event)
+      }
+    }
+  }
+}
+
+export function fireUnmountEvents(domNodes: Array<HTMLElement | Text | null>): void {
+  for (let i = domNodes.length - 1; i >= 0; i--) {
+    const node = domNodes[i]
+    if (node instanceof HTMLElement) {
+      const listeners = (node as any)._listeners
+      if (listeners && listeners.unmount) {
+        listeners.unmount({ type: 'unmount', target: node } as unknown as Event)
+      }
+    }
+  }
 }
 
 export function applyOps(
@@ -63,8 +84,16 @@ export function applyOps(
   for (const op of ops) {
     if (op.type === 'remove') {
       const node = domNodes[op.index]
-      if (node !== null && node.parentElement) {
-        node.parentElement.removeChild(node)
+      if (node !== null) {
+        if (node instanceof HTMLElement) {
+          const listeners = (node as any)._listeners
+          if (listeners && listeners.unmount) {
+            listeners.unmount({ type: 'unmount', target: node } as unknown as Event)
+          }
+        }
+        if (node.parentElement) {
+          node.parentElement.removeChild(node)
+        }
       }
       domNodes[op.index] = null
     }
@@ -85,6 +114,19 @@ export function applyOps(
 
       if (op.newTextContent !== undefined && el instanceof Text) {
         el.nodeValue = op.newTextContent
+      }
+
+      if (op.newOn !== undefined && el instanceof HTMLElement) {
+        const oldListeners = (el as any)._listeners
+        if (oldListeners) {
+          for (const [evt, listener] of Object.entries(oldListeners)) {
+            el.removeEventListener(evt, listener as EventListener)
+          }
+        }
+        for (const [evt, listener] of Object.entries(op.newOn)) {
+          el.addEventListener(evt, listener)
+        }
+        ;(el as any)._listeners = op.newOn
       }
     }
 
@@ -118,6 +160,19 @@ export function applyOps(
 
   if (fragment.childNodes.length > 0) {
     root.appendChild(fragment)
+  }
+
+  // Phase 4: Trigger mount events after DOM insertion
+  for (const op of ops) {
+    if (op.type === 'insert') {
+      const node = domNodes[op.index]
+      if (node instanceof HTMLElement) {
+        const listeners = (node as any)._listeners
+        if (listeners && listeners.mount) {
+          listeners.mount({ type: 'mount', target: node } as unknown as Event)
+        }
+      }
+    }
   }
 }
 
@@ -179,6 +234,15 @@ function buildDOMTree(
     }
   }
 
+  // Apply event listeners
+  const on = getOn(prepared)
+  if (on !== undefined) {
+    for (const [evt, listener] of Object.entries(on)) {
+      el.addEventListener(evt, listener)
+    }
+    (el as any)._listeners = on
+  }
+
   state.domNodes[idx] = el
   parent.appendChild(el)
 
@@ -217,6 +281,13 @@ function createDOMElement(op: DOMOperation): HTMLElement | Text {
     for (const [key, value] of Object.entries(op.attrs)) {
       el.setAttribute(key, value)
     }
+  }
+
+  if (op.on !== undefined) {
+    for (const [evt, listener] of Object.entries(op.on)) {
+      el.addEventListener(evt, listener)
+    }
+    (el as any)._listeners = op.on
   }
 
   return el

@@ -32,6 +32,7 @@ export interface ElementNode {
   key?: string
   classes?: string[]
   attrs?: Record<string, string>
+  on?: Record<string, EventListener>
   layout?: LayoutProps
   children?: ComponentNode[]
 }
@@ -76,9 +77,11 @@ export interface LayoutConstraints {
 export type JustifyContent = 'start' | 'center' | 'end' | 'space-between'
 export type AlignItems = 'start' | 'center' | 'end' | 'stretch'
 export type FlexDirection = 'row' | 'column'
+export type FlexWrap = 'nowrap' | 'wrap' | 'wrap-reverse'
 
 export interface LayoutProps {
   flexDirection?: FlexDirection
+  flexWrap?: FlexWrap
   gap?: number
   justifyContent?: JustifyContent
   alignItems?: AlignItems
