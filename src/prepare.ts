@@ -119,12 +119,11 @@ function prepareElementNode(node: ElementNode, options?: PrepareOptions): Prepar
   const children = node.children !== undefined
     ? node.children.flatMap(child => {
         const prepared = prepareNode(child, options)
-        const internal = unbrandPrepared(prepared)
         // Flatten fragments
-        if (internal.nodeType === 'fragment') {
-          return internal.children
+        if (prepared.nodeType === 'fragment') {
+          return prepared.children
         }
-        return [internal]
+        return [prepared]
       })
     : []
 
@@ -153,11 +152,10 @@ function prepareElementNode(node: ElementNode, options?: PrepareOptions): Prepar
 function prepareFragmentNode(node: FragmentNode, options?: PrepareOptions): PreparedInternal {
   const children = node.children.flatMap(child => {
     const prepared = prepareNode(child, options)
-    const internal = unbrandPrepared(prepared)
-    if (internal.nodeType === 'fragment') {
-      return internal.children
+    if (prepared.nodeType === 'fragment') {
+      return prepared.children
     }
-    return [internal]
+    return [prepared]
   })
 
   const hasText = children.some(c => c.metrics.hasText)
@@ -236,8 +234,8 @@ export function getTextHandle(prepared: PreparedComponent): unknown {
   return unbrandPrepared(prepared).textHandle
 }
 
-export function getPreparedChildren(prepared: PreparedComponent): PreparedInternal[] {
-  return unbrandPrepared(prepared).children
+export function getPreparedChildren(prepared: PreparedComponent): PreparedComponent[] {
+  return unbrandPrepared(prepared).children.map(c => brandPrepared(c))
 }
 
 export function getKey(prepared: PreparedComponent): string | undefined {

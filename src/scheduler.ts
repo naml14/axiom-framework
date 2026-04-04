@@ -3,10 +3,8 @@
 // Injectable for testability
 // ============================================================
 
-export type SchedulerFn = (cb: RenderCallback) => void
-
 type RenderCallback = () => void
-type SchedulerFn = (cb: RenderCallback) => void
+export type SchedulerFn = (cb: RenderCallback) => void
 
 let pendingRender: RenderCallback | null = null
 let generation = 0

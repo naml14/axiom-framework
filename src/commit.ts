@@ -14,6 +14,7 @@ import {
   getClasses,
   getAttrs,
   forEachNode,
+  getPreparedChildren,
 } from './prepare.js'
 
 // ============================================================
@@ -129,7 +130,7 @@ function buildDOMTree(
 ): void {
   const idx = getNodeIndex(prepared)
   const nodeType = getNodeType(prepared)
-  const children = prepared.children || []
+  const children = getPreparedChildren(prepared)
 
   if (nodeType === 'text') {
     const textContent = getTextContent(prepared) || ''

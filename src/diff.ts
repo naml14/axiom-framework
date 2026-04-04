@@ -141,7 +141,7 @@ export function fullDiff(
 
 function fullTreeDiff(
   prevPrepared: PreparedComponent,
-  prevLayout: LayoutResult,
+  prevLayout: LayoutResult | null,
   newPrepared: PreparedComponent,
   newLayout: LayoutResult,
   domNodes: Array<HTMLElement | Text | null>
@@ -214,10 +214,12 @@ function fullTreeDiff(
       ops.push(op)
     } else {
       // Same index — check for updates
-      const layoutChanged = prevLayout.x[idx] !== newLayout.x[idx] ||
+      const layoutChanged = prevLayout !== null && (
+        prevLayout.x[idx] !== newLayout.x[idx] ||
         prevLayout.y[idx] !== newLayout.y[idx] ||
         prevLayout.width[idx] !== newLayout.width[idx] ||
         prevLayout.height[idx] !== newLayout.height[idx]
+      )
 
       let textChanged = false
       let newTextContent: string | undefined
