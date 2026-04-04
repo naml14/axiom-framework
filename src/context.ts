@@ -13,6 +13,10 @@ import type { Signal } from './types.js'
 export interface Context<T> {
   readonly _id: symbol
   readonly _defaultValue: T
+  /** Memoized Signal<T> for the default value — shared across all useContext() calls without a Provider.
+   *  This ensures two consumers of the same context without a Provider receive the same reactive signal
+   *  instead of independent, unrelated signals. */
+  readonly _defaultSignal: Signal<T>
 }
 
 export interface StoreInstance<T> {
@@ -36,6 +40,7 @@ export function createContext<T>(defaultValue: T): Context<T> {
   return {
     _id: Symbol('Context'),
     _defaultValue: defaultValue,
+    _defaultSignal: signal(defaultValue),
   }
 }
 
@@ -43,6 +48,12 @@ export function createContext<T>(defaultValue: T): Context<T> {
 // withContext — Provider HOF (ADR-3: plain function, not defineComponent)
 // Pushes context value onto the stack, calls children, pops.
 // Returns whatever children() returns — transparent to the pipeline.
+//
+// NOTE: context scoping is synchronous by design (same as React/Solid.js).
+// If children() is async, the contextStack.pop() runs when the initial Promise
+// is returned — before any code after internal `await`s executes. Any useContext()
+// calls after an `await` inside children will NOT see this provider. This is
+// intentional and documented in ADR-1.
 // ============================================================
 
 export function withContext<T, R>(
@@ -50,12 +61,14 @@ export function withContext<T, R>(
   value: Signal<T> | T,
   children: () => R
 ): R {
-  // Normalize: wrap plain value in signal if needed
+  // Normalize: wrap plain value in signal if needed.
+  // We check for the PRESENCE of a `.value` property (not its runtime type) to correctly
+  // handle Signal<T> where T = undefined. Using `typeof sig.value !== 'undefined'`
+  // would incorrectly re-wrap a valid Signal<undefined>.
   const sig: Signal<T> =
     value !== null &&
     typeof value === 'object' &&
-    'value' in (value as object) &&
-    typeof (value as Signal<T>).value !== 'undefined'
+    'value' in (value as object)
       ? (value as Signal<T>)
       : signal(value as T)
 
@@ -83,25 +96,28 @@ export function useContext<T>(ctx: Context<T>): Signal<T> {
       return frame.get(ctx._id) as Signal<T>
     }
   }
-  // Default: wrap defaultValue in a signal (always returns Signal<T>)
-  return signal(ctx._defaultValue)
+  // Default: return the memoized signal — ensures all consumers without a Provider
+  // share the same reactive Signal<T> instance (consistent and memory-efficient).
+  return ctx._defaultSignal
 }
 
 // ============================================================
 // ADR-2: createStore — module-level singleton DI
-// provideStore/injectStore use the same call-stack mechanism
+// provideStore/injectStore are now implemented via withContext/useContext,
+// reusing the same contextStack mechanism (eliminates the duplicate storeStack).
 // ============================================================
 
-// Each store instance gets its own symbol key for the DI stack
-const storeKeyMap = new WeakMap<StoreInstance<unknown>, symbol>()
-const storeStack: Map<symbol, StoreInstance<unknown>>[] = []
+// Each StoreInstance gets its own Context<StoreInstance<T>> for DI scoping.
+// We use a WeakMap so the Context is created once per store and reused on
+// subsequent provideStore/injectStore calls for the same instance.
+const storeContextMap = new WeakMap<StoreInstance<unknown>, Context<StoreInstance<unknown>>>()
 
-function getStoreKey<T>(store: StoreInstance<T>): symbol {
-  const key = storeKeyMap.get(store as StoreInstance<unknown>)
-  if (key !== undefined) return key
-  const newKey = Symbol('Store')
-  storeKeyMap.set(store as StoreInstance<unknown>, newKey)
-  return newKey
+function getStoreContext<T>(store: StoreInstance<T>): Context<StoreInstance<T>> {
+  const existing = storeContextMap.get(store as StoreInstance<unknown>)
+  if (existing !== undefined) return existing as Context<StoreInstance<T>>
+  const ctx = createContext<StoreInstance<T>>(store)
+  storeContextMap.set(store as StoreInstance<unknown>, ctx as Context<StoreInstance<unknown>>)
+  return ctx
 }
 
 export function createStore<T>(initialState: T): StoreInstance<T> {
@@ -120,25 +136,11 @@ export function createStore<T>(initialState: T): StoreInstance<T> {
 }
 
 export function provideStore<T>(store: StoreInstance<T>, children: () => void): void {
-  const key = getStoreKey(store)
-  const frame = new Map<symbol, StoreInstance<unknown>>()
-  frame.set(key, store as StoreInstance<unknown>)
-  storeStack.push(frame)
-  try {
-    children()
-  } finally {
-    storeStack.pop()
-  }
+  const ctx = getStoreContext(store)
+  withContext(ctx, store, children)
 }
 
 export function injectStore<T>(store: StoreInstance<T>): StoreInstance<T> {
-  const key = getStoreKey(store)
-  for (let i = storeStack.length - 1; i >= 0; i--) {
-    const frame = storeStack[i]
-    if (frame.has(key)) {
-      return frame.get(key) as StoreInstance<T>
-    }
-  }
-  // Not provided — return the same store (module-level singleton usage)
-  return store
+  const ctx = getStoreContext(store)
+  return useContext(ctx).value
 }

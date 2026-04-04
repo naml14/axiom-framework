@@ -51,8 +51,11 @@ export function bind(sig: Signal<string>, el: BindableElement): () => void {
   })
 
   // DOM → signal (via input event listener)
-  const handler = (e: Event) => {
-    sig.value = (e.target as HTMLInputElement).value
+  // Using el.value directly from the closure is more robust than (e.target as HTMLInputElement).value:
+  // it avoids incorrect casts for textarea/select, and is immune to event bubbling
+  // where e.target might point to a child element instead of the bound element.
+  const handler = () => {
+    sig.value = el.value
   }
   el.addEventListener('input', handler)
 
@@ -68,17 +71,31 @@ export function bind(sig: Signal<string>, el: BindableElement): () => void {
 // ADR-6: debounce + generation counter for async rules
 // ============================================================
 
-function isAsync<T>(rule: ValidationRule<T>): boolean {
-  // A rule is async if it returns a Promise (we detect via .then)
-  // We'll detect this at runtime by checking the return value
-  // Heuristic: if rule.constructor.name === 'AsyncFunction'
-  return rule.constructor.name === 'AsyncFunction'
+// Descriptor built once per validate() call — avoids repeated probe calls per value change.
+interface RuleDescriptor<T> {
+  rule: ValidationRule<T>
+  isAsync: boolean
 }
 
-function runSyncRules<T>(value: T, rules: ValidationRule<T>[]): string[] {
+// AsyncFunction constructor — obtained via Object.getPrototypeOf so we don't rely on
+// the string `constructor.name` (which breaks under minification). Using `instanceof`
+// against this constructor correctly identifies `async function` declarations and
+// `async () => {}` arrow functions without ever calling the rule.
+// Edge case NOT covered: a regular (non-async) function that returns Promise.resolve().
+// For validation rules this is extremely rare and can be addressed by making the rule
+// explicitly async if async behavior is needed.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const AsyncFunctionConstructor: FunctionConstructor = Object.getPrototypeOf(async function () {})
+  .constructor as FunctionConstructor
+
+function buildDescriptors<T>(rules: ValidationRule<T>[]): RuleDescriptor<T>[] {
+  return rules.map((rule) => ({ rule, isAsync: rule instanceof AsyncFunctionConstructor }))
+}
+
+function runSyncRules<T>(value: T, descriptors: RuleDescriptor<T>[]): string[] {
   const errors: string[] = []
-  for (const rule of rules) {
-    if (isAsync(rule)) continue // skip async rules in sync pass
+  for (const { rule, isAsync } of descriptors) {
+    if (isAsync) continue // skip async rules in sync pass
     const result = (rule as SyncRule<T>)(value)
     if (result !== null) {
       errors.push(result) // fail-fast: stop at first error
@@ -88,9 +105,9 @@ function runSyncRules<T>(value: T, rules: ValidationRule<T>[]): string[] {
   return errors
 }
 
-async function runAsyncRules<T>(value: T, rules: ValidationRule<T>[]): Promise<string[]> {
-  for (const rule of rules) {
-    if (!isAsync(rule)) continue // skip sync rules in async pass
+async function runAsyncRules<T>(value: T, descriptors: RuleDescriptor<T>[]): Promise<string[]> {
+  for (const { rule, isAsync } of descriptors) {
+    if (!isAsync) continue // skip sync rules in async pass
     const result = await (rule as AsyncRule<T>)(value)
     if (result !== null) {
       return [result] // fail-fast: stop at first async error
@@ -114,14 +131,16 @@ export function validate<T>(
   let generation = 0
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-  const hasAsyncRules = rules.some(isAsync)
+  // Pre-compute async/sync classification once — avoids repeated probing per value change
+  const descriptors = buildDescriptors(rules)
+  const hasAsyncRules = descriptors.some((d) => d.isAsync)
 
   // effect() returns a dispose function — store it to prevent memory leaks
   const disposeEffect = effect(() => {
     const val = source.value // track dependency
 
     // Run sync rules first (fail-fast)
-    const syncErrors = runSyncRules(val, rules)
+    const syncErrors = runSyncRules(val, descriptors)
     if (syncErrors.length > 0) {
       // Cancel any pending async debounce
       if (debounceTimer !== null) {
@@ -158,7 +177,7 @@ export function validate<T>(
       // Stale check (generation counter — ADR-6)
       if (currentGen !== generation) return
 
-      const asyncErrors = await runAsyncRules(val, rules)
+      const asyncErrors = await runAsyncRules(val, descriptors)
 
       // Second stale check after await
       if (currentGen !== generation) return
