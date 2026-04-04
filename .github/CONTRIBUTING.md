@@ -33,7 +33,7 @@ bun run demo       # interactive demo in browser
 
 This project uses [Conventional Commits](https://www.conventionalcommits.org/) because **release-please** reads commit history to determine version bumps and generate the CHANGELOG automatically.
 
-```
+```Text
 <type>(<scope>): <short description>
 
 [optional body]
@@ -44,7 +44,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) b
 ### Types and their effect on versioning
 
 | Type | When to use | Version bump |
-|------|-------------|--------------|
+| ------ | ------------- | -------------- |
 | `feat` | New feature or capability | **minor** (0.x.0) |
 | `fix` | Bug fix | **patch** (0.0.x) |
 | `perf` | Performance improvement | **patch** |
@@ -57,7 +57,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) b
 
 ### Examples
 
-```
+```Text
 feat(signals): add batch() API for grouping multiple signal updates
 fix(reflow): correct height calculation for empty flex containers
 perf(fast-path): avoid array allocation in measureSimple for single children
@@ -102,7 +102,7 @@ The only intentional DOM read is in `app.ts:getConstraints()`, which runs once p
 
 ## Project Structure
 
-```
+```Text
 src/
   signals.ts     — signal(), computed(), effect() — reactive core
   component.ts   — defineComponent() — component definition

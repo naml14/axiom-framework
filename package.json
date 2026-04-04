@@ -46,8 +46,8 @@
     "flex",
     "typescript"
   ],
-  "author": "naml14",
-  "license": "MIT",
+  "author": "Nelson Andrés Mora López <na2003ml.am@gmail.com>",
+  "license": "MIT OR Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/naml14/axiom-framework.git"

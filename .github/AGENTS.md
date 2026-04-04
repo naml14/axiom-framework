@@ -14,7 +14,7 @@ El DOM no es la fuente de verdad. Es write-only output después de que todos los
 
 ### El Mantra
 
-```
+```Text
 prepare()  → trabajo costoso UNA vez (análisis, métricas, estructura)
 reflow()   → aritmética pura en cada frame (posiciones, tamaños)
 commit()   → escrituras DOM batcheadas (removes → updates → inserts)
@@ -39,7 +39,7 @@ commit()   → escrituras DOM batcheadas (removes → updates → inserts)
 
 ## Arquitectura
 
-```
+```Text
 ┌─────────────────────────────────────────────────────────────┐
 │                     PUBLIC API                               │
 │  signal()  computed()  effect()  defineComponent()  createApp() │
@@ -60,7 +60,7 @@ commit()   → escrituras DOM batcheadas (removes → updates → inserts)
 
 ### El ciclo de actualización
 
-```
+```Text
 Signal cambia
     │
     ▼
@@ -80,7 +80,7 @@ performUpdate():
 
 ## Estructura de Archivos
 
-```
+```Text
 src/
   signals.ts        — Signal primitives (push effects + pull computed)
   component.ts      — defineComponent() — callable component definitions
@@ -115,7 +115,7 @@ demo/
 ### Naming
 
 | Patrón | Ejemplos | Por qué |
-|--------|----------|---------|
+| -------- | ---------- | --------- |
 | `signal` | `signal()`, `computed()`, `effect()` | Término universal de reactividad |
 | `define` | `defineComponent()` | Patrón conocido (Vue, Pinia) |
 | `create` | `createApp()`, `createLayoutResult()` | Instanciar y configurar |
@@ -144,7 +144,7 @@ demo/
 ## Invariantes de Performance
 
 | Operación | Target | Restricciones |
-|-----------|--------|---------------|
+| ----------- | -------- | -------------- |
 | `prepare()` por componente | < 5ms | Una vez por cambio de forma |
 | `reflow()` por componente | < 0.5ms | Sin DOM, sin strings, sin allocations |
 | `commit()` por update | < 2ms | Escrituras secuenciales, sin lecturas |
@@ -152,7 +152,7 @@ demo/
 
 ### Hot Path Prohibiciones
 
-```
+```Text
 ❌ DOM reads (getBoundingClientRect, offsetHeight, clientWidth en hot path)
 ❌ Canvas calls (measureText)
 ❌ String operations (concat, split, template literals)
@@ -162,7 +162,7 @@ demo/
 
 ### Hot Path Permitido
 
-```
+```Text
 ✅ Aritmética sobre Float32Array
 ✅ Map/Set lookups
 ✅ Comparaciones
@@ -276,7 +276,7 @@ const Card = defineComponent((props: { title: string; body: string }) => ({
 
 ### Root height
 
-El height calculado del root node (índice 0) se aplica al contenedor DOM: `root.style.height = \`${rootHeight}px\``. Esto asegura que el contenido sea visible sin `overflow: hidden`.
+El height calculado del root node (índice 0) se aplica al contenedor DOM: `root.style.height = \`${rootHeight}px\``. Esto asegura que el contenido sea visible sin`overflow: hidden`.
 
 ---
 
@@ -308,7 +308,7 @@ El height calculado del root node (índice 0) se aplica al contenedor DOM: `root
 ## Anti-patterns (NO hacer)
 
 | Anti-pattern | Por qué | Equivalente |
-|--------------|---------|-------------|
+| -------------- | --------- | ------------- |
 | Leer DOM en reflow | Reintroduce reflows al hot path | `getBoundingClientRect()` en loop |
 | Mover lógica compleja al hot path | Regresa el benchmark | Validaciones exhaustivas por frame |
 | Lookup tables para valores de ambiente | No confiables cross-browser | Hardcodear font metrics |
@@ -344,7 +344,7 @@ El height calculado del root node (índice 0) se aplica al contenedor DOM: `root
 ## Roadmap
 
 | Fase | Qué | Estado |
-|------|-----|--------|
+| ------ | ----- | -------- |
 | **Fase 1** | Signals + Componentes | ✅ Completado |
 | **Fase 2** | Reflow Engine (layout aritmético) | ✅ Completado |
 | **Fase 3** | Commit Engine (DOM batch writes) | ✅ Completado |
