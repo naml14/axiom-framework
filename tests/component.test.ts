@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'bun:test'
 import { defineComponent } from '../src/component.js'
+import type { ElementNode, TextNode, FragmentNode } from '../src/types.js'
 
 describe('defineComponent', () => {
   test('wraps a function and returns ComponentDefinition with unique _id', () => {
@@ -29,7 +30,8 @@ describe('defineComponent', () => {
 
     const result = def._fn({ title: 'Test', count: 42 })
     expect(result.type).toBe('element')
-    expect(result.tag).toBe('div')
+    const el = result as ElementNode
+    expect(el.tag).toBe('div')
   })
 
   test('component with no props', () => {
@@ -37,7 +39,9 @@ describe('defineComponent', () => {
     const def = defineComponent(fn)
 
     const result = def._fn()
-    expect(result.content).toBe('no props')
+    expect(result.type).toBe('text')
+    const txt = result as TextNode
+    expect(txt.content).toBe('no props')
   })
 
   test('component returning fragment', () => {
@@ -52,7 +56,8 @@ describe('defineComponent', () => {
 
     const result = def._fn()
     expect(result.type).toBe('fragment')
-    expect(result.children).toHaveLength(2)
+    const frag = result as FragmentNode
+    expect(frag.children).toHaveLength(2)
   })
 
   test('component returning element with children', () => {
@@ -69,9 +74,10 @@ describe('defineComponent', () => {
 
     const result = def._fn()
     expect(result.type).toBe('element')
-    expect(result.tag).toBe('div')
-    expect(result.classes).toEqual(['card'])
-    expect(result.attrs).toEqual({ 'data-id': '1' })
-    expect(result.children).toHaveLength(1)
+    const el = result as ElementNode
+    expect(el.tag).toBe('div')
+    expect(el.classes).toEqual(['card'])
+    expect(el.attrs).toEqual({ 'data-id': '1' })
+    expect(el.children).toHaveLength(1)
   })
 })

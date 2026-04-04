@@ -5,6 +5,9 @@ import type {
 
 import type { DOMOperation } from './diff.js'
 
+// Re-export for consumers that import from commit
+export type { DOMOperation } from './diff.js'
+
 import {
   getNodeIndex,
   getNodeType,
