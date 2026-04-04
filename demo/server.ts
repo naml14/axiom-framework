@@ -8,7 +8,23 @@ const ROOT_DIR = join(import.meta.dir, '..')
 const DEMO_DIR = import.meta.dir
 
 async function doBuild(): Promise<boolean> {
-  console.log('📦 Building demo...')
+  console.log('📦 Building framework (dist)...')
+
+  // Step 1: compile framework → dist/ (tsc)
+  const tsc = Bun.spawnSync(['bunx', 'tsc', '--project', 'tsconfig.build.json'], {
+    cwd: ROOT_DIR,
+    stdout: 'pipe',
+    stderr: 'pipe',
+  })
+  if (tsc.exitCode !== 0) {
+    console.error('❌ Framework typecheck/build failed:')
+    console.error(new TextDecoder().decode(tsc.stderr))
+    return false
+  }
+
+  console.log('📦 Building demo bundle (app.js)...')
+
+  // Step 2: bundle demo → demo/app.js (using dist/ as source)
   const result = await Bun.build({
     entrypoints: ['demo/app.ts'],
     outdir: 'demo',
@@ -16,14 +32,14 @@ async function doBuild(): Promise<boolean> {
   })
 
   if (!result.success) {
-    console.error('❌ Build failed:')
+    console.error('❌ Demo bundle failed:')
     for (const msg of result.logs) {
       console.error(msg)
     }
     return false
   }
 
-  console.log('✅ Built demo/app.js')
+  console.log('✅ Built demo/app.js (from dist/)')
   return true
 }
 

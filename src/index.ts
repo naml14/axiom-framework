@@ -22,6 +22,27 @@ export type { App, AppOptions, RenderMetrics } from './app.js'
 export { prepare } from './prepare.js'
 export { reflow } from './reflow.js'
 
+// --- Context ---
+export {
+  createContext,
+  withContext,
+  useContext,
+  createStore,
+  provideStore,
+  injectStore,
+} from './context.js'
+export type { Context, StoreInstance } from './context.js'
+
+// --- Forms ---
+export { bind, validate, required, minLength, maxLength, pattern } from './forms.js'
+export type {
+  ValidationRule,
+  ValidationResult,
+  ValidateOptions,
+  SyncRule,
+  AsyncRule,
+} from './forms.js'
+
 // --- Types ---
 export type {
   // Signals

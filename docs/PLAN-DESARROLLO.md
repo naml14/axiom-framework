@@ -177,7 +177,7 @@ src/
 
 demo/
   index.html        — Demo page
-  app.ts            — Demo application
+  app.ts            — Demo application (importa desde ../dist/index.js)
 ```
 
 ---
@@ -344,7 +344,7 @@ No es una lista aburrida. Es una **dashboard editorial interactiva** que hace co
 #### Componentes del Demo
 
 ```typescript
-import { signal, computed, defineComponent, createApp } from './src/index.js'
+import { signal, computed, defineComponent, createApp } from './dist/index.js'
 
 // === Signals ===
 const containerWidth = signal(800)

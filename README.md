@@ -315,7 +315,7 @@ bun install
 bun test           # run tests
 bun run typecheck  # type check
 bun run build      # emit dist/
-bun run demo       # run the interactive demo
+bun run demo       # run the interactive demo (la demo importa desde ./dist)
 ```
 
 Tests use [Bun's built-in test runner](https://bun.sh/docs/cli/test) and [Happy DOM](https://github.com/capricorn86/happy-dom) for DOM simulation.

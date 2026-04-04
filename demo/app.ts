@@ -1,5 +1,5 @@
-import { signal, defineComponent, createApp } from '../src/index.js'
-import type { ComponentNode } from '../src/index.js'
+import { signal, defineComponent, createApp } from '../dist/index.js'
+import type { ComponentNode } from '../dist/index.js'
 import { TEXTS, TAGS, COLORS } from './data.js'
 import { computeColumns, getTagWidth, distributeToColumns } from './layout.js'
 import { TagBubble, Card, HeroCard } from './components.js'
