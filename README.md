@@ -5,7 +5,7 @@
 A web framework with **two-phase rendering**. All calculations happen in memory. The hot path is pure arithmetic. Zero DOM reads.
 
 [![CI](https://github.com/naml14/axiom-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/naml14/axiom-framework/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/axiom-framework.svg)](https://www.npmjs.com/package/axiom-framework)
+[![npm version](https://img.shields.io/badge/npm-v0.2.0-blue)](https://www.npmjs.com/package/axiom-framework)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---

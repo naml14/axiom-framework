@@ -1,36 +1,40 @@
-// Axiom — Public API
+// ============================================================
+// axiom-framework — Public API
+// ============================================================
+//
+// This is the ONLY surface consumers should import from.
+// Internal modules (prepare internals, diff, commit, scheduler)
+// are NOT exported here — they are implementation details that
+// can change between minor versions without semver guarantees.
+// ============================================================
+
+// --- Reactivity ---
 export { signal, computed, effect } from './signals.js'
+
+// --- Components ---
 export { defineComponent } from './component.js'
-export {
-  prepare,
-  getMetrics,
-  getNodeType,
-  getTag,
-  getChildren,
-  getNodeIndex,
-  countNodes,
-  forEachNode,
-  getLayoutProps,
-  getTextHandle,
-  getKey,
-  getClasses,
-  getAttrs,
-  getTextContent,
-} from './prepare.js'
-export { reflow, createLayoutResult } from './reflow.js'
-export { createApp, type App, type AppOptions, type RenderMetrics } from './app.js'
-export { scheduleRender, cancelScheduled, resetScheduler, setScheduler, type SchedulerFn } from './scheduler.js'
-export { fastDiff, fullDiff, type DOMOperation } from './diff.js'
-export { applyOps, commitFull, type DOMState } from './commit.js'
+
+// --- App ---
+export { createApp } from './app.js'
+export type { App, AppOptions, RenderMetrics } from './app.js'
+
+// --- Layout (advanced — for custom rendering pipelines) ---
+export { prepare } from './prepare.js'
+export { reflow } from './reflow.js'
+
+// --- Types ---
 export type {
+  // Signals
   Signal,
   ComputedSignal,
+  // Components
   ComponentDefinition,
-  PreparedComponent,
   ComponentNode,
   ElementNode,
   TextNode,
   FragmentNode,
+  // Layout
+  PreparedComponent,
   LayoutResult,
   LayoutConstraints,
   LayoutProps,

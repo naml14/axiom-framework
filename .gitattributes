@@ -2,6 +2,9 @@
 # Windows checkouts will still use CRLF locally if core.autocrlf=true
 * text=auto eol=lf
 
+# bun.lock is text (YAML-like), must be LF
+bun.lock text eol=lf
+
 # Binary files — never modify line endings
 *.png binary
 *.jpg binary
@@ -13,4 +16,3 @@
 *.ttf binary
 *.eot binary
 *.zip binary
-*.lock binary

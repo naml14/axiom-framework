@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Override: do NOT inject bun-types into emitted .d.ts files.
+    // Consumers use Node.js or bundlers — they don't have bun-types installed.
+    // The base tsconfig.json keeps bun-types for IDE support in src/ and tests/.
+    "types": []
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests", "demo", "pretext-main"]
+}
