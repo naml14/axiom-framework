@@ -29,7 +29,7 @@
     "typecheck": "bunx tsc --noEmit",
     "test": "bun test",
     "prepublishOnly": "bun run typecheck && bun test && bun run build",
-    "demo:build": "bun build demo/app.ts --outfile demo/app.js --target browser",
+    "demo:build": "bun run build && bun build demo/app.ts --outfile demo/app.js --target browser",
     "run:demo": "bun run demo/server.ts --no-build",
     "demo": "bun run demo:build && bun run run:demo",
     "demo:watch": "bun run demo/server.ts --watch"
