@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug Fixes
 
-* **forms,context:** address PR review findings from sourcery-ai and gemini ([e89413e](https://github.com/naml14/axiom-framework/commit/e89413e6522d01ed435e9ef28946575e6ab9398b))
+* **forms,context:** address PR review findings from Sourcery AI and Gemini ([e89413e](https://github.com/naml14/axiom-framework/commit/e89413e6522d01ed435e9ef28946575e6ab9398b))
 * **tests:** use GlobalWindow and mount select to body to fix happy-dom select tests ([599782d](https://github.com/naml14/axiom-framework/commit/599782d37d2fb3abd7f759aeeef7310198e8c06a))
 
 ## [0.2.2](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.1...axiom-framework-v0.2.2) (2026-04-04)
