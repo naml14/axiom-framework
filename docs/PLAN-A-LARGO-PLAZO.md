@@ -9,9 +9,32 @@ Todo manteniendo **Bun** como runtime, **cero dependencias externas** (salvo las
 
 ---
 
-## Plan de Desarrollo para la Próxima Versión (v0.3.0 → v1.0.0)
+## Cómo funciona el versionado (release-please)
+
+Este proyecto usa [release-please](https://github.com/googleapis/release-please) con la siguiente configuración en `release-please-config.json`:
+
+```json
+"bump-minor-pre-major": true
+"bump-patch-for-minor-pre-major": true
+```
+
+Mientras la versión sea `< 1.0.0`, las reglas son:
+
+| Tipo de commit | Bump generado | Ejemplo |
+|---|---|---|
+| `fix:` | **patch** | `0.2.3 → 0.2.4` |
+| `feat:` | **patch** (reducido de minor) | `0.2.3 → 0.2.4` |
+| `feat!:` o `BREAKING CHANGE:` | **minor** (reducido de major) | `0.2.3 → 0.3.0` |
+
+**Consecuencia directa:** cada sprint de nuevas funcionalidades (`feat:`) genera un bump de **patch**, no de minor. Para llegar a `1.0.0` se usará `release-as: 1.0.0` en la config cuando el proyecto esté listo (ver Sprint 7).
+
+---
+
+## Plan de Desarrollo (v0.2.3 → v1.0.0)
 
 Basado en el código existente (`signals.ts`, `component.ts`, `app.ts`, `prepare.ts`, `reflow.ts`, `commit.ts`, `diff.ts`, `flex.ts`, `fast-path.ts`, `scheduler.ts`, `types.ts`).
+
+Estado actual: **v0.2.3** — signals, layout engine, forms, context/store.
 
 ---
 
@@ -19,7 +42,47 @@ Basado en el código existente (`signals.ts`, `component.ts`, `app.ts`, `prepare
 
 *Objetivo: funcionalidades mínimas para un SPA completo + SSR que permita construir la landing page.*
 
-### Sprint 1 – Enrutador declarativo (SPA)
+### ✅ Sprint 3 – Formularios reactivos (bindings y validación) → **v0.2.3** (lanzado)
+
+**Commits:** `feat(forms):` + `feat(context):` → patch bump `0.2.2 → 0.2.3`
+
+**Qué se implementó:**
+- `bind(signal, inputElement)` → two-way binding para `input`, `textarea`, `select`.
+- `validate(signal, rules)` → señal derivada con debounce + generación para reglas async.
+- Built-ins: `required`, `minLength`, `maxLength`, `pattern` en `forms.ts`.
+
+---
+
+### ✅ Sprint 4 – Estado global (Context / Store) → **v0.2.3** (lanzado, junto con Sprint 3)
+
+**Commits:** `feat(context):` → incluido en el mismo patch bump `0.2.2 → 0.2.3`
+
+**Qué se implementó:**
+- `createContext<T>`, `withContext`, `useContext` → scoping por call-stack (como React/Solid).
+- `createStore`, `provideStore`, `injectStore` → DI basado en el mismo mecanismo de contexto.
+- Todo en `context.ts` (~120 líneas, cero dependencias externas).
+
+---
+
+### Sprint 5 – Portales (renderizado fuera del nodo raíz) → **v0.2.4**
+
+**Commits esperados:** `feat(portal):` → patch bump `0.2.3 → 0.2.4`
+
+**Qué falta:** Modales, tooltips, notificaciones necesitan DOM fuera del `root`.  
+**Implementación:** `createPortal(children, targetElement)`.
+
+- `Portal` es un componente especial que en `commit` escribe directamente en `targetElement` en lugar de en el árbol padre.
+- Durante `prepare` y `reflow`, el portal se comporta como un nodo vacío (no ocupa layout).
+- Manejar la limpieza del portal en `unmount`.
+
+**Impacto:** Modificar `commit.ts` (fase de inserción) y `prepare.ts` (marcar tipo `'portal'`).  
+**Pruebas:** Portal que se mueve entre padres, eliminación del DOM.
+
+---
+
+### Sprint 1 – Enrutador declarativo (SPA) → **v0.2.5**
+
+**Commits esperados:** `feat(router):` → patch bump `0.2.4 → 0.2.5`
 
 **Qué falta:** No hay navegación entre páginas.  
 **Implementación:** Router propio sin dependencias, basado en History API y señales.
@@ -29,7 +92,7 @@ Basado en el código existente (`signals.ts`, `component.ts`, `app.ts`, `prepare
 - Integración con el ciclo de renderizado: cuando cambia `$route`, se re‑ejecuta el componente raíz (efecto automático).
 - Lazy loading de componentes: `defineAsyncComponent(() => import('./Page.js'))`.
 
-**Impacto en archivos:**  
+**Impacto en archivos:**
 
 - Nuevo `router.ts` (usa `signal`, `effect` existentes).
 - Modificar `createApp` opcionalmente para aceptar `router` y suscribirse a cambios.
@@ -38,7 +101,9 @@ Basado en el código existente (`signals.ts`, `component.ts`, `app.ts`, `prepare
 
 ---
 
-### Sprint 2 – SSR básico (renderizado en servidor)
+### Sprint 2 – SSR básico (renderizado en servidor) → **v0.2.6**
+
+**Commits esperados:** `feat(ssr):` → patch bump `0.2.5 → 0.2.6`
 
 **Qué falta:** No se puede renderizar en servidor (necesario para SEO y rendimiento de landing page).  
 **Implementación:** Usar `Bun.serve` y reutilizar el pipeline `prepare` + `reflow` en Node.js/Bun sin DOM.
@@ -60,55 +125,9 @@ Basado en el código existente (`signals.ts`, `component.ts`, `app.ts`, `prepare
 
 ---
 
-### Sprint 3 – Formularios reactivos (bindings y validación)
+### Sprint 6 – Mejoras de DX (hot reload, errores, profiling) → **v0.2.7**
 
-**Qué falta:** No hay bindings de dos vías ni validación integrada.  
-**Implementación:** Pequeña extensión de señales + directivas.
-
-- `bind(signal, inputElement)` → actualiza señal cuando el input cambia, y viceversa.
-- `validate(signal, rules)` → señal derivada que devuelve errores.
-- Componentes `Input`, `Form` de ejemplo (opcional, pero útil para documentación).
-
-**Impacto:**
-
-- Extender `signals.ts` con utilidades (no cambios en núcleo).
-- Nuevo `forms.ts` (usando `effect` para escuchar eventos DOM).  
-- Opcional: integración con `on` de `ElementNode` para eventos personalizados.
-
-**Pruebas:** Binding, validación síncrona/asíncrona.
-
----
-
-### Sprint 4 – Estado global (Context / Store)
-
-**Qué falta:** No hay forma de compartir estado entre componentes sin prop drilling.  
-**Implementación:** API ligera basada en señales y contexto.
-
-- `createContext<T>(initialValue: T)` → devuelve `Provider` y `useContext`.
-- `Provider` es un componente que inyecta una señal en el árbol mediante un `Map` débil (sin dependencias externas).
-- `useContext(context)` → devuelve la señal del provider más cercano.
-
-**Alternativa más simple:** `createStore` que devuelve un objeto con señales y un `provideStore`/`injectStore`.  
-**Impacto:** Nuevo `context.ts` (menos de 100 líneas).  
-**Pruebas:** Acceso a contexto anidado, actualizaciones reactivas.
-
----
-
-### Sprint 5 – Portales (renderizado fuera del nodo raíz)
-
-**Qué falta:** Modales, tooltips, notificaciones necesitan DOM fuera del `root`.  
-**Implementación:** `createPortal(children, targetElement)`.  
-
-- `Portal` es un componente especial que en `commit` escribe directamente en `targetElement` en lugar de en el árbol padre.
-- Durante `prepare` y `reflow`, el portal se comporta como un nodo vacío (no ocupa layout).
-- Manejar la limpieza del portal en `unmount`.
-
-**Impacto:** Modificar `commit.ts` (fase de inserción) y `prepare.ts` (marcar tipo `'portal'`).  
-**Pruebas:** Portal que se mueve entre padres, eliminación del DOM.
-
----
-
-### Sprint 6 – Mejoras de DX (hot reload, errores, profiling)
+**Commits esperados:** `feat(devtools):` → patch bump `0.2.6 → 0.2.7`
 
 **Qué falta:** Experiencia de desarrollo aún básica.  
 **Implementación:**
@@ -128,7 +147,11 @@ Basado en el código existente (`signals.ts`, `component.ts`, `app.ts`, `prepare
 
 ---
 
-### Sprint 7 – Construir la landing page con Axiom
+### Sprint 7 – Construir la landing page con Axiom → **v1.0.0**
+
+**Commits esperados:** `feat!: launch axiom-framework v1.0.0` con `release-as: 1.0.0` en `release-please-config.json`
+
+> **Nota de versionado:** Este sprint marca la madurez del framework. El salto de `0.2.x` a `1.0.0` requiere agregar temporalmente `"release-as": "1.0.0"` al `release-please-config.json` antes de hacer el merge del Release PR. Una vez lanzado se elimina esa línea.
 
 **Objetivo:** Demostrar que el framework es autosuficiente.
 
@@ -192,7 +215,7 @@ Basado en el código existente (`signals.ts`, `component.ts`, `app.ts`, `prepare
 - **Mantener la compatibilidad:** Las nuevas funcionalidades no deben romper la API actual. Usar `export` adicionales, no modificar contratos existentes.
 - **Pruebas:** Cada sprint debe incluir pruebas con `Bun.test` (ya tienen infraestructura). Para SSR, usar `Bun.serve` local.
 - **Documentación:** Actualizar el README y agregar guías de cada nueva característica.
-- **Versionado:** Seguir Semver. La Parte A puede lanzarse como `v0.3.0`, `v0.4.0`, etc., hasta `v1.0.0` después de la landing page.
+- **Versionado:** Con la config actual de release-please (`bump-patch-for-minor-pre-major: true`), cada sprint de `feat:` genera un patch bump. El roadmap previsto es `0.2.3 → 0.2.4 → 0.2.5 → 0.2.6 → 0.2.7 → 1.0.0`. El salto final a `1.0.0` se hace manualmente con `release-as` (ver Sprint 7).
 
 ---
 
