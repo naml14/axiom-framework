@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.2.3](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.2...axiom-framework-v0.2.3) (2026-04-05)
+
+
+### Features
+
+* **context,forms:** add reactive context and forms modules for v0.3.0 ([a8b9060](https://github.com/naml14/axiom-framework/commit/a8b9060a2fb2c74a79827cfa3aa3b661fc3ff70d))
+* **context,forms:** add reactive context and forms modules for v0.3.0 ([d619b1f](https://github.com/naml14/axiom-framework/commit/d619b1fe60237ebde747dc90bdf75408decae0e4)), closes [#4](https://github.com/naml14/axiom-framework/issues/4)
+
+
+### Bug Fixes
+
+* **forms,context:** address PR review findings from Sourcery AI and Gemini ([e89413e](https://github.com/naml14/axiom-framework/commit/e89413e6522d01ed435e9ef28946575e6ab9398b))
+* **tests:** use GlobalWindow and mount select to body to fix happy-dom select tests ([599782d](https://github.com/naml14/axiom-framework/commit/599782d37d2fb3abd7f759aeeef7310198e8c06a))
+
 ## [0.2.2](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.1...axiom-framework-v0.2.2) (2026-04-04)
 
 

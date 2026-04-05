@@ -1,6 +1,6 @@
 {
   "name": "axiom-framework",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Web framework with two-phase rendering. All calculations happen in memory. The hot path is pure arithmetic. Zero DOM reads.",
   "type": "module",
   "main": "dist/index.js",
