@@ -26,6 +26,70 @@ beforeAll(() => {
 // ============================================================
 
 describe('bind', () => {
+  test('binds textarea bidirectionally and disposes correctly', () => {
+    const sig = signal('hello textarea')
+    const textarea = happyWindow.document.createElement('textarea') as unknown as HTMLTextAreaElement
+
+    const dispose = bind(sig, textarea)
+
+    // initial value from signal
+    expect(textarea.value).toBe('hello textarea')
+
+    // DOM -> signal on input
+    textarea.value = 'updated from textarea'
+    textarea.dispatchEvent(new happyWindow.Event('input') as unknown as Event)
+    expect(sig.value).toBe('updated from textarea')
+
+    // signal -> DOM
+    sig.value = 'updated from signal'
+    expect(textarea.value).toBe('updated from signal')
+
+    // dispose stops DOM -> signal updates
+    dispose()
+    textarea.value = 'changed after dispose'
+    textarea.dispatchEvent(new happyWindow.Event('input') as unknown as Event)
+    expect(sig.value).toBe('updated from signal')
+  })
+
+  test('binds select bidirectionally and disposes correctly', () => {
+    const sig = signal('b')
+    const select = happyWindow.document.createElement('select') as unknown as HTMLSelectElement
+
+    const optionA = happyWindow.document.createElement('option')
+    optionA.value = 'a'
+    optionA.textContent = 'Option A'
+
+    const optionB = happyWindow.document.createElement('option')
+    optionB.value = 'b'
+    optionB.textContent = 'Option B'
+
+    const optionC = happyWindow.document.createElement('option')
+    optionC.value = 'c'
+    optionC.textContent = 'Option C'
+
+    select.append(optionA, optionB, optionC)
+
+    const dispose = bind(sig, select)
+
+    // initial value from signal
+    expect(select.value).toBe('b')
+
+    // DOM -> signal on change
+    select.value = 'c'
+    select.dispatchEvent(new happyWindow.Event('change') as unknown as Event)
+    expect(sig.value).toBe('c')
+
+    // signal -> DOM
+    sig.value = 'a'
+    expect(select.value).toBe('a')
+
+    // dispose stops DOM -> signal updates
+    dispose()
+    select.value = 'b'
+    select.dispatchEvent(new happyWindow.Event('change') as unknown as Event)
+    expect(sig.value).toBe('a')
+  })
+
   test('sets initial input value from signal', () => {
     const sig = signal('hello')
     const input = happyWindow.document.createElement('input') as unknown as HTMLInputElement
