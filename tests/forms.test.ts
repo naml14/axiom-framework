@@ -1,13 +1,17 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
-import { Window } from 'happy-dom'
+import { GlobalWindow } from 'happy-dom'
 import { signal } from '../src/signals.js'
 import { bind, validate, required, minLength, maxLength, pattern } from '../src/forms.js'
 
-// Setup happy-dom globals for DOM tests
-let happyWindow: Window
+// Setup happy-dom globals for DOM tests.
+// We use GlobalWindow (extends Window) because it correctly sets [PropertySymbol.window]
+// on every element it creates — required for HTMLSelectElement.updateSelectedness() to work.
+// Plain Window with Object.assign(globalThis, ...) leaves elements with an undefined
+// [PropertySymbol.window], causing crashes in querySelectorAll when options are appended.
+let happyWindow: GlobalWindow
 
 beforeAll(() => {
-  happyWindow = new Window()
+  happyWindow = new GlobalWindow()
   // Inject DOM globals so our bind() instanceof checks work
   Object.assign(globalThis, {
     document: happyWindow.document,
@@ -16,8 +20,6 @@ beforeAll(() => {
     HTMLSelectElement: happyWindow.HTMLSelectElement,
     Event: happyWindow.Event,
     Window: happyWindow.constructor,
-    // Required by happy-dom's HTMLSelectElement.value setter (it runs querySelectorAll internally)
-    SyntaxError: happyWindow.SyntaxError,
   })
 })
 
@@ -53,7 +55,14 @@ describe('bind', () => {
 
   test('binds select bidirectionally and disposes correctly', () => {
     const sig = signal('b')
-    const select = happyWindow.document.createElement('select') as unknown as HTMLSelectElement
+    // Keep as `any` for happy-dom DOM operations — cast to HTMLSelectElement only when passing to bind()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const select = happyWindow.document.createElement('select') as any
+
+    // happy-dom v20.8.9: HTMLSelectElement must be mounted to the document before
+    // appending options — otherwise updateSelectedness() calls querySelectorAll and
+    // crashes because this.window.SyntaxError is undefined on detached elements.
+    happyWindow.document.body.appendChild(select)
 
     const optionA = happyWindow.document.createElement('option')
     optionA.value = 'a'
@@ -69,14 +78,14 @@ describe('bind', () => {
 
     select.append(optionA, optionB, optionC)
 
-    const dispose = bind(sig, select)
+    const dispose = bind(sig, select as unknown as HTMLSelectElement)
 
     // initial value from signal
     expect(select.value).toBe('b')
 
-    // DOM -> signal on change
+    // DOM -> signal on input event (bind() uses 'input' consistently for all element types)
     select.value = 'c'
-    select.dispatchEvent(new happyWindow.Event('change') as unknown as Event)
+    select.dispatchEvent(new happyWindow.Event('input') as unknown as Event)
     expect(sig.value).toBe('c')
 
     // signal -> DOM
@@ -86,7 +95,7 @@ describe('bind', () => {
     // dispose stops DOM -> signal updates
     dispose()
     select.value = 'b'
-    select.dispatchEvent(new happyWindow.Event('change') as unknown as Event)
+    select.dispatchEvent(new happyWindow.Event('input') as unknown as Event)
     expect(sig.value).toBe('a')
   })
 
