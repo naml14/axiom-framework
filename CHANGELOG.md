@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.2.4](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.3...axiom-framework-v0.2.4) (2026-04-11)
+
+
+### Features
+
+* **portal:** add createPortal for rendering outside the component tree ([8ad5896](https://github.com/naml14/axiom-framework/commit/8ad58969bc2053e5604266cf08608841395a67af))
+* **portal:** add createPortal for rendering outside the component tree ([ee397b5](https://github.com/naml14/axiom-framework/commit/ee397b5b456a45696a6153e2a0d0de7089f4b514))
+
+
+### Bug Fixes
+
+* **portal:** address PR review findings — cleanup safety, layout, and diff routing ([9d25415](https://github.com/naml14/axiom-framework/commit/9d25415cd5318d846679d5eccd44b5a07b8df2f6))
+
 ## [0.2.3](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.2...axiom-framework-v0.2.3) (2026-04-05)
 
 
