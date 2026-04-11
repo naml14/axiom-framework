@@ -25,7 +25,6 @@ export interface Router {
   replace(path: string): void
   go(n: number): void
   dispose(): void
-  dispose(): void
 }
 
 // ============================================================
