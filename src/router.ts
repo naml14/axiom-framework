@@ -63,7 +63,12 @@ function assignSafeKey(
   value: string
 ): void {
   if (!key || UNSAFE_OBJECT_KEYS.has(key)) return
-  target[key] = value
+  Object.defineProperty(target, key, {
+    value,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  })
 }
 
 // ============================================================

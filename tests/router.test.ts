@@ -450,6 +450,37 @@ describe('router: app + async integration (RED)', () => {
     }
     expect(out.children).toEqual([])
   })
+
+  test('async route component renders through router+app after loader resolves', async () => {
+    const Real = makeComponent('Real (router)')
+    const loader = mock(() => Promise.resolve({ default: Real }))
+    const AsyncPage = defineAsyncComponent(loader)
+
+    const router = createRouter([{ path: '/async', component: AsyncPage }])
+
+    const Root = defineComponent(() => {
+      const matched = router.$route.value.matched?.component
+      if (matched) {
+        return matched._fn(undefined as never)
+      }
+      return { type: 'fragment' as const, children: [] }
+    })
+
+    const rootEl = document.createElement('div')
+    const app = createApp(Root, rootEl, { pretext: fakePretext, router })
+
+    app.mount()
+    router.push('/async')
+
+    expect(rootEl.textContent ?? '').toBe('')
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootEl.textContent ?? '').toContain('Real (router)')
+    expect(loader).toHaveBeenCalledTimes(1)
+
+    app.unmount()
+  })
 })
 
 describe('router: edge cases (RED)', () => {
