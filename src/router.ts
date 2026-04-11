@@ -24,6 +24,7 @@ export interface Router {
   push(path: string): void
   replace(path: string): void
   go(n: number): void
+  dispose(): void
 }
 
 // ============================================================
@@ -42,16 +43,54 @@ interface ParsedRoute {
   isWildcard: boolean
 }
 
+const UNSAFE_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor'])
+
+function createSafeDict(): Record<string, string> {
+  return Object.create(null) as Record<string, string>
+}
+
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+function assignSafeKey(
+  target: Record<string, string>,
+  key: string,
+  value: string
+): void {
+  if (!key || UNSAFE_OBJECT_KEYS.has(key)) return
+  target[key] = value
+}
+
 // ============================================================
 // Utilities (signatures only in Phase 1)
 // ============================================================
 
 function normalizePath(pathname: string): string {
   if (!pathname) return '/'
+  if (!pathname.startsWith('/')) {
+    pathname = `/${pathname}`
+  }
   if (pathname.length > 1 && pathname.endsWith('/')) {
     return pathname.slice(0, -1)
   }
   return pathname
+}
+
+function normalizeFullPath(fullPath: string): string {
+  const { pathname, query, hash } = parseURL(fullPath)
+  const normalizedPathname = normalizePath(pathname)
+  const search = Object.keys(query).length
+    ? `?${Object.entries(query)
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+        .join('&')}`
+    : ''
+  const hashSuffix = hash ? `#${hash}` : ''
+  return `${normalizedPathname}${search}${hashSuffix}`
 }
 
 function parseURL(fullPath: string): {
@@ -71,17 +110,16 @@ function parseURL(fullPath: string): {
   const queryStr = queryIdx >= 0 ? rest.slice(queryIdx + 1) : ''
   const pathname = queryIdx >= 0 ? rest.slice(0, queryIdx) : rest
 
-  const query: Record<string, string> = {}
+  const query = createSafeDict()
   if (queryStr) {
     for (const pair of queryStr.split('&')) {
       if (!pair) continue
       const eqIdx = pair.indexOf('=')
-      if (eqIdx < 0) continue
-      const key = decodeURIComponent(pair.slice(0, eqIdx))
-      const value = decodeURIComponent(pair.slice(eqIdx + 1))
-      if (key) {
-        query[key] = value
-      }
+      const keyRaw = eqIdx < 0 ? pair : pair.slice(0, eqIdx)
+      const valueRaw = eqIdx < 0 ? '' : pair.slice(eqIdx + 1)
+      const key = safeDecode(keyRaw)
+      const value = safeDecode(valueRaw)
+      assignSafeKey(query, key, value)
     }
   }
 
@@ -125,19 +163,20 @@ function matchRoute(
 
   for (const parsed of parsedRoutes) {
     if (parsed.isWildcard) {
-      return { route: parsed.route, params: {} }
+      return { route: parsed.route, params: createSafeDict() }
     }
 
     if (parsed.segments.length !== urlSegments.length) {
       continue
     }
 
-    const params: Record<string, string> = {}
+    const params = createSafeDict()
     let matched = true
 
     for (let i = 0; i < parsed.segments.length; i++) {
       const segment = parsed.segments[i]!
-      const urlSegment = urlSegments[i]!
+      const rawUrlSegment = urlSegments[i]!
+      const urlSegment = safeDecode(rawUrlSegment)
 
       if (segment.kind === 'static') {
         if (segment.value !== urlSegment) {
@@ -148,7 +187,7 @@ function matchRoute(
       }
 
       if (segment.kind === 'dynamic') {
-        params[segment.name] = decodeURIComponent(urlSegment)
+        assignSafeKey(params, segment.name, urlSegment)
         continue
       }
 
@@ -174,7 +213,7 @@ function buildRouteStateFromPath(
 
   return {
     path: normalizedPathname,
-    params: match?.params ?? {},
+    params: match?.params ?? createSafeDict(),
     query,
     hash,
     matched: match?.route ?? null,
@@ -188,12 +227,17 @@ function buildRouteStateFromPath(
 export function createRouter(routes: Route[]): Router {
   const parsedRoutes: ParsedRoute[] = routes
     .map((route) => {
-      const segments = parseRoutePattern(route.path)
+      const normalizedRoutePath = route.path === '*' ? '*' : normalizePath(route.path)
+      const routeForMatch =
+        normalizedRoutePath === route.path
+          ? route
+          : { ...route, path: normalizedRoutePath }
+      const segments = parseRoutePattern(routeForMatch.path)
       return {
-        route,
+        route: routeForMatch,
         segments,
         specificity: computeSpecificity(segments),
-        isWildcard: route.path === '*',
+        isWildcard: routeForMatch.path === '*',
       }
     })
     .sort((a, b) => b.specificity - a.specificity)
@@ -206,12 +250,13 @@ export function createRouter(routes: Route[]): Router {
   )
 
   const navigate = (fullPath: string, method: 'push' | 'replace'): void => {
-    $route.value = buildRouteStateFromPath(fullPath, parsedRoutes)
+    const normalizedFullPath = normalizeFullPath(fullPath)
+    $route.value = buildRouteStateFromPath(normalizedFullPath, parsedRoutes)
 
     if (method === 'push') {
-      window.history.pushState(null, '', fullPath)
+      window.history.pushState(null, '', normalizedFullPath)
     } else {
-      window.history.replaceState(null, '', fullPath)
+      window.history.replaceState(null, '', normalizedFullPath)
     }
   }
 
@@ -235,7 +280,7 @@ export function createRouter(routes: Route[]): Router {
       if (n === 0) return
       window.history.go(n)
     },
-    _dispose(): void {
+    dispose(): void {
       window.removeEventListener('popstate', popstateHandler)
     },
   }
@@ -254,7 +299,8 @@ export function defineAsyncComponent<P = void>(
     _fn(props: P) {
       if (!initiated) {
         initiated = true
-        loader()
+        Promise.resolve()
+          .then(loader)
           .then((mod) => {
             if (mod?.default) {
               loaded.value = mod.default

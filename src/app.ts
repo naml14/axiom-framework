@@ -60,10 +60,6 @@ interface AppState {
   metrics: RenderMetrics
 }
 
-interface RouterWithDispose extends Router {
-  _dispose?: () => void
-}
-
 export function createApp(
   component: ComponentDefinition<void>,
   root: HTMLElement,
@@ -198,7 +194,7 @@ export function createApp(
     unmount(): void {
       state.stopEffect?.()
       cancelScheduled()
-      ;(options?.router as RouterWithDispose | undefined)?._dispose?.()
+      options?.router?.dispose?.()
       fireUnmountEvents(state.domState.domNodes)
       // Clear portal targets BEFORE wiping root — they live outside root DOM scope
       clearPortalRoots(state.domState)

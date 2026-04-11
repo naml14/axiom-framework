@@ -107,6 +107,14 @@ describe('router: scaffolding and core behavior (RED)', () => {
     expect(router.$route.value.params.term).toBe('hello world')
   })
 
+  test('malformed encoded path segment does not throw', () => {
+    const Search = makeComponent('Search')
+    const router = createRouter([{ path: '/search/:term', component: Search }])
+
+    expect(() => router.push('/search/%E0')).not.toThrow()
+    expect(router.$route.value.params.term).toBe('%E0')
+  })
+
   test('prefers static route over dynamic when both match', () => {
     const Profile = makeComponent('Profile')
     const User = makeComponent('User')
@@ -129,6 +137,23 @@ describe('router: scaffolding and core behavior (RED)', () => {
 
     router.push('/search')
     expect(router.$route.value.query).toEqual({})
+  })
+
+  test('tolerates malformed query encoding and keeps router alive', () => {
+    const Search = makeComponent('Search')
+    const router = createRouter([{ path: '/search', component: Search }])
+
+    expect(() => router.push('/search?q=%E0')).not.toThrow()
+    expect(router.$route.value.path).toBe('/search')
+    expect(router.$route.value.query.q).toBe('%E0')
+  })
+
+  test('supports flag-like query params without equals sign', () => {
+    const Search = makeComponent('Search')
+    const router = createRouter([{ path: '/search', component: Search }])
+
+    router.push('/search?debug')
+    expect(router.$route.value.query.debug).toBe('')
   })
 
   test('parses hash and uses empty hash fallback', () => {
@@ -186,16 +211,20 @@ describe('router: navigation + signals (RED)', () => {
     const originalPush = window.history.pushState.bind(window.history)
     const pushCalls: Array<[unknown, string, string | URL | null | undefined]> = []
 
-    window.history.pushState = (state, title, url) => {
-      pushCalls.push([state, title, url])
-      originalPush(state, title, url)
+    try {
+      window.history.pushState = (state, title, url) => {
+        pushCalls.push([state, title, url])
+        originalPush(state, title, url)
+      }
+
+      router.push('/b')
+
+      expect(router.$route.value.path).toBe('/b')
+      expect(pushCalls.length).toBeGreaterThan(0)
+      expect(pushCalls[0]?.[2]).toBe('/b')
+    } finally {
+      window.history.pushState = originalPush
     }
-
-    router.push('/b')
-
-    expect(router.$route.value.path).toBe('/b')
-    expect(pushCalls.length).toBeGreaterThan(0)
-    expect(pushCalls[0]?.[2]).toBe('/b')
   })
 
   test('push is signal-first: effect sees new route before pushState side-effect ordering', () => {
@@ -208,24 +237,28 @@ describe('router: navigation + signals (RED)', () => {
 
     const events: string[] = []
     const originalPush = window.history.pushState.bind(window.history)
-    window.history.pushState = (state, title, url) => {
-      events.push(`pushState:${String(url)}`)
-      originalPush(state, title, url)
+    let stop: (() => void) | null = null
+    try {
+      window.history.pushState = (state, title, url) => {
+        events.push(`pushState:${String(url)}`)
+        originalPush(state, title, url)
+      }
+
+      stop = effect(() => {
+        events.push(`effect:${router.$route.value.path}`)
+      })
+
+      router.push('/b')
+
+      const effectIdx = events.findIndex((e) => e === 'effect:/b')
+      const pushIdx = events.findIndex((e) => e === 'pushState:/b')
+      expect(effectIdx).toBeGreaterThanOrEqual(0)
+      expect(pushIdx).toBeGreaterThanOrEqual(0)
+      expect(effectIdx).toBeLessThan(pushIdx)
+    } finally {
+      stop?.()
+      window.history.pushState = originalPush
     }
-
-    const stop = effect(() => {
-      events.push(`effect:${router.$route.value.path}`)
-    })
-
-    router.push('/b')
-
-    const effectIdx = events.findIndex((e) => e === 'effect:/b')
-    const pushIdx = events.findIndex((e) => e === 'pushState:/b')
-    expect(effectIdx).toBeGreaterThanOrEqual(0)
-    expect(pushIdx).toBeGreaterThanOrEqual(0)
-    expect(effectIdx).toBeLessThan(pushIdx)
-
-    stop()
   })
 
   test('replace updates signal, calls replaceState, and not pushState', () => {
@@ -242,21 +275,26 @@ describe('router: navigation + signals (RED)', () => {
     const originalReplace = window.history.replaceState.bind(window.history)
     const originalPush = window.history.pushState.bind(window.history)
 
-    window.history.replaceState = (state, title, url) => {
-      replaceCalls++
-      originalReplace(state, title, url)
+    try {
+      window.history.replaceState = (state, title, url) => {
+        replaceCalls++
+        originalReplace(state, title, url)
+      }
+
+      window.history.pushState = (state, title, url) => {
+        pushCalls++
+        originalPush(state, title, url)
+      }
+
+      router.replace('/b')
+
+      expect(router.$route.value.path).toBe('/b')
+      expect(replaceCalls).toBe(1)
+      expect(pushCalls).toBe(0)
+    } finally {
+      window.history.replaceState = originalReplace
+      window.history.pushState = originalPush
     }
-
-    window.history.pushState = (state, title, url) => {
-      pushCalls++
-      originalPush(state, title, url)
-    }
-
-    router.replace('/b')
-
-    expect(router.$route.value.path).toBe('/b')
-    expect(replaceCalls).toBe(1)
-    expect(pushCalls).toBe(0)
   })
 
   test('go(n) delegates to history.go and go(0) is no-op', () => {
@@ -266,17 +304,21 @@ describe('router: navigation + signals (RED)', () => {
     const args: number[] = []
     const originalGo = window.history.go.bind(window.history)
 
-    window.history.go = (n?: number) => {
-      args.push(n ?? 0)
-      originalGo(n)
+    try {
+      window.history.go = (n?: number) => {
+        args.push(n ?? 0)
+        originalGo(n)
+      }
+
+      router.go(-1)
+      expect(args).toContain(-1)
+
+      const before = args.length
+      router.go(0)
+      expect(args.length).toBe(before)
+    } finally {
+      window.history.go = originalGo
     }
-
-    router.go(-1)
-    expect(args).toContain(-1)
-
-    const before = args.length
-    router.go(0)
-    expect(args.length).toBe(before)
   })
 
   test('popstate sync updates route and supports back sequence simulation', () => {
@@ -334,6 +376,28 @@ describe('router: app + async integration (RED)', () => {
       appWithRouter.mount()
       appWithRouter.unmount()
     }).not.toThrow()
+
+    const removeSpy = mock(window.removeEventListener)
+    const originalRemove = window.removeEventListener
+    window.removeEventListener = removeSpy as typeof window.removeEventListener
+
+    try {
+      const appWithRouterCleanup = createApp(Root, rootEl, {
+        pretext: fakePretext,
+        router,
+      })
+
+      appWithRouterCleanup.mount()
+      appWithRouterCleanup.unmount()
+
+      expect(removeSpy).toHaveBeenCalled()
+      const popstateRemoval = removeSpy.mock.calls.some(
+        (call) => call?.[0] === 'popstate'
+      )
+      expect(popstateRemoval).toBe(true)
+    } finally {
+      window.removeEventListener = originalRemove
+    }
   })
 
   test('defineAsyncComponent returns ComponentDefinition and renders empty while pending', () => {
@@ -367,7 +431,7 @@ describe('router: app + async integration (RED)', () => {
     expect(first.type).toBe('fragment')
     expect(second.type).toBe('fragment')
 
-    await Promise.resolve()
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     const after = AsyncPage._fn(undefined as void)
     expect(after.type).toBe('element')
