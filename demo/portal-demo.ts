@@ -7,14 +7,34 @@ import { signal, defineComponent, createPortal, createApp } from '../src/index.j
 // appended to #app, so it stays visually inside the page but
 // is fully independent of the main Axiom instance.
 //
-// The modal is rendered via createPortal into document.body,
-// completely outside the app root — that's the whole point.
+// The modal is rendered via createPortal into a DEDICATED
+// #portal-modal-root container — NOT directly into document.body.
+// Best practice: always target a controlled container, not body.
+// This ensures Axiom only removes what it inserted on cleanup.
 // ============================================================
 
 const isModalOpen = signal(false)
 
 // ============================================================
-// Modal content component — rendered into document.body
+// Modal root — dedicated container for portal output
+//
+// Best practice: never use document.body directly as a portal
+// target. Instead, create a dedicated container so Axiom only
+// manages content it inserted, without risking other DOM nodes.
+// ============================================================
+
+function getOrCreateModalRoot(): HTMLElement {
+  let el = document.getElementById('portal-modal-root')
+  if (el === null) {
+    el = document.createElement('div')
+    el.id = 'portal-modal-root'
+    document.body.appendChild(el)
+  }
+  return el
+}
+
+// ============================================================
+// Modal content component — rendered into #portal-modal-root
 // ============================================================
 
 const ModalPortal = defineComponent(() => {
@@ -73,7 +93,7 @@ const ModalPortal = defineComponent(() => {
                   {
                     type: 'text' as const,
                     content:
-                      'This modal is rendered via createPortal into document.body — completely outside the #app root. The component tree stays clean; the DOM target is arbitrary.',
+                      'This modal is rendered via createPortal into #portal-modal-root — a dedicated container outside the #app root. The component tree stays clean; the DOM target is arbitrary.',
                   },
                 ],
               },
@@ -94,7 +114,7 @@ const ModalPortal = defineComponent(() => {
         ],
       },
     ],
-    document.body
+    getOrCreateModalRoot()
   )
 })
 
@@ -153,6 +173,11 @@ const PortalDemo = defineComponent(() => ({
 // ============================================================
 
 export function initPortalDemo() {
+  // Create the dedicated portal modal root — Axiom renders modal content here.
+  // Using a dedicated container (not document.body) is the recommended pattern:
+  // it ensures Axiom only removes what it inserted on cleanup.
+  getOrCreateModalRoot()
+
   const container = document.createElement('div')
   container.id = 'portal-demo-root'
 

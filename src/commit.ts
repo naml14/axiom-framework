@@ -26,9 +26,14 @@ import {
 // Public API
 // ============================================================
 
+export interface PortalEntry {
+  target: HTMLElement
+  nodes: Node[]
+}
+
 export interface DOMState {
   domNodes: Array<HTMLElement | Text | null>
-  portalRoots: Map<number, HTMLElement>  // _index → targetElement
+  portalRoots: Map<number, PortalEntry>  // _index → { target, nodes[] }
 }
 
 export function commitFull(
@@ -221,9 +226,16 @@ function buildDOMTree(
     // Portal: redirect children to the portalTarget, not the current parent
     const portalTarget = getPortalTarget(prepared)
     if (portalTarget !== undefined) {
-      state.portalRoots.set(idx, portalTarget)
+      const entry: PortalEntry = { target: portalTarget, nodes: [] }
+      state.portalRoots.set(idx, entry)
       for (const child of children) {
+        // Capture childNodes count before insertion to track root-level nodes added
+        const before = portalTarget.childNodes.length
         buildDOMTree(child, layout, portalTarget, state)
+        // Collect any new direct children of portalTarget added by this child
+        for (let i = before; i < portalTarget.childNodes.length; i++) {
+          entry.nodes.push(portalTarget.childNodes[i]!)
+        }
       }
     }
     return

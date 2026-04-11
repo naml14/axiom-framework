@@ -83,6 +83,17 @@ export function measureFlex(
   let currentLine: FlexLine = { items: [], mainSize: 0, crossSize: 0 }
 
   for (const child of children) {
+    // Portals are invisible to flex layout — skip flex positioning,
+    // but still recurse to lay out their internal content
+    if (getNodeType(child) === 'portal') {
+      // Use simple layout for the portal's internal children
+      const childIdx = getNodeIndex(child)
+      result.width[childIdx] = 0
+      result.height[childIdx] = 0
+      measureSimple(child, availableWidth, result, lineHeight)
+      continue
+    }
+
     const childLayout = getLayoutProps(child)
     
     let childWidth = childLayout?.width

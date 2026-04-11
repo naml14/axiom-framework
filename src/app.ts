@@ -4,12 +4,27 @@ import type { SchedulerFn } from './scheduler.js'
 import type { ReflowOptions } from './reflow.js'
 
 import { prepare, resetIndexCounter } from './prepare.js'
-import { reflow, createLayoutResult } from './reflow.js'
+import { reflow } from './reflow.js'
 import { fullDiff, type DOMOperation } from './diff.js'
 import { commitFull, applyOps, fireUnmountEvents, type DOMState } from './commit.js'
 import { effect } from './signals.js'
 import { scheduleRender, cancelScheduled } from './scheduler.js'
 import { getNodeType, getTag, getChildren } from './prepare.js'
+
+// ============================================================
+// Internal helpers
+// ============================================================
+
+/** Remove only the DOM nodes Axiom inserted into each portal target — never nuke foreign content. */
+function clearPortalRoots(domState: DOMState): void {
+  for (const entry of domState.portalRoots.values()) {
+    for (const node of entry.nodes) {
+      if (node.parentNode === entry.target) {
+        entry.target.removeChild(node)
+      }
+    }
+  }
+}
 
 // ============================================================
 // Public API
@@ -120,9 +135,7 @@ export function createApp(
       // applyOps can't handle hierarchy changes because it flat-appends inserts to root.
       fireUnmountEvents(state.domState.domNodes)
       // Clear portal targets BEFORE resetting root — they are outside root.innerHTML scope
-      for (const portalTarget of state.domState.portalRoots.values()) {
-        portalTarget.innerHTML = ''
-      }
+      clearPortalRoots(state.domState)
       root.innerHTML = ''
       state.domState.domNodes = []
       state.domState.portalRoots = new Map()
@@ -181,9 +194,7 @@ export function createApp(
       cancelScheduled()
       fireUnmountEvents(state.domState.domNodes)
       // Clear portal targets BEFORE wiping root — they live outside root DOM scope
-      for (const portalTarget of state.domState.portalRoots.values()) {
-        portalTarget.innerHTML = ''
-      }
+      clearPortalRoots(state.domState)
       root.innerHTML = ''
       state.mounted = false
       state.prevPrepared = null

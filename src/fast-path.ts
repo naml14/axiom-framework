@@ -29,8 +29,18 @@ export function measureSimple(
   const gap = layout?.gap ?? 0
   let offsetY = 0
 
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i]!
+  // Count non-portal children for gap calculation
+  const realChildren = children.filter(c => getNodeType(c) !== 'portal')
+  let realIdx = 0
+
+  for (const child of children) {
+    // Portals are invisible to parent layout — skip positioning,
+    // but still recurse to lay out their internal content
+    if (getNodeType(child) === 'portal') {
+      layoutChild(child, availableWidth, result, lineHeight)
+      continue
+    }
+
     const childIdx = getNodeIndex(child)
     const childWidth = availableWidth
 
@@ -43,13 +53,14 @@ export function measureSimple(
     layoutChild(child, childWidth, result, lineHeight)
 
     offsetY += result.height[childIdx]
-    if (i < children.length - 1) {
+    if (realIdx < realChildren.length - 1) {
       offsetY += gap
     }
+    realIdx++
   }
 
-  // Set parent height if not already set
-  if (result.height[parentIdx] === 0) {
+  // Set parent height if not already set (portals stay 0×0 — they don't occupy parent space)
+  if (result.height[parentIdx] === 0 && getNodeType(prepared) !== 'portal') {
     result.height[parentIdx] = offsetY
   }
 }

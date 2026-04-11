@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, beforeAll } from 'bun:test'
 import { Window } from 'happy-dom'
 import { createPortal } from '../src/portal.js'
 import { prepare, resetIndexCounter, getNodeIndex, getNodeType, getPreparedChildren } from '../src/prepare.js'
-import { reflow, createLayoutResult } from '../src/reflow.js'
+import { reflow } from '../src/reflow.js'
 import { commitFull } from '../src/commit.js'
 import type { DOMState } from '../src/commit.js'
 import { defineComponent } from '../src/component.js'
@@ -10,6 +10,7 @@ import { signal } from '../src/signals.js'
 import { createApp } from '../src/app.js'
 import { resetScheduler } from '../src/scheduler.js'
 import type { PortalNode, ElementNode } from '../src/types.js'
+import { fullDiff } from '../src/diff.js'
 
 // ============================================================
 // DOM setup for commit/app tests
@@ -256,6 +257,81 @@ describe('reflow — portal layout', () => {
 })
 
 // ============================================================
+// Bug B — fixPortalSlots: portal siblings in flex row layout
+// ============================================================
+
+describe('Bug B — portal in flex row does not displace siblings', () => {
+  let target: HTMLElement
+
+  beforeEach(() => {
+    resetIndexCounter()
+    target = { tagName: 'DIV' } as unknown as HTMLElement
+  })
+
+  test('flex row with two normal children and a portal: normal children have y=0 and correct x', () => {
+    // root (div, flexDirection:'row') → [span-a, portal, span-b]
+    // span-a and span-b must both have y=0 and x values based only on their sizes
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'row' as const },
+      children: [
+        { type: 'element' as const, tag: 'span', layout: { width: 100, height: 50 }, children: [] },
+        createPortal([{ type: 'text' as const, content: 'portal text' }], target),
+        { type: 'element' as const, tag: 'span', layout: { width: 100, height: 50 }, children: [] },
+      ],
+    }))
+
+    const prepared = prepare(component, undefined)
+    const result = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+
+    const rootChildren = getPreparedChildren(prepared)
+    // root=0, spanA=1, portal=2, spanB=3
+    const spanAIdx = getNodeIndex(rootChildren[0]!)
+    const portalIdx = getNodeIndex(rootChildren[1]!)
+    const spanBIdx = getNodeIndex(rootChildren[2]!)
+
+    // Portal must be 0×0
+    expect(result.width[portalIdx]).toBe(0)
+    expect(result.height[portalIdx]).toBe(0)
+
+    // Both spans at y=0 (flex row)
+    expect(result.y[spanAIdx]).toBe(0)
+    expect(result.y[spanBIdx]).toBe(0)
+
+    // spanA at x=0, spanB at x=100 (right after spanA, portal contributes nothing)
+    expect(result.x[spanAIdx]).toBe(0)
+    expect(result.x[spanBIdx]).toBe(100)
+  })
+
+  test('justifyContent:center with a portal child: non-portal siblings are centered correctly', () => {
+    // root (div, flexDirection:'row', justifyContent:'center', width:400) → [span-a, portal, span-b]
+    // Each span is 50px wide. Total real content = 100px. Center offset = (400-100)/2 = 150px
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'row' as const, justifyContent: 'center' as const, width: 400, height: 100 },
+      children: [
+        { type: 'element' as const, tag: 'span', layout: { width: 50, height: 40 }, children: [] },
+        createPortal([{ type: 'text' as const, content: 'modal' }], target),
+        { type: 'element' as const, tag: 'span', layout: { width: 50, height: 40 }, children: [] },
+      ],
+    }))
+
+    const prepared = prepare(component, undefined)
+    const result = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+
+    const rootChildren = getPreparedChildren(prepared)
+    const spanAIdx = getNodeIndex(rootChildren[0]!)
+    const spanBIdx = getNodeIndex(rootChildren[2]!)
+
+    // With centering and no portal influence: spanA at x=150, spanB at x=200
+    expect(result.x[spanAIdx]).toBe(150)
+    expect(result.x[spanBIdx]).toBe(200)
+  })
+})
+
+// ============================================================
 // Phase 3: Commit — portal DOM rendering (Task 3.1)
 // ============================================================
 
@@ -411,8 +487,10 @@ describe('commitFull — portal children appended to targetElement', () => {
 
     // portalRoots must have one entry tracking the targetElement
     expect(state.portalRoots.size).toBe(1)
-    const [storedTarget] = [...state.portalRoots.values()]
-    expect(storedTarget).toBe(targetEl)
+    const [entry] = [...state.portalRoots.values()]
+    expect(entry!.target).toBe(targetEl)
+    // nodes array must contain the span that was appended to targetEl
+    expect(entry!.nodes).toHaveLength(1)
   })
 })
 
@@ -529,6 +607,114 @@ describe('app shape change — portal DOM cleanup before re-render', () => {
     expect(targetEl.childNodes.length).toBe(2)
 
     app.unmount()
+  })
+})
+
+// ============================================================
+// PR #8 Bug fixes — RED tests (must fail before fix)
+// ============================================================
+
+describe('Bug A1 — portal cleanup does not nuke external DOM', () => {
+  const syncScheduler = (cb: () => void) => cb()
+
+  test('unmounting with body-like target does not remove unrelated children from that target', () => {
+    resetScheduler()
+    // Use a dedicated container that simulates document.body (holds unrelated children)
+    const portalTarget = document.createElement('div')
+
+    // Survivor element that Axiom did NOT create — must survive unmount
+    const survivor = document.createElement('p')
+    portalTarget.appendChild(survivor)
+
+    const root = document.createElement('div')
+
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [{ type: 'element' as const, tag: 'span', children: [] }],
+          portalTarget
+        ),
+      ],
+    }))
+
+    const app = createApp(comp, root, { scheduler: syncScheduler })
+    app.mount()
+
+    // After mount: portalTarget has survivor + span (2 children)
+    expect(portalTarget.childNodes.length).toBe(2)
+
+    app.unmount()
+
+    // After unmount: only the survivor must remain — Axiom must remove only what it added
+    expect(portalTarget.childNodes.length).toBe(1)
+    expect(portalTarget.childNodes[0]).toBe(survivor)
+  })
+})
+
+describe('Bug A2 — portal direct children get proper y positions', () => {
+  test('two direct div children of a portal have stacked y positions (second y > 0)', () => {
+    resetIndexCounter()
+    const target = document.createElement('div')
+
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [
+            { type: 'element' as const, tag: 'div', children: [{ type: 'text' as const, content: 'first' }] },
+            { type: 'element' as const, tag: 'div', children: [{ type: 'text' as const, content: 'second' }] },
+          ],
+          target
+        ),
+      ],
+    }))
+
+    const prepared = prepare(component, undefined)
+    const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+
+    // Get the portal and its children
+    const rootChildren = getPreparedChildren(prepared)
+    const portalPrepared = rootChildren[0]!
+    const portalChildren = getPreparedChildren(portalPrepared)
+
+    const firstIdx = getNodeIndex(portalChildren[0]!)
+    const secondIdx = getNodeIndex(portalChildren[1]!)
+
+    // First child at y=0
+    expect(layout.y[firstIdx]).toBe(0)
+    // Second child must be below the first (y > 0), not stacked at y=0
+    expect(layout.y[secondIdx]).toBeGreaterThan(0)
+  })
+})
+
+describe('Bug A3 — fullDiff insert ops for portal descendants carry portalTarget', () => {
+  test('fullDiff first-render path: insert ops for portal element children have portalTarget set', () => {
+    resetIndexCounter()
+    const targetEl = document.createElement('section')
+
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [{ type: 'element' as const, tag: 'span', children: [] }],
+          targetEl
+        ),
+      ],
+    }))
+
+    const prepared = prepare(component, undefined)
+    const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+
+    const ops = fullDiff(null, null, prepared, layout, [])
+
+    // The insert op for the portal child (span) must have portalTarget set
+    const insertOps = ops.filter(op => op.type === 'insert' && op.tag === 'span')
+    expect(insertOps).toHaveLength(1)
+    expect(insertOps[0]!.portalTarget).toBe(targetEl)
   })
 })
 
