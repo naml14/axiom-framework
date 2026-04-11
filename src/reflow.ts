@@ -63,21 +63,12 @@ function layoutNode(
   const nodeType = getNodeType(prepared)
   const children = getPreparedChildren(prepared)
 
-  // Portal nodes: assign 0×0 to the slot (transparent to parent layout),
-  // then lay out children in a simple top-to-bottom column at the portal target's origin.
-  // The portal is invisible to its parent, but its own children must be positioned
-  // correctly relative to each other (y-stacked) for when they render in the targetElement.
+  // Portal nodes: assign 0×0 to the slot (transparent to parent layout).
+  // Portal children are CSS-managed — the framework inserts them into the DOM
+  // but does NOT apply inline position/size styles. CSS owns their layout entirely.
   if (nodeType === 'portal') {
     result.width[idx] = 0
     result.height[idx] = 0
-    let offsetY = 0
-    for (const child of children) {
-      layoutNode(child, constraints, result, lineHeight)
-      const childIdx = getNodeIndex(child)
-      result.x[childIdx] = 0
-      result.y[childIdx] = offsetY
-      offsetY += result.height[childIdx]
-    }
     return
   }
 

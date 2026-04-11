@@ -112,11 +112,9 @@ export function applyOps(
       const el = domNodes[op.index]
       if (el === null) continue
 
+      // Only apply layout to framework-managed nodes — skip portal children.
       if (op.x !== undefined && el instanceof HTMLElement) {
-        el.style.position = 'absolute'
-        el.style.transform = `translate(${op.x}px,${op.y}px)`
-        el.style.width = `${op.width}px`
-        el.style.height = `${op.height}px`
+        applyFrameworkLayout(el, { x: op.x, y: op.y, width: op.width, height: op.height }, op.portalTarget === undefined)
       }
 
       if (op.newTextContent !== undefined && el instanceof Text) {
@@ -141,12 +139,9 @@ export function applyOps(
       const oldNode = domNodes[op.oldIndex!]
       if (oldNode === null) continue
 
-      // Update position
+      // Update position — skip portal children (CSS-managed)
       if (op.x !== undefined && oldNode instanceof HTMLElement) {
-        oldNode.style.position = 'absolute'
-        oldNode.style.transform = `translate(${op.x}px,${op.y}px)`
-        oldNode.style.width = `${op.width}px`
-        oldNode.style.height = `${op.height}px`
+        applyFrameworkLayout(oldNode, { x: op.x, y: op.y, width: op.width, height: op.height }, op.portalTarget === undefined)
       }
 
       // Move to new position in domNodes
@@ -160,7 +155,10 @@ export function applyOps(
   const fragments = new Map<HTMLElement, DocumentFragment>()
   for (const op of ops) {
     if (op.type === 'insert') {
-      const el = createDOMElement(op)
+      // Portal inserts are CSS-managed — presence of portalTarget is sufficient,
+      // regardless of whether the target happens to equal root.
+      const isPortalChild = op.portalTarget !== undefined
+      const el = createDOMElement(op, isPortalChild)
       domNodes[op.index] = el
       const container = op.portalTarget ?? root
       let frag = fragments.get(container)
@@ -196,11 +194,33 @@ export function applyOps(
 // Internal
 // ============================================================
 
+/**
+ * Applies Axiom's absolute-position layout styles to an element.
+ * Portal children are CSS-managed — this is a no-op when managedByFramework=false.
+ */
+function applyFrameworkLayout(
+  el: HTMLElement,
+  layoutInfo: { x?: number; y?: number; width?: number; height?: number },
+  managedByFramework: boolean
+): void {
+  if (!managedByFramework) return
+  el.style.position = 'absolute'
+  const { x, y, width, height } = layoutInfo
+  if (x !== undefined && y !== undefined) {
+    el.style.transform = `translate(${x}px,${y}px)`
+  }
+  if (width !== undefined && height !== undefined) {
+    el.style.width = `${width}px`
+    el.style.height = `${height}px`
+  }
+}
+
 function buildDOMTree(
   prepared: PreparedComponent,
   layout: LayoutResult,
   parent: HTMLElement,
-  state: DOMState
+  state: DOMState,
+  portalChild = false
 ): void {
   const idx = getNodeIndex(prepared)
   const nodeType = getNodeType(prepared)
@@ -231,7 +251,8 @@ function buildDOMTree(
       for (const child of children) {
         // Capture childNodes count before insertion to track root-level nodes added
         const before = portalTarget.childNodes.length
-        buildDOMTree(child, layout, portalTarget, state)
+        // Children of portals are CSS-managed — pass portalChild=true so no inline styles are applied
+        buildDOMTree(child, layout, portalTarget, state, true)
         // Collect any new direct children of portalTarget added by this child
         for (let i = before; i < portalTarget.childNodes.length; i++) {
           entry.nodes.push(portalTarget.childNodes[i]!)
@@ -244,16 +265,13 @@ function buildDOMTree(
   // Element node
   const tag = getTag(prepared) || 'div'
   const el = document.createElement(tag)
-  el.style.position = 'absolute'
 
-  // Apply layout
-  const x = layout.x[idx]
-  const y = layout.y[idx]
-  const w = layout.width[idx]
-  const h = layout.height[idx]
-  el.style.transform = `translate(${x}px,${y}px)`
-  el.style.width = `${w}px`
-  el.style.height = `${h}px`
+  // Apply layout ONLY for framework-managed nodes.
+  // Portal children are CSS-managed — no inline position/size applied.
+  applyFrameworkLayout(el, {
+    x: layout.x[idx], y: layout.y[idx],
+    width: layout.width[idx], height: layout.height[idx],
+  }, !portalChild)
 
   // Apply classes
   const classes = getClasses(prepared)
@@ -281,28 +299,23 @@ function buildDOMTree(
   state.domNodes[idx] = el
   parent.appendChild(el)
 
-  // Process children
+  // Process children — propagate portalChild flag so descendants also skip inline styles
   for (const child of children) {
-    buildDOMTree(child, layout, el, state)
+    buildDOMTree(child, layout, el, state, portalChild)
   }
 }
 
-function createDOMElement(op: DOMOperation): HTMLElement | Text {
+function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement | Text {
   if (op.textContent !== undefined && op.tag === undefined) {
     return document.createTextNode(op.textContent)
   }
 
   const tag = op.tag || 'div'
   const el = document.createElement(tag)
-  el.style.position = 'absolute'
 
-  if (op.x !== undefined) {
-    el.style.transform = `translate(${op.x}px,${op.y}px)`
-  }
-  if (op.width !== undefined) {
-    el.style.width = `${op.width}px`
-    el.style.height = `${op.height}px`
-  }
+  // Apply layout ONLY for framework-managed nodes.
+  // Portal children (isPortalChild=true) are CSS-managed — no inline styles.
+  applyFrameworkLayout(el, { x: op.x, y: op.y, width: op.width, height: op.height }, !isPortalChild)
 
   if (op.textContent !== undefined) {
     el.textContent = op.textContent
