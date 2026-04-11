@@ -66,7 +66,7 @@ describe('edge case: empty tree', () => {
     const p = prepare(Empty, undefined)
     const layout = reflow(p, CONSTRAINTS)
     const root = document.createElement('div')
-    const state: DOMState = { domNodes: [] }
+    const state: DOMState = { domNodes: [], portalRoots: new Map() }
     expect(() => commitFull(layout, p, root, state)).not.toThrow()
     expect(root.children.length).toBe(1)
   })

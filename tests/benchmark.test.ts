@@ -112,7 +112,7 @@ describe('benchmark: 1000-node tree', () => {
     const layout = reflow(p, CONSTRAINTS, { lineHeight: 20 })
 
     const root = document.createElement('div')
-    const state: DOMState = { domNodes: [] }
+    const state: DOMState = { domNodes: [], portalRoots: new Map() }
 
     const t0 = performance.now()
     commitFull(layout, p, root, state)
@@ -132,7 +132,7 @@ describe('benchmark: 1000-node tree', () => {
     const p = prepare(BenchComp, undefined)
     const layout = reflow(p, CONSTRAINTS, { lineHeight: 20 })
     const root = document.createElement('div')
-    const state: DOMState = { domNodes: [] }
+    const state: DOMState = { domNodes: [], portalRoots: new Map() }
     commitFull(layout, p, root, state)
 
     const total = performance.now() - t0

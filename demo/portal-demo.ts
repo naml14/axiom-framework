@@ -1,0 +1,165 @@
+import { signal, defineComponent, createPortal, createApp } from '../src/index.js'
+
+// ============================================================
+// Portal Demo — standalone section demonstrating createPortal
+//
+// Renders its own Axiom app into a dedicated container that is
+// appended to #app, so it stays visually inside the page but
+// is fully independent of the main Axiom instance.
+//
+// The modal is rendered via createPortal into document.body,
+// completely outside the app root — that's the whole point.
+// ============================================================
+
+const isModalOpen = signal(false)
+
+// ============================================================
+// Modal content component — rendered into document.body
+// ============================================================
+
+const ModalPortal = defineComponent(() => {
+  if (!isModalOpen.value) {
+    return { type: 'fragment' as const, children: [] }
+  }
+
+  return createPortal(
+    [
+      {
+        type: 'element' as const,
+        tag: 'div',
+        classes: ['portal-overlay'],
+        on: {
+          click: (e: Event) => {
+            if ((e.target as HTMLElement).classList.contains('portal-overlay')) {
+              isModalOpen.value = false
+            }
+          },
+        },
+        children: [
+          {
+            type: 'element' as const,
+            tag: 'div',
+            classes: ['portal-modal'],
+            children: [
+              {
+                type: 'element' as const,
+                tag: 'div',
+                classes: ['portal-modal-header'],
+                children: [
+                  {
+                    type: 'element' as const,
+                    tag: 'h2',
+                    classes: ['portal-modal-title'],
+                    children: [{ type: 'text' as const, content: '✨ Portal Modal' }],
+                  },
+                  {
+                    type: 'element' as const,
+                    tag: 'button',
+                    classes: ['portal-close-btn'],
+                    on: {
+                      click: () => {
+                        isModalOpen.value = false
+                      },
+                    },
+                    children: [{ type: 'text' as const, content: '✕' }],
+                  },
+                ],
+              },
+              {
+                type: 'element' as const,
+                tag: 'p',
+                classes: ['portal-modal-body'],
+                children: [
+                  {
+                    type: 'text' as const,
+                    content:
+                      'This modal is rendered via createPortal into document.body — completely outside the #app root. The component tree stays clean; the DOM target is arbitrary.',
+                  },
+                ],
+              },
+              {
+                type: 'element' as const,
+                tag: 'p',
+                classes: ['portal-modal-body'],
+                children: [
+                  {
+                    type: 'text' as const,
+                    content:
+                      'Reactivity works normally: a signal controls visibility, and Axiom diffs only what changed — even across DOM boundaries.',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    document.body
+  )
+})
+
+// ============================================================
+// Trigger + portal root component — the full demo section
+// ============================================================
+
+const PortalDemo = defineComponent(() => ({
+  type: 'element' as const,
+  tag: 'div',
+  classes: ['card', 'portal-demo-section'],
+  layout: { flexDirection: 'column' as const, gap: 10, padding: 16 },
+  children: [
+    {
+      type: 'element' as const,
+      tag: 'div',
+      classes: ['hero-badge'],
+      children: [{ type: 'text' as const, content: '🌀 PORTAL DEMO' }],
+    },
+    {
+      type: 'element' as const,
+      tag: 'h2',
+      classes: ['hero-title'],
+      children: [{ type: 'text' as const, content: 'createPortal' }],
+    },
+    {
+      type: 'element' as const,
+      tag: 'p',
+      classes: ['hero-body'],
+      children: [
+        {
+          type: 'text' as const,
+          content:
+            'Renders children into an arbitrary DOM node outside the component tree. Perfect for modals, tooltips, and overlays that need to escape overflow/stacking contexts.',
+        },
+      ],
+    },
+    {
+      type: 'element' as const,
+      tag: 'button',
+      classes: ['portal-trigger-btn'],
+      on: {
+        click: () => {
+          isModalOpen.value = true
+        },
+      },
+      children: [{ type: 'text' as const, content: '🚀 Open Portal Modal' }],
+    },
+    // ModalPortal lives here in the logical tree but renders into document.body
+    ModalPortal(),
+  ],
+}))
+
+// ============================================================
+// Mount the portal demo section
+// ============================================================
+
+export function initPortalDemo() {
+  const container = document.createElement('div')
+  container.id = 'portal-demo-root'
+
+  // Insert after #app so it appears below the main demo
+  const appEl = document.getElementById('app')!
+  appEl.after(container)
+
+  const portalApp = createApp(PortalDemo, container, { lineHeight: 20 })
+  portalApp.mount()
+}

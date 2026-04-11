@@ -25,6 +25,7 @@ export type ComponentNode =
   | ElementNode
   | TextNode
   | FragmentNode
+  | PortalNode
 
 export interface ElementNode {
   type: 'element'
@@ -44,6 +45,12 @@ export interface TextNode {
 
 export interface FragmentNode {
   type: 'fragment'
+  children: ComponentNode[]
+}
+
+export interface PortalNode {
+  type: 'portal'
+  target: HTMLElement
   children: ComponentNode[]
 }
 

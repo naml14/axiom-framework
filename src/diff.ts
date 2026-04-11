@@ -32,6 +32,8 @@ export interface DOMOperation {
   attrs?: Record<string, string>
   on?: Record<string, EventListener>
   key?: string
+  /** When set, this insert targets a portal container instead of the app root */
+  portalTarget?: HTMLElement
   // For update/move
   x?: number
   y?: number

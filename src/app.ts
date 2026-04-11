@@ -51,7 +51,7 @@ export function createApp(
   const state: AppState = {
     prevPrepared: null,
     prevLayout: null,
-    domState: { domNodes: [] },
+    domState: { domNodes: [], portalRoots: new Map() },
     mounted: false,
     stopEffect: null,
     metrics: { prepareMs: 0, reflowMs: 0, commitMs: 0 },
@@ -119,8 +119,13 @@ export function createApp(
       // Shape change (e.g. column count changed) — full teardown and re-commit.
       // applyOps can't handle hierarchy changes because it flat-appends inserts to root.
       fireUnmountEvents(state.domState.domNodes)
+      // Clear portal targets BEFORE resetting root — they are outside root.innerHTML scope
+      for (const portalTarget of state.domState.portalRoots.values()) {
+        portalTarget.innerHTML = ''
+      }
       root.innerHTML = ''
       state.domState.domNodes = []
+      state.domState.portalRoots = new Map()
       commitFull(layout, prepared, root, state.domState)
     } else {
       // Value change only — incremental diff and apply
@@ -175,6 +180,10 @@ export function createApp(
       state.stopEffect?.()
       cancelScheduled()
       fireUnmountEvents(state.domState.domNodes)
+      // Clear portal targets BEFORE wiping root — they live outside root DOM scope
+      for (const portalTarget of state.domState.portalRoots.values()) {
+        portalTarget.innerHTML = ''
+      }
       root.innerHTML = ''
       state.mounted = false
       state.prevPrepared = null
@@ -182,6 +191,7 @@ export function createApp(
       // Replace the array reference (not just fill) to release all DOM node references
       // and allow the GC to collect them, preventing memory leaks in long-lived apps.
       state.domState.domNodes = []
+      state.domState.portalRoots = new Map()
     },
 
     getMetrics(): RenderMetrics {
