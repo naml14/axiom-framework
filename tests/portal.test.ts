@@ -653,8 +653,8 @@ describe('Bug A1 — portal cleanup does not nuke external DOM', () => {
   })
 })
 
-describe('Bug A2 — portal direct children get proper y positions', () => {
-  test('two direct div children of a portal have stacked y positions (second y > 0)', () => {
+describe('Bug A2 — portal direct children are CSS-managed (no Axiom layout positions)', () => {
+  test('portal direct children have 0×0 layout — CSS owns their positioning', () => {
     resetIndexCounter()
     const target = document.createElement('div')
 
@@ -683,12 +683,52 @@ describe('Bug A2 — portal direct children get proper y positions', () => {
     const firstIdx = getNodeIndex(portalChildren[0]!)
     const secondIdx = getNodeIndex(portalChildren[1]!)
 
-    // First child at y=0
+    // Portal children are CSS-managed: Axiom assigns 0×0 (no layout interference).
+    // The CSS classes (e.g. position:fixed, display:flex) own the actual positioning.
+    expect(layout.x[firstIdx]).toBe(0)
     expect(layout.y[firstIdx]).toBe(0)
-    // Second child must be below the first (y > 0), not stacked at y=0
-    expect(layout.y[secondIdx]).toBeGreaterThan(0)
+    expect(layout.x[secondIdx]).toBe(0)
+    expect(layout.y[secondIdx]).toBe(0)
+  })
+
+  test('portal direct children are appended to the target DOM without inline position styles', () => {
+    resetIndexCounter()
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [
+            { type: 'element' as const, tag: 'div', children: [] },
+            { type: 'element' as const, tag: 'div', children: [] },
+          ],
+          target
+        ),
+      ],
+    }))
+
+    const prepared = prepare(component, undefined)
+    const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+    const state: DOMState = { domNodes: [], portalRoots: new Map() }
+
+    commitFull(layout, prepared, root, state)
+
+    // Both portal children are in the target element
+    expect(target.childNodes.length).toBe(2)
+
+    // No inline position styles applied (CSS-managed)
+    const first = target.childNodes[0] as HTMLElement
+    const second = target.childNodes[1] as HTMLElement
+    expect(first.style.position).toBe('')
+    expect(first.style.transform).toBe('')
+    expect(second.style.position).toBe('')
+    expect(second.style.transform).toBe('')
   })
 })
+
 
 describe('Bug A3 — fullDiff insert ops for portal descendants carry portalTarget', () => {
   test('fullDiff first-render path: insert ops for portal element children have portalTarget set', () => {

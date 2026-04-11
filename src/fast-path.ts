@@ -34,10 +34,9 @@ export function measureSimple(
   let realIdx = 0
 
   for (const child of children) {
-    // Portals are invisible to parent layout — skip positioning,
-    // but still recurse to lay out their internal content
+    // Portals are invisible to parent layout — skip entirely.
+    // Portal children are CSS-managed; no layout calculation needed.
     if (getNodeType(child) === 'portal') {
-      layoutChild(child, availableWidth, result, lineHeight)
       continue
     }
 
