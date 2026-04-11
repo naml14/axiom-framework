@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.2.5](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.4...axiom-framework-v0.2.5) (2026-04-11)
+
+
+### Features
+
+* **router:** add declarative SPA routing with async components ([2d888ab](https://github.com/naml14/axiom-framework/commit/2d888ab4d930ed3d3d68903f5ce58fb7edd3cc36))
+* **router:** declarative SPA routing with async components ([7c8dac7](https://github.com/naml14/axiom-framework/commit/7c8dac7b7a9762545413c60c96905318c56c3cf3))
+
+
+### Bug Fixes
+
+* **router:** address security review findings ([c5dea3e](https://github.com/naml14/axiom-framework/commit/c5dea3eedf7729716964cc4954166153e1ddf55a))
+* **router:** avoid dynamic property writes in URL parsing ([650a5e0](https://github.com/naml14/axiom-framework/commit/650a5e0c43f6c484c5f5d8efc65cbb04c8a4a30a))
+* **router:** harden URL parsing and review feedback ([8e5cb61](https://github.com/naml14/axiom-framework/commit/8e5cb6183f6a4199e54179b8b957a1d705b348cc))
+* **router:** tighten key guards for CodeQL ([cf4ca24](https://github.com/naml14/axiom-framework/commit/cf4ca24678417d2c830cef17ae074a87f35f5a11))
+
 ## [0.2.4](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.3...axiom-framework-v0.2.4) (2026-04-11)
 
 
