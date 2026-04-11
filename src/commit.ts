@@ -112,11 +112,9 @@ export function applyOps(
       const el = domNodes[op.index]
       if (el === null) continue
 
+      // Only apply layout to framework-managed nodes — skip portal children.
       if (op.x !== undefined && el instanceof HTMLElement) {
-        el.style.position = 'absolute'
-        el.style.transform = `translate(${op.x}px,${op.y}px)`
-        el.style.width = `${op.width}px`
-        el.style.height = `${op.height}px`
+        applyFrameworkLayout(el, { x: op.x, y: op.y, width: op.width, height: op.height }, op.portalTarget === undefined)
       }
 
       if (op.newTextContent !== undefined && el instanceof Text) {
@@ -141,12 +139,9 @@ export function applyOps(
       const oldNode = domNodes[op.oldIndex!]
       if (oldNode === null) continue
 
-      // Update position
+      // Update position — skip portal children (CSS-managed)
       if (op.x !== undefined && oldNode instanceof HTMLElement) {
-        oldNode.style.position = 'absolute'
-        oldNode.style.transform = `translate(${op.x}px,${op.y}px)`
-        oldNode.style.width = `${op.width}px`
-        oldNode.style.height = `${op.height}px`
+        applyFrameworkLayout(oldNode, { x: op.x, y: op.y, width: op.width, height: op.height }, op.portalTarget === undefined)
       }
 
       // Move to new position in domNodes
@@ -160,8 +155,9 @@ export function applyOps(
   const fragments = new Map<HTMLElement, DocumentFragment>()
   for (const op of ops) {
     if (op.type === 'insert') {
-      // Portal inserts target a different container — they are CSS-managed, no inline styles applied
-      const isPortalChild = op.portalTarget !== undefined && op.portalTarget !== root
+      // Portal inserts are CSS-managed — presence of portalTarget is sufficient,
+      // regardless of whether the target happens to equal root.
+      const isPortalChild = op.portalTarget !== undefined
       const el = createDOMElement(op, isPortalChild)
       domNodes[op.index] = el
       const container = op.portalTarget ?? root
@@ -197,6 +193,27 @@ export function applyOps(
 // ============================================================
 // Internal
 // ============================================================
+
+/**
+ * Applies Axiom's absolute-position layout styles to an element.
+ * Portal children are CSS-managed — this is a no-op when managedByFramework=false.
+ */
+function applyFrameworkLayout(
+  el: HTMLElement,
+  layoutInfo: { x?: number; y?: number; width?: number; height?: number },
+  managedByFramework: boolean
+): void {
+  if (!managedByFramework) return
+  el.style.position = 'absolute'
+  const { x, y, width, height } = layoutInfo
+  if (x !== undefined && y !== undefined) {
+    el.style.transform = `translate(${x}px,${y}px)`
+  }
+  if (width !== undefined && height !== undefined) {
+    el.style.width = `${width}px`
+    el.style.height = `${height}px`
+  }
+}
 
 function buildDOMTree(
   prepared: PreparedComponent,
@@ -251,16 +268,10 @@ function buildDOMTree(
 
   // Apply layout ONLY for framework-managed nodes.
   // Portal children are CSS-managed — no inline position/size applied.
-  if (!portalChild) {
-    el.style.position = 'absolute'
-    const x = layout.x[idx]
-    const y = layout.y[idx]
-    const w = layout.width[idx]
-    const h = layout.height[idx]
-    el.style.transform = `translate(${x}px,${y}px)`
-    el.style.width = `${w}px`
-    el.style.height = `${h}px`
-  }
+  applyFrameworkLayout(el, {
+    x: layout.x[idx], y: layout.y[idx],
+    width: layout.width[idx], height: layout.height[idx],
+  }, !portalChild)
 
   // Apply classes
   const classes = getClasses(prepared)
@@ -304,16 +315,7 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
 
   // Apply layout ONLY for framework-managed nodes.
   // Portal children (isPortalChild=true) are CSS-managed — no inline styles.
-  if (!isPortalChild) {
-    el.style.position = 'absolute'
-    if (op.x !== undefined) {
-      el.style.transform = `translate(${op.x}px,${op.y}px)`
-    }
-    if (op.width !== undefined) {
-      el.style.width = `${op.width}px`
-      el.style.height = `${op.height}px`
-    }
-  }
+  applyFrameworkLayout(el, { x: op.x, y: op.y, width: op.width, height: op.height }, !isPortalChild)
 
   if (op.textContent !== undefined) {
     el.textContent = op.textContent

@@ -687,8 +687,13 @@ describe('Bug A2 — portal direct children are CSS-managed (no Axiom layout pos
     // The CSS classes (e.g. position:fixed, display:flex) own the actual positioning.
     expect(layout.x[firstIdx]).toBe(0)
     expect(layout.y[firstIdx]).toBe(0)
+    expect(layout.width[firstIdx]).toBe(0)
+    expect(layout.height[firstIdx]).toBe(0)
+
     expect(layout.x[secondIdx]).toBe(0)
     expect(layout.y[secondIdx]).toBe(0)
+    expect(layout.width[secondIdx]).toBe(0)
+    expect(layout.height[secondIdx]).toBe(0)
   })
 
   test('portal direct children are appended to the target DOM without inline position styles', () => {
