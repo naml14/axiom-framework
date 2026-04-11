@@ -21,6 +21,10 @@ export { createPortal } from './portal.js'
 export { createApp } from './app.js'
 export type { App, AppOptions, RenderMetrics } from './app.js'
 
+// --- Router ---
+export { createRouter, defineAsyncComponent } from './router.js'
+export type { Route, RouteState, Router } from './router.js'
+
 // --- Layout (advanced — for custom rendering pipelines) ---
 export { prepare } from './prepare.js'
 export { reflow } from './reflow.js'
