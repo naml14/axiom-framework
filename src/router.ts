@@ -47,6 +47,21 @@ function createSafeDict(): Record<string, string> {
   return Object.create(null) as Record<string, string>
 }
 
+const SAFE_KEY_PATTERN = /^[A-Za-z0-9_.-]+$/
+
+function isSafeKey(key: string): boolean {
+  if (!key) return false
+  if (key === '__proto__' || key === 'prototype' || key === 'constructor') {
+    return false
+  }
+  return SAFE_KEY_PATTERN.test(key)
+}
+
+function toSafeRecord(entries: Array<[string, string]>): Record<string, string> {
+  if (entries.length === 0) return createSafeDict()
+  return Object.fromEntries(entries) as Record<string, string>
+}
+
 function safeDecode(value: string): string {
   try {
     return decodeURIComponent(value)
@@ -99,7 +114,7 @@ function parseURL(fullPath: string): {
   const queryStr = queryIdx >= 0 ? rest.slice(queryIdx + 1) : ''
   const pathname = queryIdx >= 0 ? rest.slice(0, queryIdx) : rest
 
-  const query = createSafeDict()
+  const queryEntries: Array<[string, string]> = []
   if (queryStr) {
     for (const pair of queryStr.split('&')) {
       if (!pair) continue
@@ -108,15 +123,12 @@ function parseURL(fullPath: string): {
       const valueRaw = eqIdx < 0 ? '' : pair.slice(eqIdx + 1)
       const key = safeDecode(keyRaw)
       const value = safeDecode(valueRaw)
-      if (!key) continue
-      if (key === '__proto__' || key === 'prototype' || key === 'constructor') {
-        continue
-      }
-      query[key] = value
+      if (!isSafeKey(key)) continue
+      queryEntries.push([key, value])
     }
   }
 
-  return { pathname, query, hash }
+  return { pathname, query: toSafeRecord(queryEntries), hash }
 }
 
 function parseRoutePattern(routePath: string): RouteSegment[] {
@@ -163,7 +175,7 @@ function matchRoute(
       continue
     }
 
-    const params = createSafeDict()
+    const paramEntries: Array<[string, string]> = []
     let matched = true
 
     for (let i = 0; i < parsed.segments.length; i++) {
@@ -180,12 +192,8 @@ function matchRoute(
       }
 
       if (segment.kind === 'dynamic') {
-        if (
-          segment.name !== '__proto__' &&
-          segment.name !== 'prototype' &&
-          segment.name !== 'constructor'
-        ) {
-          params[segment.name] = urlSegment
+        if (isSafeKey(segment.name)) {
+          paramEntries.push([segment.name, urlSegment])
         }
         continue
       }
@@ -195,7 +203,7 @@ function matchRoute(
     }
 
     if (matched) {
-      return { route: parsed.route, params }
+      return { route: parsed.route, params: toSafeRecord(paramEntries) }
     }
   }
 
