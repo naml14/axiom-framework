@@ -43,8 +43,6 @@ interface ParsedRoute {
   isWildcard: boolean
 }
 
-const UNSAFE_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor'])
-
 function createSafeDict(): Record<string, string> {
   return Object.create(null) as Record<string, string>
 }
@@ -55,20 +53,6 @@ function safeDecode(value: string): string {
   } catch {
     return value
   }
-}
-
-function assignSafeKey(
-  target: Record<string, string>,
-  key: string,
-  value: string
-): void {
-  if (!key || UNSAFE_OBJECT_KEYS.has(key)) return
-  Object.defineProperty(target, key, {
-    value,
-    enumerable: true,
-    configurable: true,
-    writable: true,
-  })
 }
 
 // ============================================================
@@ -124,7 +108,11 @@ function parseURL(fullPath: string): {
       const valueRaw = eqIdx < 0 ? '' : pair.slice(eqIdx + 1)
       const key = safeDecode(keyRaw)
       const value = safeDecode(valueRaw)
-      assignSafeKey(query, key, value)
+      if (!key) continue
+      if (key === '__proto__' || key === 'prototype' || key === 'constructor') {
+        continue
+      }
+      query[key] = value
     }
   }
 
@@ -192,7 +180,13 @@ function matchRoute(
       }
 
       if (segment.kind === 'dynamic') {
-        assignSafeKey(params, segment.name, urlSegment)
+        if (
+          segment.name !== '__proto__' &&
+          segment.name !== 'prototype' &&
+          segment.name !== 'constructor'
+        ) {
+          params[segment.name] = urlSegment
+        }
         continue
       }
 
