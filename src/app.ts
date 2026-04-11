@@ -2,6 +2,7 @@ import type { ComponentDefinition, LayoutConstraints, LayoutResult, PreparedComp
 import type { PretextModule, PrepareOptions } from './prepare.js'
 import type { SchedulerFn } from './scheduler.js'
 import type { ReflowOptions } from './reflow.js'
+import type { Router } from './router.js'
 
 import { prepare, resetIndexCounter } from './prepare.js'
 import { reflow } from './reflow.js'
@@ -41,6 +42,7 @@ export interface AppOptions {
   font?: string
   pretext?: PretextModule
   scheduler?: SchedulerFn
+  router?: Router
 }
 
 export interface App {
@@ -192,6 +194,7 @@ export function createApp(
     unmount(): void {
       state.stopEffect?.()
       cancelScheduled()
+      options?.router?.dispose?.()
       fireUnmountEvents(state.domState.domNodes)
       // Clear portal targets BEFORE wiping root — they live outside root DOM scope
       clearPortalRoots(state.domState)
