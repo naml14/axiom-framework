@@ -4,12 +4,27 @@ import type { SchedulerFn } from './scheduler.js'
 import type { ReflowOptions } from './reflow.js'
 
 import { prepare, resetIndexCounter } from './prepare.js'
-import { reflow, createLayoutResult } from './reflow.js'
+import { reflow } from './reflow.js'
 import { fullDiff, type DOMOperation } from './diff.js'
 import { commitFull, applyOps, fireUnmountEvents, type DOMState } from './commit.js'
 import { effect } from './signals.js'
 import { scheduleRender, cancelScheduled } from './scheduler.js'
 import { getNodeType, getTag, getChildren } from './prepare.js'
+
+// ============================================================
+// Internal helpers
+// ============================================================
+
+/** Remove only the DOM nodes Axiom inserted into each portal target — never nuke foreign content. */
+function clearPortalRoots(domState: DOMState): void {
+  for (const entry of domState.portalRoots.values()) {
+    for (const node of entry.nodes) {
+      if (node.parentNode === entry.target) {
+        entry.target.removeChild(node)
+      }
+    }
+  }
+}
 
 // ============================================================
 // Public API
@@ -51,7 +66,7 @@ export function createApp(
   const state: AppState = {
     prevPrepared: null,
     prevLayout: null,
-    domState: { domNodes: [] },
+    domState: { domNodes: [], portalRoots: new Map() },
     mounted: false,
     stopEffect: null,
     metrics: { prepareMs: 0, reflowMs: 0, commitMs: 0 },
@@ -119,8 +134,11 @@ export function createApp(
       // Shape change (e.g. column count changed) — full teardown and re-commit.
       // applyOps can't handle hierarchy changes because it flat-appends inserts to root.
       fireUnmountEvents(state.domState.domNodes)
+      // Clear portal targets BEFORE resetting root — they are outside root.innerHTML scope
+      clearPortalRoots(state.domState)
       root.innerHTML = ''
       state.domState.domNodes = []
+      state.domState.portalRoots = new Map()
       commitFull(layout, prepared, root, state.domState)
     } else {
       // Value change only — incremental diff and apply
@@ -175,6 +193,8 @@ export function createApp(
       state.stopEffect?.()
       cancelScheduled()
       fireUnmountEvents(state.domState.domNodes)
+      // Clear portal targets BEFORE wiping root — they live outside root DOM scope
+      clearPortalRoots(state.domState)
       root.innerHTML = ''
       state.mounted = false
       state.prevPrepared = null
@@ -182,6 +202,7 @@ export function createApp(
       // Replace the array reference (not just fill) to release all DOM node references
       // and allow the GC to collect them, preventing memory leaks in long-lived apps.
       state.domState.domNodes = []
+      state.domState.portalRoots = new Map()
     },
 
     getMetrics(): RenderMetrics {

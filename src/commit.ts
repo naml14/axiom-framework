@@ -19,14 +19,21 @@ import {
   getOn,
   forEachNode,
   getPreparedChildren,
+  getPortalTarget,
 } from './prepare.js'
 
 // ============================================================
 // Public API
 // ============================================================
 
+export interface PortalEntry {
+  target: HTMLElement
+  nodes: Node[]
+}
+
 export interface DOMState {
   domNodes: Array<HTMLElement | Text | null>
+  portalRoots: Map<number, PortalEntry>  // _index → { target, nodes[] }
 }
 
 export function commitFull(
@@ -148,18 +155,27 @@ export function applyOps(
     }
   }
 
-  // Phase 3: Inserts — use DocumentFragment for batching
-  const fragment = document.createDocumentFragment()
+  // Phase 3: Inserts — use per-container DocumentFragment for batching
+  // This supports portal inserts which target a different container than root.
+  const fragments = new Map<HTMLElement, DocumentFragment>()
   for (const op of ops) {
     if (op.type === 'insert') {
       const el = createDOMElement(op)
       domNodes[op.index] = el
-      fragment.appendChild(el)
+      const container = op.portalTarget ?? root
+      let frag = fragments.get(container)
+      if (frag === undefined) {
+        frag = document.createDocumentFragment()
+        fragments.set(container, frag)
+      }
+      frag.appendChild(el)
     }
   }
 
-  if (fragment.childNodes.length > 0) {
-    root.appendChild(fragment)
+  for (const [container, frag] of fragments) {
+    if (frag.childNodes.length > 0) {
+      container.appendChild(frag)
+    }
   }
 
   // Phase 4: Trigger mount events after DOM insertion
@@ -202,6 +218,25 @@ function buildDOMTree(
     // Fragments are transparent — just process children
     for (const child of children) {
       buildDOMTree(child, layout, parent, state)
+    }
+    return
+  }
+
+  if (nodeType === 'portal') {
+    // Portal: redirect children to the portalTarget, not the current parent
+    const portalTarget = getPortalTarget(prepared)
+    if (portalTarget !== undefined) {
+      const entry: PortalEntry = { target: portalTarget, nodes: [] }
+      state.portalRoots.set(idx, entry)
+      for (const child of children) {
+        // Capture childNodes count before insertion to track root-level nodes added
+        const before = portalTarget.childNodes.length
+        buildDOMTree(child, layout, portalTarget, state)
+        // Collect any new direct children of portalTarget added by this child
+        for (let i = before; i < portalTarget.childNodes.length; i++) {
+          entry.nodes.push(portalTarget.childNodes[i]!)
+        }
+      }
     }
     return
   }

@@ -15,6 +15,7 @@ import {
   forEachNode,
   countNodes,
   getPreparedChildren,
+  getPortalTarget,
 } from './prepare.js'
 
 // ============================================================
@@ -32,6 +33,8 @@ export interface DOMOperation {
   attrs?: Record<string, string>
   on?: Record<string, EventListener>
   key?: string
+  /** When set, this insert targets a portal container instead of the app root */
+  portalTarget?: HTMLElement
   // For update/move
   x?: number
   y?: number
@@ -39,6 +42,33 @@ export interface DOMOperation {
   height?: number
   newTextContent?: string
   newOn?: Record<string, EventListener>
+}
+
+// ============================================================
+// Portal Map — maps every descendant node index to its portalTarget
+// ============================================================
+
+function buildPortalMap(prepared: PreparedComponent): Map<number, HTMLElement> {
+  const map = new Map<number, HTMLElement>()
+  function walk(node: PreparedComponent, currentPortalTarget?: HTMLElement): void {
+    const nodeType = getNodeType(node)
+    const idx = getNodeIndex(node)
+    if (nodeType === 'portal') {
+      const target = getPortalTarget(node)
+      for (const child of getPreparedChildren(node)) {
+        walk(child, target)
+      }
+    } else {
+      if (currentPortalTarget !== undefined) {
+        map.set(idx, currentPortalTarget)
+      }
+      for (const child of getPreparedChildren(node)) {
+        walk(child, currentPortalTarget)
+      }
+    }
+  }
+  walk(prepared)
+  return map
 }
 
 // ============================================================
@@ -76,6 +106,7 @@ export function fullDiff(
 
   // First render — all inserts
   if (prevPrepared === null) {
+    const portalMap = buildPortalMap(newPrepared)
     forEachNode(newPrepared, (node) => {
       const idx = getNodeIndex(node)
       const op: DOMOperation = { type: 'insert', index: idx }
@@ -89,6 +120,11 @@ export function fullDiff(
         op.key = getKey(node)
       } else if (nodeType === 'text') {
         op.textContent = getTextContent(node)
+      }
+
+      const portalTarget = portalMap.get(idx)
+      if (portalTarget !== undefined) {
+        op.portalTarget = portalTarget
       }
 
       ops.push(op)
@@ -166,6 +202,9 @@ function fullTreeDiff(
 ): DOMOperation[] {
   const ops: DOMOperation[] = []
 
+  // Build portal map to propagate portalTarget to insert ops
+  const portalMap = buildPortalMap(newPrepared)
+
   // Build key maps for reconciliation
   const prevByKey = buildKeyMap(prevPrepared)
   const newByKey = buildKeyMap(newPrepared)
@@ -229,6 +268,10 @@ function fullTreeDiff(
         op.key = getKey(node)
       } else if (nodeType === 'text') {
         op.textContent = getTextContent(node)
+      }
+      const portalTarget = portalMap.get(idx)
+      if (portalTarget !== undefined) {
+        op.portalTarget = portalTarget
       }
       ops.push(op)
     } else {

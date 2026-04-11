@@ -161,7 +161,7 @@ describe('commitFull', () => {
     const root = document.createElement('div')
     const domNodes: (HTMLElement | Text | null)[] = []
 
-    commitFull(layout, prepared, root, { domNodes })
+    commitFull(layout, prepared, root, { domNodes, portalRoots: new Map() })
 
     expect(root.children.length).toBe(1)
     expect(root.children[0].tagName.toLowerCase()).toBe('div')
@@ -184,7 +184,7 @@ describe('commitFull', () => {
     const root = document.createElement('div')
     const domNodes: (HTMLElement | Text | null)[] = []
 
-    commitFull(layout, prepared, root, { domNodes })
+    commitFull(layout, prepared, root, { domNodes, portalRoots: new Map() })
 
     const container = root.children[0] as HTMLElement
     expect(container.style.position).toBe('absolute')
@@ -207,7 +207,7 @@ describe('commitFull', () => {
     const root = document.createElement('div')
     const domNodes: (HTMLElement | Text | null)[] = []
 
-    commitFull(layout, prepared, root, { domNodes })
+    commitFull(layout, prepared, root, { domNodes, portalRoots: new Map() })
 
     expect(root.style.position).toBe('relative')
     // overflow is NOT set to hidden — the framework measures and sets explicit

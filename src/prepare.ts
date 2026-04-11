@@ -6,6 +6,7 @@ import type {
   TextNode,
   ElementNode,
   FragmentNode,
+  PortalNode,
 } from './types.js'
 
 // ============================================================
@@ -30,7 +31,7 @@ export interface PrepareOptions {
 interface PreparedInternal {
   _index: number
   key?: string
-  nodeType: 'element' | 'text' | 'fragment'
+  nodeType: 'element' | 'text' | 'fragment' | 'portal'
   tag?: string
   classes?: string[]
   attrs?: Record<string, string>
@@ -38,6 +39,7 @@ interface PreparedInternal {
   layout?: import('./types.js').LayoutProps
   textContent?: string
   textHandle?: unknown
+  portalTarget?: HTMLElement
   children: PreparedInternal[]
   metrics: ComponentMetrics
 }
@@ -89,6 +91,8 @@ function prepareNode(node: ComponentNode, options?: PrepareOptions): PreparedInt
       return prepareElementNode(node, options)
     case 'fragment':
       return prepareFragmentNode(node, options)
+    case 'portal':
+      return preparePortalNode(node, options)
   }
 }
 
@@ -174,6 +178,32 @@ function prepareFragmentNode(node: FragmentNode, options?: PrepareOptions): Prep
   }
 }
 
+function preparePortalNode(node: PortalNode, options?: PrepareOptions): PreparedInternal {
+  const index = allocIndex() // Assign portal's index BEFORE processing children
+
+  const children = node.children.flatMap(child => {
+    const prepared = prepareNode(child, options)
+    if (prepared.nodeType === 'fragment') {
+      return prepared.children
+    }
+    return [prepared]
+  })
+
+  const hasText = children.some(c => c.metrics.hasText)
+
+  return {
+    _index: index,
+    nodeType: 'portal',
+    portalTarget: node.target,
+    children,
+    metrics: {
+      hasText,
+      isInline: false,
+      simpleLayout: true,  // Portal slot is 0×0 — always "simple" from parent's perspective
+    },
+  }
+}
+
 // ============================================================
 // Helpers
 // ============================================================
@@ -195,8 +225,12 @@ export function getMetrics(prepared: PreparedComponent): ComponentMetrics {
   return unbrandPrepared(prepared).metrics
 }
 
-export function getNodeType(prepared: PreparedComponent): 'element' | 'text' | 'fragment' {
+export function getNodeType(prepared: PreparedComponent): 'element' | 'text' | 'fragment' | 'portal' {
   return unbrandPrepared(prepared).nodeType
+}
+
+export function getPortalTarget(prepared: PreparedComponent): HTMLElement | undefined {
+  return unbrandPrepared(prepared).portalTarget
 }
 
 export function getTag(prepared: PreparedComponent): string | undefined {

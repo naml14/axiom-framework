@@ -14,6 +14,9 @@ export { signal, computed, effect } from './signals.js'
 // --- Components ---
 export { defineComponent } from './component.js'
 
+// --- Portals ---
+export { createPortal } from './portal.js'
+
 // --- App ---
 export { createApp } from './app.js'
 export type { App, AppOptions, RenderMetrics } from './app.js'
@@ -54,6 +57,7 @@ export type {
   ElementNode,
   TextNode,
   FragmentNode,
+  PortalNode,
   // Layout
   PreparedComponent,
   LayoutResult,
