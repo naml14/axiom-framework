@@ -34,12 +34,30 @@ export interface SSRRenderOptions {
    * integra aún al matching de rutas en servidor.
    */
   url?: string
+  /** ID del elemento raíz donde se monta la app. Por defecto: `"app"`. */
+  rootId?: string
 }
 
-export async function renderToString(
+// Elementos HTML que no tienen closing tag ni pueden tener hijos.
+const VOID_ELEMENTS = new Set([
+  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+  'link', 'meta', 'param', 'source', 'track', 'wbr',
+])
+
+// Nombre de tag HTML/custom-element válido (e.g. "div", "my-component").
+const VALID_TAG_RE = /^[a-zA-Z][a-zA-Z0-9]*(-[a-zA-Z0-9]+)*$/
+
+// Nombre de atributo HTML válido (e.g. "data-role", "aria-label").
+const VALID_ATTR_RE = /^[A-Za-z_][\w:.-]*$/
+
+function sanitizeTagName(tag: string): string {
+  return VALID_TAG_RE.test(tag) ? tag : 'div'
+}
+
+export function renderToString(
   component: ComponentDefinition<void>,
   options?: SSRRenderOptions
-): Promise<string> {
+): string {
   const prepared = prepare(component, undefined, {
     font: options?.font ?? '16px sans-serif',
     textEngine: options?.textEngine,
@@ -56,13 +74,18 @@ export async function renderToString(
     }
   )
 
+  const rootId = escapeHtml(options?.rootId ?? 'app')
   const bodyHtml = renderNode(prepared, layout)
   const headHtml = renderHead(options?.metadata)
 
-  return `<!DOCTYPE html><html><head>${headHtml}</head><body><div id="app">${bodyHtml}</div></body></html>`
+  return `<!DOCTYPE html><html><head>${headHtml}</head><body><div id="${rootId}">${bodyHtml}</div></body></html>`
 }
 
-function renderNode(node: PreparedComponent, layout: LayoutResult): string {
+function renderNode(
+  node: PreparedComponent,
+  layout: LayoutResult,
+  isPortalChild = false
+): string {
   const nodeType = getNodeType(node)
 
   if (nodeType === 'text') {
@@ -71,11 +94,16 @@ function renderNode(node: PreparedComponent, layout: LayoutResult): string {
 
   const children = getPreparedChildren(node)
 
-  if (nodeType === 'fragment' || nodeType === 'portal') {
-    return children.map(child => renderNode(child, layout)).join('')
+  if (nodeType === 'fragment') {
+    return children.map(child => renderNode(child, layout, isPortalChild)).join('')
   }
 
-  const tag = getTag(node) ?? 'div'
+  if (nodeType === 'portal') {
+    // Los hijos de portal son gestionados por CSS — el layout del framework no aplica.
+    return children.map(child => renderNode(child, layout, true)).join('')
+  }
+
+  const tag = sanitizeTagName(getTag(node) ?? 'div')
   const attrs = getAttrs(node)
   const classes = getClasses(node)
   const idx = getNodeIndex(node)
@@ -86,14 +114,25 @@ function renderNode(node: PreparedComponent, layout: LayoutResult): string {
     attrPairs.push(['class', classes.join(' ')])
   }
 
-  const style = `left:${layout.x[idx]}px;top:${layout.y[idx]}px;width:${layout.width[idx]}px;height:${layout.height[idx]}px;`
-  attrPairs.push(['style', style])
+  // Emitir el mismo contrato de layout que el renderer de cliente: position:absolute + transform.
+  // Los portal children son CSS-managed (reflow les asigna 0×0), así que se omite el layout.
+  if (!isPortalChild) {
+    let style = `position:absolute;left:0px;top:0px;transform:translate(${layout.x[idx]}px,${layout.y[idx]}px);width:${layout.width[idx]}px;height:${layout.height[idx]}px;`
+    if (attrs?.style) {
+      style += attrs.style.endsWith(';') ? ` ${attrs.style}` : ` ${attrs.style};`
+    }
+    attrPairs.push(['style', style])
+  } else if (attrs?.style) {
+    attrPairs.push(['style', attrs.style])
+  }
 
   if (attrs !== undefined) {
     const keys = Object.keys(attrs).sort()
     for (const key of keys) {
       if (key === 'class' || key === 'style') continue
       if (key.startsWith('on')) continue
+      // Validar nombre de atributo para prevenir inyección de markup.
+      if (!VALID_ATTR_RE.test(key)) continue
       attrPairs.push([key, attrs[key]!])
     }
   }
@@ -106,7 +145,12 @@ function renderNode(node: PreparedComponent, layout: LayoutResult): string {
     ? `<${tag} ${serializedAttrs}>`
     : `<${tag}>`
 
-  const inner = children.map(child => renderNode(child, layout)).join('')
+  // Los elementos void no tienen closing tag ni pueden tener hijos (HTML5).
+  if (VOID_ELEMENTS.has(tag)) {
+    return openTag
+  }
+
+  const inner = children.map(child => renderNode(child, layout, isPortalChild)).join('')
   return `${openTag}${inner}</${tag}>`
 }
 
