@@ -29,6 +29,10 @@ export type { Route, RouteState, Router } from './router.js'
 export { prepare } from './prepare.js'
 export { reflow } from './reflow.js'
 
+// --- SSR ---
+export { renderToString } from './ssr.js'
+export type { SSRMetadata, SSRRenderOptions } from './ssr.js'
+
 // --- Context ---
 export {
   createContext,
