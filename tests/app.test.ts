@@ -27,10 +27,10 @@ beforeAll(() => {
 })
 
 // ============================================================
-// Fake pretext
+// Fake text layout engine
 // ============================================================
 
-const fakePretext = {
+const fakeTextEngine = {
   prepare: (text: string, _font: string) => ({ text }),
   layout: (_p: unknown, maxWidth: number, _lh: number) => {
     const text = (_p as { text: string }).text
@@ -54,7 +54,7 @@ describe('createApp', () => {
     }))
 
     const root = document.createElement('div')
-    const app = createApp(comp, root, { pretext: fakePretext })
+    const app = createApp(comp, root, { textEngine: fakeTextEngine })
 
     expect(typeof app.mount).toBe('function')
     expect(typeof app.unmount).toBe('function')
@@ -70,7 +70,7 @@ describe('createApp', () => {
     }))
 
     const root = document.createElement('div')
-    const app = createApp(comp, root, { pretext: fakePretext })
+    const app = createApp(comp, root, { textEngine: fakeTextEngine })
     app.mount()
 
     expect(root.childNodes.length).toBe(1)
@@ -88,7 +88,7 @@ describe('createApp', () => {
     }))
 
     const root = document.createElement('div')
-    const app = createApp(comp, root, { pretext: fakePretext })
+    const app = createApp(comp, root, { textEngine: fakeTextEngine })
     app.mount()
     expect(root.childNodes.length).toBeGreaterThan(0)
 
@@ -104,7 +104,7 @@ describe('createApp', () => {
     }))
 
     const root = document.createElement('div')
-    const app = createApp(comp, root, { pretext: fakePretext })
+    const app = createApp(comp, root, { textEngine: fakeTextEngine })
     app.mount()
 
     const metrics = app.getMetrics()
@@ -127,7 +127,7 @@ describe('createApp', () => {
 
     const root = document.createElement('div')
     const app = createApp(comp, root, {
-      pretext: fakePretext,
+      textEngine: fakeTextEngine,
       scheduler: mockScheduler,
     })
     app.mount()

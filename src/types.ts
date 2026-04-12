@@ -67,7 +67,7 @@ export interface ComponentMetrics {
   simpleLayout: boolean
 }
 
-// Brand type — opaque handle, like PreparedText from pretext
+// Brand type — opaque prepared component handle
 declare const preparedBrand: unique symbol
 
 export type PreparedComponent = {

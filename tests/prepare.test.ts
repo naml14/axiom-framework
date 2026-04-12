@@ -4,12 +4,12 @@ import { prepare } from '../src/prepare.js'
 import type { ComponentNode } from '../src/types.js'
 
 // ============================================================
-// Fake pretext module — mimics pretext's prepare() API
+// Fake text layout engine — mimics the TextLayoutEngine contract
 // ============================================================
 
 const fakePreparedText = Symbol('fake-prepared-text')
 
-const fakePretext = {
+const fakeTextEngine = {
   prepare: mock((text: string, _font: string) => {
     return { [fakePreparedText]: true, text, segmentCount: text.length }
   }),
@@ -19,9 +19,7 @@ const fakePretext = {
   clearCache: mock(),
 }
 
-// Inject fake pretext into module resolution
-// In Phase 1, prepare.ts imports pretext directly, so we mock at the module level
-// For now, we pass the fake pretext as a parameter to prepare() for testability
+// The text engine is injected via PrepareOptions — no module mocking needed
 
 describe('prepare', () => {
   test('prepares a text node', () => {
@@ -30,7 +28,7 @@ describe('prepare', () => {
       content: 'Hello World'
     }))
 
-    const result = prepare(comp, undefined, { pretext: fakePretext })
+    const result = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(result).toBeDefined()
   })
 
@@ -43,7 +41,7 @@ describe('prepare', () => {
       children: []
     }))
 
-    const result = prepare(comp, undefined, { pretext: fakePretext })
+    const result = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(result).toBeDefined()
   })
 
@@ -59,7 +57,7 @@ describe('prepare', () => {
       ]
     }))
 
-    const result = prepare(comp, undefined, { pretext: fakePretext })
+    const result = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(result).toBeDefined()
   })
 
@@ -72,7 +70,7 @@ describe('prepare', () => {
       ]
     }))
 
-    const result = prepare(comp, undefined, { pretext: fakePretext })
+    const result = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(result).toBeDefined()
   })
 
@@ -82,7 +80,7 @@ describe('prepare', () => {
       content: 'Hello'
     }))
 
-    const result = prepare(comp, undefined, { pretext: fakePretext })
+    const result = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(result).toBeDefined()
   })
 
@@ -95,7 +93,7 @@ describe('prepare', () => {
       ]
     }))
 
-    const result = prepare(comp, undefined, { pretext: fakePretext })
+    const result = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(result).toBeDefined()
   })
 
@@ -108,7 +106,7 @@ describe('prepare', () => {
       ]
     }))
 
-    const result = prepare(inlineComp, undefined, { pretext: fakePretext })
+    const result = prepare(inlineComp, undefined, { textEngine: fakeTextEngine })
     expect(result).toBeDefined()
   })
 
@@ -121,7 +119,7 @@ describe('prepare', () => {
       ]
     }))
 
-    const result = prepare(comp, undefined, { pretext: fakePretext })
+    const result = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(result).toBeDefined()
   })
 
@@ -132,7 +130,7 @@ describe('prepare', () => {
       children: []
     }))
 
-    const result = prepare(comp, undefined, { pretext: fakePretext })
+    const result = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(result).toBeDefined()
   })
 
@@ -142,7 +140,7 @@ describe('prepare', () => {
       content: 'no props'
     }))
 
-    const result = prepare(comp, undefined, { pretext: fakePretext })
+    const result = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(result).toBeDefined()
   })
 
@@ -157,7 +155,7 @@ describe('prepare', () => {
     }
 
     const comp = defineComponent(() => buildTree(20))
-    const result = prepare(comp, undefined, { pretext: fakePretext })
+    const result = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(result).toBeDefined()
   })
 })

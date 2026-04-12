@@ -14,10 +14,10 @@ beforeAll(() => {
 })
 
 // ============================================================
-// Fake pretext
+// Fake text layout engine
 // ============================================================
 
-const fakePretext = {
+const fakeTextEngine = {
   prepare: (text: string, _font: string) => ({ text }),
   layout: (_p: unknown, maxWidth: number, _lh: number) => {
     const text = (_p as { text: string }).text
@@ -155,7 +155,7 @@ describe('commitFull', () => {
       ]
     }))
 
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const layout = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: 20 })
 
     const root = document.createElement('div')
@@ -178,7 +178,7 @@ describe('commitFull', () => {
       ]
     }))
 
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const layout = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: 20 })
 
     const root = document.createElement('div')
@@ -201,7 +201,7 @@ describe('commitFull', () => {
       ]
     }))
 
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const layout = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: 20 })
 
     const root = document.createElement('div')
