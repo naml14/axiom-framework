@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.2.6](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.5...axiom-framework-v0.2.6) (2026-04-12)
+
+
+### Features
+
+* **ssr:** add renderToString public API ([47fdc4d](https://github.com/naml14/axiom-framework/commit/47fdc4d08c14571acca86cf065c2cb14c69cffba))
+* **ssr:** add renderToString public API ([d6b369d](https://github.com/naml14/axiom-framework/commit/d6b369d7b9d2ea8906e91826212c8552bd29a61c))
+
+
+### Bug Fixes
+
+* **ssr:** address PR [#17](https://github.com/naml14/axiom-framework/issues/17) review comments ([4b4b9db](https://github.com/naml14/axiom-framework/commit/4b4b9db1373877a9ccf4b9744dc5a1617bfe93b1))
+
 ## [0.2.5](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.4...axiom-framework-v0.2.5) (2026-04-11)
 
 
