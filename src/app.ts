@@ -1,5 +1,5 @@
 import type { ComponentDefinition, LayoutConstraints, LayoutResult, PreparedComponent } from './types.js'
-import type { PretextModule, PrepareOptions } from './prepare.js'
+import type { TextLayoutEngine, PrepareOptions } from './prepare.js'
 import type { SchedulerFn } from './scheduler.js'
 import type { ReflowOptions } from './reflow.js'
 import type { Router } from './router.js'
@@ -40,7 +40,7 @@ export interface RenderMetrics {
 export interface AppOptions {
   lineHeight?: number
   font?: string
-  pretext?: PretextModule
+  textEngine?: TextLayoutEngine
   scheduler?: SchedulerFn
   router?: Router
 }
@@ -76,7 +76,7 @@ export function createApp(
 
   const prepareOpts: PrepareOptions = {
     font: options?.font ?? '16px sans-serif',
-    pretext: options?.pretext,
+    textEngine: options?.textEngine,
   }
 
   const reflowOpts: ReflowOptions = {

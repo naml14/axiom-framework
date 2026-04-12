@@ -104,7 +104,7 @@ function measureText(
   const idx = getNodeIndex(prepared)
   const textHandle = getTextHandle(prepared)
 
-  // Resolve text content — prefer pretext handle, fallback to raw textContent
+  // Resolve text content — prefer text engine handle, fallback to raw textContent
   let text: string | undefined
   if (textHandle !== undefined) {
     text = (textHandle as { text: string }).text

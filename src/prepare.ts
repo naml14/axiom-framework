@@ -10,17 +10,17 @@ import type {
 } from './types.js'
 
 // ============================================================
-// Pretext integration type
+// Text layout engine contract
 // ============================================================
 
-export interface PretextModule {
+export interface TextLayoutEngine {
   prepare(text: string, font: string): unknown
   layout(prepared: unknown, maxWidth: number, lineHeight: number): { lineCount: number; height: number }
   clearCache(): void
 }
 
 export interface PrepareOptions {
-  pretext?: PretextModule
+  textEngine?: TextLayoutEngine
   font?: string
 }
 
@@ -97,11 +97,11 @@ function prepareNode(node: ComponentNode, options?: PrepareOptions): PreparedInt
 }
 
 function prepareTextNode(node: TextNode, options?: PrepareOptions): PreparedInternal {
-  const pretext = options?.pretext
+  const textEngine = options?.textEngine
   let textHandle: unknown = undefined
 
-  if (pretext !== undefined) {
-    textHandle = pretext.prepare(node.content, options?.font ?? '16px sans-serif')
+  if (textEngine !== undefined) {
+    textHandle = textEngine.prepare(node.content, options?.font ?? '16px sans-serif')
   }
 
   return {

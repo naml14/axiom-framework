@@ -23,7 +23,7 @@ function setupDOM() {
   return window
 }
 
-const fakePretext = {
+const fakeTextEngine = {
   prepare: (text: string, _font: string) => ({ text }),
   layout: (_p: unknown, _maxWidth: number, lh: number) => ({ lineCount: 1, height: lh }),
   clearCache: () => {},
@@ -362,7 +362,7 @@ describe('router: app + async integration (RED)', () => {
     const Root = makeComponent('Root')
     const rootEl = document.createElement('div')
 
-    const appNoRouter = createApp(Root, rootEl, { pretext: fakePretext })
+    const appNoRouter = createApp(Root, rootEl, { textEngine: fakeTextEngine })
     expect(() => {
       appNoRouter.mount()
       appNoRouter.unmount()
@@ -370,7 +370,7 @@ describe('router: app + async integration (RED)', () => {
 
     const Home = makeComponent('Home')
     const router = createRouter([{ path: '/', component: Home }])
-    const appWithRouter = createApp(Root, rootEl, { pretext: fakePretext, router })
+    const appWithRouter = createApp(Root, rootEl, { textEngine: fakeTextEngine, router })
 
     expect(() => {
       appWithRouter.mount()
@@ -383,7 +383,7 @@ describe('router: app + async integration (RED)', () => {
 
     try {
       const appWithRouterCleanup = createApp(Root, rootEl, {
-        pretext: fakePretext,
+        textEngine: fakeTextEngine,
         router,
       })
 
@@ -467,7 +467,7 @@ describe('router: app + async integration (RED)', () => {
     })
 
     const rootEl = document.createElement('div')
-    const app = createApp(Root, rootEl, { pretext: fakePretext, router })
+    const app = createApp(Root, rootEl, { textEngine: fakeTextEngine, router })
 
     app.mount()
     router.push('/async')

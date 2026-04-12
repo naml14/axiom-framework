@@ -21,10 +21,10 @@ beforeAll(() => {
 })
 
 // ============================================================
-// Fake pretext
+// Fake text layout engine
 // ============================================================
 
-const fakePretext = {
+const fakeTextEngine = {
   prepare: (text: string, _font: string) => ({ text }),
   layout: (_p: unknown, maxWidth: number, _lh: number) => {
     const text = (_p as { text: string }).text
@@ -93,7 +93,7 @@ describe('fullDiff', () => {
         { type: 'text' as const, content: 'Hello' }
       ]
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const layout = createLayoutResult(prepared)
 
     const ops = fullDiff(null, null, prepared, layout, [])
@@ -109,14 +109,14 @@ describe('fullDiff', () => {
         { type: 'text' as const, content: 'Hello' }
       ]
     }))
-    const prevPrepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prevPrepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const prevLayout = createLayoutResult(prevPrepared)
     prevLayout.x[1] = 0
     prevLayout.y[1] = 0
     prevLayout.width[1] = 500
     prevLayout.height[1] = 20
 
-    const newPrepared = prepare(comp, undefined, { pretext: fakePretext })
+    const newPrepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const newLayout = createLayoutResult(newPrepared)
     newLayout.x[1] = 100
     newLayout.y[1] = 50
@@ -147,9 +147,9 @@ describe('fullDiff', () => {
       ]
     }))
 
-    const prevPrepared = prepare(comp1, undefined, { pretext: fakePretext })
+    const prevPrepared = prepare(comp1, undefined, { textEngine: fakeTextEngine })
     const prevLayout = createLayoutResult(prevPrepared)
-    const newPrepared = prepare(comp2, undefined, { pretext: fakePretext })
+    const newPrepared = prepare(comp2, undefined, { textEngine: fakeTextEngine })
     const newLayout = createLayoutResult(newPrepared)
 
     const domNodes: (HTMLElement | Text | null)[] = [
@@ -181,9 +181,9 @@ describe('fullDiff', () => {
       ]
     }))
 
-    const prevPrepared = prepare(comp1, undefined, { pretext: fakePretext })
+    const prevPrepared = prepare(comp1, undefined, { textEngine: fakeTextEngine })
     const prevLayout = createLayoutResult(prevPrepared)
-    const newPrepared = prepare(comp2, undefined, { pretext: fakePretext })
+    const newPrepared = prepare(comp2, undefined, { textEngine: fakeTextEngine })
     const newLayout = createLayoutResult(newPrepared)
 
     const domNodes: (HTMLElement | Text | null)[] = [
@@ -225,9 +225,9 @@ describe('fullDiff', () => {
       ]
     }))
 
-    const prevPrepared = prepare(comp1, undefined, { pretext: fakePretext })
+    const prevPrepared = prepare(comp1, undefined, { textEngine: fakeTextEngine })
     const prevLayout = createLayoutResult(prevPrepared)
-    const newPrepared = prepare(comp2, undefined, { pretext: fakePretext })
+    const newPrepared = prepare(comp2, undefined, { textEngine: fakeTextEngine })
     const newLayout = createLayoutResult(newPrepared)
 
     const domNodes: (HTMLElement | Text | null)[] = [

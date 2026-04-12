@@ -5,10 +5,10 @@ import { reflow, createLayoutResult } from '../src/reflow.js'
 import type { PreparedComponent } from '../src/types.js'
 
 // ============================================================
-// Fake pretext
+// Fake text layout engine
 // ============================================================
 
-const fakePretext = {
+const fakeTextEngine = {
   prepare: mock((text: string, _font: string) => ({ text })),
   layout: mock((_prepared: unknown, maxWidth: number, _lineHeight: number) => {
     // Simulate text wrapping — used by prepare() for metrics, not by fast-path measureText
@@ -33,7 +33,7 @@ function prepareSimple(content: string) {
     tag: 'div',
     children: [{ type: 'text' as const, content }]
   }))
-  return prepare(comp, undefined, { pretext: fakePretext })
+  return prepare(comp, undefined, { textEngine: fakeTextEngine })
 }
 
 describe('createLayoutResult', () => {
@@ -58,7 +58,7 @@ describe('createLayoutResult', () => {
         ]}
       ]
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = createLayoutResult(prepared)
 
     expect(result.nodeCount).toBe(3) // root + child + text
@@ -107,7 +107,7 @@ describe('reflow — fast path', () => {
         { type: 'text' as const, content: 'Line 2' }
       ]
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     // First child at y=0
@@ -125,7 +125,7 @@ describe('reflow — fast path', () => {
         { type: 'text' as const, content: 'B' }
       ]
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     expect(result.height[0]).toBe(result.height[1] + result.height[2])
@@ -137,7 +137,7 @@ describe('reflow — fast path', () => {
       tag: 'div',
       children: []
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     expect(result.width[0]).toBe(500)
@@ -156,7 +156,7 @@ describe('reflow — flex layout', () => {
         { type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 } }
       ]
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     // First child at x=0
@@ -178,7 +178,7 @@ describe('reflow — flex layout', () => {
         { type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 } }
       ]
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     expect(result.x[1]).toBe(0)
@@ -194,7 +194,7 @@ describe('reflow — flex layout', () => {
         { type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 } }
       ]
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     // Free space = 200 - 50 = 150, center = 75
@@ -211,7 +211,7 @@ describe('reflow — flex layout', () => {
         { type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 } }
       ]
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     // First at top, last at bottom
@@ -228,7 +228,7 @@ describe('reflow — flex layout', () => {
         { type: 'element' as const, tag: 'div', layout: { width: 50, height: 40 } }
       ]
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     // Cross axis center: (100 - 40) / 2 = 30
@@ -244,7 +244,7 @@ describe('reflow — flex layout', () => {
         { type: 'text' as const, content: 'Hello' }
       ]
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     // Child positioned at x=20, y=20 (padding offset)
@@ -262,7 +262,7 @@ describe('reflow — edge cases', () => {
       tag: 'div',
       children: []
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = reflow(prepared, { maxWidth: 0, maxHeight: 0 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     expect(result.width[0]).toBe(0)
@@ -277,7 +277,7 @@ describe('reflow — edge cases', () => {
         { type: 'text' as const, content: 'Hello' }
       ]
     }))
-    const prepared = prepare(comp, undefined, { pretext: fakePretext })
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = reflow(prepared, { maxWidth: 0, maxHeight: 0 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     expect(result.width[0]).toBe(0)

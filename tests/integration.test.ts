@@ -5,10 +5,10 @@ import { signal, computed, effect, defineComponent, prepare } from '../src/index
 import type { ComponentNode } from '../src/index.js'
 
 // ============================================================
-// Fake pretext
+// Fake text layout engine
 // ============================================================
 
-const fakePretext = {
+const fakeTextEngine = {
   prepare: mock((text: string, _font: string) => ({ text })),
   layout: mock((_p: unknown, _w: number, lh: number) => ({ lineCount: 1, height: lh })),
   clearCache: mock(),
@@ -30,7 +30,7 @@ describe('integration: signal triggers prepare', () => {
     }))
 
     effect(() => {
-      const p = prepare(comp, { value: count.value }, { pretext: fakePretext })
+      const p = prepare(comp, { value: count.value }, { textEngine: fakeTextEngine })
       preparedCount++
       expect(p).toBeDefined()
     })
@@ -49,11 +49,11 @@ describe('integration: signal triggers prepare', () => {
       children: [{ type: 'text' as const, content: `Hello ${name.value}!` }]
     }))
 
-    const p1 = prepare(comp, undefined, { pretext: fakePretext })
+    const p1 = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(p1).toBeDefined()
 
     name.value = 'Axiom'
-    const p2 = prepare(comp, undefined, { pretext: fakePretext })
+    const p2 = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(p2).toBeDefined()
   })
 
@@ -68,11 +68,11 @@ describe('integration: signal triggers prepare', () => {
       }))
     }))
 
-    const p1 = prepare(comp, undefined, { pretext: fakePretext })
+    const p1 = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(p1).toBeDefined()
 
     items.value = ['a', 'b', 'c']
-    const p2 = prepare(comp, undefined, { pretext: fakePretext })
+    const p2 = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(p2).toBeDefined()
   })
 
@@ -88,7 +88,7 @@ describe('integration: signal triggers prepare', () => {
 
     let lastValue = 0
     effect(() => {
-      const p = prepare(comp, { value: doubled.value }, { pretext: fakePretext })
+      const p = prepare(comp, { value: doubled.value }, { textEngine: fakeTextEngine })
       expect(p).toBeDefined()
       lastValue = doubled.value
     })
@@ -115,7 +115,7 @@ describe('integration: signal triggers prepare', () => {
     let prepareCalls = 0
     effect(() => {
       void count.value // track computed
-      const p = prepare(List, undefined, { pretext: fakePretext })
+      const p = prepare(List, undefined, { textEngine: fakeTextEngine })
       prepareCalls++
       expect(p).toBeDefined()
     })
