@@ -1,106 +1,79 @@
+/**
+ * Axiom demo server — entry point.
+ *
+ * This file is intentionally thin.  Its only responsibilities are:
+ *  1. Run an initial build (unless `--no-build` is passed).
+ *  2. Start file-system watching in watch mode (`--watch`).
+ *  3. Start the Bun HTTP server and delegate each route.
+ *
+ * Logic lives in purpose-built modules:
+ *  - demo/build.ts    → framework build + watch utilities
+ *  - demo/ssr-page.ts → SSR demo route handler
+ */
+
 import { serve } from 'bun'
-import { join, dirname } from 'path'
-import { watch, statSync } from 'fs'
+import { join } from 'path'
 
-const isWatch = Bun.argv.includes('--watch')
+import { doBuild, setupWatch } from './build.js'
+import { renderSSRPage } from './ssr-page.js'
+
+// ---------------------------------------------------------------------------
+// Start-up flags
+// ---------------------------------------------------------------------------
+
+const isWatch   = Bun.argv.includes('--watch')
 const skipBuild = Bun.argv.includes('--no-build')
-const ROOT_DIR = join(import.meta.dir, '..')
-const DEMO_DIR = import.meta.dir
+const DEMO_DIR  = import.meta.dir
 
-async function doBuild(): Promise<boolean> {
-  console.log('📦 Building framework (dist)...')
+// ---------------------------------------------------------------------------
+// Build step (skipped when the caller already built — e.g. `bun run demo`)
+// ---------------------------------------------------------------------------
 
-  // Step 1: compile framework → dist/ (tsc)
-  const tsc = Bun.spawnSync(['bunx', 'tsc', '--project', 'tsconfig.build.json'], {
-    cwd: ROOT_DIR,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  })
-  if (tsc.exitCode !== 0) {
-    console.error('❌ Framework typecheck/build failed:')
-    console.error(new TextDecoder().decode(tsc.stderr))
-    return false
-  }
-
-  console.log('📦 Building demo bundle (app.js)...')
-
-  // Step 2: bundle demo → demo/app.js (using dist/ as source)
-  const result = await Bun.build({
-    entrypoints: ['demo/app.ts'],
-    outdir: 'demo',
-    target: 'browser',
-  })
-
-  if (!result.success) {
-    console.error('❌ Demo bundle failed:')
-    for (const msg of result.logs) {
-      console.error(msg)
-    }
-    return false
-  }
-
-  console.log('✅ Built demo/app.js (from dist/)')
-  return true
-}
-
-// Initial build (skip when called from `demo` command which already builds)
 if (!skipBuild && !await doBuild()) {
   process.exit(1)
 }
 
-// Watch mode: rebuild on file changes
 if (isWatch) {
-  const watchPaths = [
-    join(ROOT_DIR, 'demo', 'app.ts'),
-    join(ROOT_DIR, 'src'),
-  ]
-
-  let rebuilding = false
-  for (const wp of watchPaths) {
-    try {
-      statSync(wp) // verify path exists
-      watch(wp, { recursive: true }, (eventType, filename) => {
-        if (rebuilding) return
-        if (filename && (filename.endsWith('.ts') || filename.endsWith('.css'))) {
-          rebuilding = true
-          console.log(`🔄 ${filename} changed — rebuilding...`)
-          doBuild().finally(() => {
-            rebuilding = false
-          })
-        }
-      })
-    } catch {
-      // path doesn't exist yet, skip
-    }
-  }
-  console.log('👀 Watching for changes...')
+  setupWatch()
 }
+
+// ---------------------------------------------------------------------------
+// Static file MIME types
+// ---------------------------------------------------------------------------
+
+const MIME: Record<string, string> = {
+  html: 'text/html',
+  css:  'text/css',
+  js:   'application/javascript',
+  json: 'application/json',
+}
+
+// ---------------------------------------------------------------------------
+// Server
+// ---------------------------------------------------------------------------
 
 serve({
   port: 3000,
-  fetch(req) {
-    const url = new URL(req.url)
-    let path = url.pathname === '/' ? '/index.html' : url.pathname
 
-    const filePath = join(DEMO_DIR, path)
-    const file = Bun.file(filePath)
+  async fetch(req) {
+    const url = new URL(req.url)
+
+    // SSR demo route
+    if (url.pathname === '/ssr') {
+      return renderSSRPage(url)
+    }
+
+    // Static file serving — map `/` to `index.html`
+    const filePath = join(DEMO_DIR, url.pathname === '/' ? '/index.html' : url.pathname)
+    const file     = Bun.file(filePath)
 
     if (!file.size) {
       return new Response('Not found', { status: 404 })
     }
 
-    const ext = path.split('.').pop()?.toLowerCase()
-    const contentType: Record<string, string> = {
-      html: 'text/html',
-      css: 'text/css',
-      js: 'application/javascript',
-      json: 'application/json',
-    }
-
+    const ext = filePath.split('.').pop()?.toLowerCase() ?? ''
     return new Response(file, {
-      headers: {
-        'Content-Type': contentType[ext ?? ''] ?? 'application/octet-stream',
-      },
+      headers: { 'Content-Type': MIME[ext] ?? 'application/octet-stream' },
     })
   },
 })
