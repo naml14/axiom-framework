@@ -3,9 +3,11 @@
 // ============================================================
 //
 // This is the ONLY surface consumers should import from.
-// Internal modules (prepare internals, diff, commit, scheduler)
+// Internal modules (prepare internals, diff, scheduler)
 // are NOT exported here — they are implementation details that
 // can change between minor versions without semver guarantees.
+//
+// Exception: `commitHydrate` is exported as an advanced hydration API.
 // ============================================================
 
 // --- Reactivity ---

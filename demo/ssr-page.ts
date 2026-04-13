@@ -13,7 +13,7 @@
 // ---------------------------------------------------------------------------
 
 /** Lazy-loaded SSR module (compiled src) kept as a module-level singleton. */
-type SSRModule = typeof import('../src/index.js')
+type SSRModule = typeof import('../src/index.ts')
 
 // ---------------------------------------------------------------------------
 // Node factory helpers
@@ -41,36 +41,72 @@ function txt(content: string): TextNode {
 }
 
 // ---------------------------------------------------------------------------
-// Module loading — lazy singleton so the dist import happens once
+// Module loading — lazy singleton so the module import happens once
 // ---------------------------------------------------------------------------
 
-let ssrModulePromise: Promise<SSRModule> | null = null
-
-function loadSSRModule(): Promise<SSRModule> {
-  ssrModulePromise ??= import('../src/index.js') as Promise<SSRModule>
-  return ssrModulePromise
-}
+const ssrModulePromise: Promise<SSRModule> = import('../src/index.ts') as Promise<SSRModule>
 
 // ---------------------------------------------------------------------------
 // Query-param parsing helpers
 // ---------------------------------------------------------------------------
 
-/** Clamps the `?width=` param to a safe 320–1600 range. Defaults to 960. */
-function parseWidth(raw: string | null): number {
-  const parsed = Number.parseInt(raw ?? '960', 10)
-  if (!Number.isFinite(parsed) || Number.isNaN(parsed)) return 960
-  return Math.max(320, Math.min(1600, parsed))
+type SSRParams = {
+  name: string
+  width: number
+  rootId: string
+  queryString: string
 }
 
-/**
- * Validates and returns the `?root=` param as a safe HTML id.
- * Defaults to `"ssr-root"` if the value is empty or contains invalid chars.
- */
-function parseRootId(raw: string | null): string {
-  const value = (raw ?? 'ssr-root').trim()
-  if (value.length === 0) return 'ssr-root'
-  return /^[A-Za-z_][\w-]*$/.test(value) ? value : 'ssr-root'
+function parseSSRParams(url: URL): SSRParams {
+  const rawName = (url.searchParams.get('name') ?? 'Axiom').trim()
+  const name = rawName || 'Axiom'
+
+  const rawWidth = url.searchParams.get('width')
+  const parsedWidth = Number.parseInt(rawWidth ?? '960', 10)
+  const width = !Number.isFinite(parsedWidth) || Number.isNaN(parsedWidth)
+    ? 960
+    : Math.max(320, Math.min(1600, parsedWidth))
+
+  const rawRoot = url.searchParams.get('root')
+  const value = (rawRoot ?? 'ssr-root').trim()
+  const rootId = value.length === 0 || !/^[A-Za-z_][\w-]*$/.test(value)
+    ? 'ssr-root'
+    : value
+
+  const queryString =
+    `?name=${encodeURIComponent(name)}` +
+    `&width=${width}` +
+    `&root=${encodeURIComponent(rootId)}`
+
+  return { name, width, rootId, queryString }
 }
+
+const SSR_SHELL_CSS = (width: number, rootId: string): string => [
+  '* { box-sizing:border-box; margin:0; padding:0; }',
+  `#${rootId} { position:static !important; height:auto !important; padding:24px 16px 48px; }`,
+  '.ssr-shell {',
+  '  position:static !important;',
+  '  transform:none !important;',
+  '  width:auto !important;',
+  '  height:auto !important;',
+  `  max-width:${width}px;`,
+  '  margin:0 auto;',
+  '  display:flex;',
+  '  flex-direction:column;',
+  '  gap:12px;',
+  '  padding:24px;',
+  '}',
+  '.ssr-shell * {',
+  '  position:static !important;',
+  '  transform:none !important;',
+  '  width:auto !important;',
+  '  height:auto !important;',
+  '  display:revert;',
+  '}',
+  '.ssr-shell code {',
+  '  display:block !important;',
+  '}',
+].join('\n')
 
 // ---------------------------------------------------------------------------
 // Component definition
@@ -174,12 +210,9 @@ function buildSSRDemoTree(params: {
  * to HTML via `renderToString`, and returns the resulting `Response`.
  */
 export async function renderSSRPage(url: URL): Promise<Response> {
-  const { defineComponent, renderToString } = await loadSSRModule()
+  const { defineComponent, renderToString } = await ssrModulePromise
 
-  const name     = (url.searchParams.get('name') ?? 'Axiom').trim() || 'Axiom'
-  const width    = parseWidth(url.searchParams.get('width'))
-  const rootId   = parseRootId(url.searchParams.get('root'))
-  const qs       = `?name=${encodeURIComponent(name)}&width=${width}&root=${encodeURIComponent(rootId)}`
+  const { name, width, rootId, queryString: qs } = parseSSRParams(url)
 
   const SSRDemoApp = defineComponent(() =>
     buildSSRDemoTree({
@@ -201,35 +234,7 @@ export async function renderSSRPage(url: URL): Promise<Response> {
       description: 'Demo SSR con renderToString, rootId configurable y layout consistente con cliente.',
       og: { type: 'website' },
       stylesheets: ['/style.css'],
-      // Override the framework's absolute-position layout for the SSR shell:
-      // the root card should use normal flow and be centred via margin:auto.
-      inlineStyles: [
-        '* { box-sizing:border-box; margin:0; padding:0; }',
-        `#${rootId} { position:static !important; height:auto !important; padding:24px 16px 48px; }`,
-        '.ssr-shell {',
-        '  position:static !important;',
-        '  transform:none !important;',
-        '  width:auto !important;',
-        '  height:auto !important;',
-        `  max-width:${width}px;`,
-        '  margin:0 auto;',
-        '  display:flex;',
-        '  flex-direction:column;',
-        '  gap:12px;',
-        '  padding:24px;',
-        '}',
-        // Also reset child layout so text content reads naturally.
-        '.ssr-shell * {',
-        '  position:static !important;',
-        '  transform:none !important;',
-        '  width:auto !important;',
-        '  height:auto !important;',
-        '  display:revert;',
-        '}',
-        '.ssr-shell code {',
-        '  display:block !important;',
-        '}',
-      ].join('\n'),
+      inlineStyles: SSR_SHELL_CSS(width, rootId),
     },
   })
 

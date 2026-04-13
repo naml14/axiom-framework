@@ -84,16 +84,13 @@ export function renderToString(
   const bodyHtml = renderNode(prepared, layout)
   const headHtml = renderHead(options?.metadata)
 
-  const rootHeight = layout.height[0] ?? 0
-  const innerStyle = `position:relative;height:${rootHeight}px;`
-
   // bodyStyle is opt-in — only emit style attribute when the caller provides it
   // so that the bare <body> contract expected by tests is preserved by default.
   const bodyAttr = options?.metadata?.bodyStyle !== undefined && options.metadata.bodyStyle.length > 0
     ? ` style="${escapeHtml(options.metadata.bodyStyle)}"`
     : ''
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${headHtml}</head><body${bodyAttr}><div id="${rootId}"><div style="${innerStyle}">${bodyHtml}</div></div></body></html>`
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${headHtml}</head><body${bodyAttr}><div id="${rootId}">${bodyHtml}</div></body></html>`
 }
 
 function renderNode(
@@ -130,6 +127,8 @@ function renderNode(
   if (classes !== undefined && classes.length > 0) {
     attrPairs.push(['class', classes.join(' ')])
   }
+
+  attrPairs.push(['data-axiom-id', String(idx)])
 
   // Emitir el mismo contrato de layout que el renderer de cliente: position:absolute + transform.
   // Los portal children son CSS-managed (reflow les asigna 0×0), así que se omite el layout.
@@ -198,11 +197,15 @@ function renderHead(metadata?: SSRMetadata): string {
   }
 
   if (metadata.inlineStyles !== undefined && metadata.inlineStyles.length > 0) {
-    // inlineStyles comes from the framework author, not from user input — no HTML-escaping needed.
-    html += `<style>${metadata.inlineStyles}</style>`
+    // Preserve CSS content while preventing `</style>` from terminating the raw-text element.
+    html += `<style>${escapeStyleText(metadata.inlineStyles)}</style>`
   }
 
   return html
+}
+
+function escapeStyleText(value: string): string {
+  return value.replace(/<\/style/gi, '<\\/style')
 }
 
 function escapeHtml(value: string): string {

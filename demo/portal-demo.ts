@@ -1,4 +1,4 @@
-import { signal, defineComponent, createPortal, createApp } from '../src/index.js'
+import { signal, defineComponent, createPortal, createApp } from '../src/index.ts'
 
 // ============================================================
 // Portal Demo — standalone section demonstrating createPortal

@@ -13,7 +13,7 @@ import type { SchedulerFn } from './scheduler.js'
 import type { ReflowOptions } from './reflow.js'
 import type { Router } from './router.js'
 
-import { prepare, resetIndexCounter } from './prepare.js'
+import { prepare } from './prepare.js'
 import { reflow } from './reflow.js'
 import { fullDiff, type DOMOperation } from './diff.js'
 import { commitFull, commitHydrate, applyOps, fireUnmountEvents, type DOMState } from './commit.js'

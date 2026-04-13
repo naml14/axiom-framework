@@ -49,9 +49,7 @@ export function commitFull(
   // Apply computed height to root so content is visible
   const rootIdx = 0
   const rootHeight = layout.height[rootIdx] ?? 0
-  if (rootHeight > 0) {
-    root.style.height = `${rootHeight}px`
-  }
+  root.style.height = `${rootHeight}px`
 
   while (state.domNodes.length < layout.nodeCount) {
     state.domNodes.push(null)
@@ -77,7 +75,7 @@ export function commitHydrate(
 
   const strict = options?.strictMismatch === true
   const byMarker = new Map<number, HTMLElement>()
-  const allElements = root.getElementsByTagName('*') as HTMLCollectionOf<HTMLElement>
+  const allElements = Array.from(root.getElementsByTagName('*')) as HTMLElement[]
   for (const node of allElements) {
     const raw = node.getAttribute('data-axiom-id')
     if (raw === null) continue
@@ -85,7 +83,23 @@ export function commitHydrate(
     if (!Number.isNaN(idx)) byMarker.set(idx, node)
   }
 
+  if (byMarker.size === 0) {
+    const preparedElementIndices: number[] = []
+    forEachNode(prepared, (node) => {
+      if (getPortalTarget(node) != null) return
+      if (getNodeType(node) === 'element') {
+        preparedElementIndices.push(getNodeIndex(node))
+      }
+    })
+
+    const limit = Math.min(preparedElementIndices.length, allElements.length)
+    for (let i = 0; i < limit; i++) {
+      byMarker.set(preparedElementIndices[i]!, allElements[i]!)
+    }
+  }
+
   const nextDomNodes: Array<HTMLElement | Text | null> = []
+  const textCursorByParent = new WeakMap<HTMLElement, number>()
 
   const fail = (message: string): void => {
     result.mismatchCount++
@@ -93,17 +107,47 @@ export function commitHydrate(
     if (strict) throw new Error(message)
   }
 
-  const hydrateNode = (node: PreparedComponent): void => {
+  const hydrateNode = (node: PreparedComponent, parentEl?: HTMLElement): void => {
     const idx = getNodeIndex(node)
     const type = getNodeType(node)
 
     if (type === 'fragment') {
       const children = getPreparedChildren(node)
-      for (const child of children) hydrateNode(child)
+      for (const child of children) hydrateNode(child, parentEl)
       return
     }
 
     if (type === 'text') {
+      if (parentEl === undefined) {
+        fail(`Text node without parent context at index ${idx}`)
+        return
+      }
+
+      const start = textCursorByParent.get(parentEl) ?? 0
+      let found = -1
+      for (let i = start; i < parentEl.childNodes.length; i++) {
+        if (parentEl.childNodes[i] instanceof Text) {
+          found = i
+          break
+        }
+      }
+
+      if (found === -1) {
+        fail(`Hydration text node missing for index ${idx}`)
+        return
+      }
+
+      const textNode = parentEl.childNodes[found]
+      textCursorByParent.set(parentEl, found + 1)
+      if (textNode instanceof Text) {
+        nextDomNodes[idx] = textNode
+        result.hydratedNodeCount++
+        const expectedText = getTextContent(node) ?? ''
+        const actualText = textNode.nodeValue ?? ''
+        if (actualText !== expectedText) {
+          fail(`Text mismatch at index ${idx}: expected "${expectedText}" got "${actualText}"`)
+        }
+      }
       return
     }
 
@@ -173,15 +217,13 @@ export function commitHydrate(
       fail(`Children count mismatch at index ${idx}: expected ${elementChildren.length} got ${actualChildCount}`)
     }
 
-    for (const child of children) hydrateNode(child)
+    for (const child of children) hydrateNode(child, domEl)
   }
 
   // Root invariants from commitFull
   root.style.position = 'relative'
   const rootHeight = layout.height[0] ?? 0
-  if (rootHeight > 0) {
-    root.style.height = `${rootHeight}px`
-  }
+  root.style.height = `${rootHeight}px`
 
   hydrateNode(prepared)
 
@@ -251,7 +293,7 @@ export function applyOps(
   for (const op of ops) {
     if (op.type === 'update') {
       const el = domNodes[op.index]
-      if (el === null) continue
+      if (el === null || el === undefined) continue
 
       // Only apply layout to framework-managed nodes — skip portal children.
       if (op.x !== undefined && el instanceof HTMLElement) {

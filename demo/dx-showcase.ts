@@ -1,5 +1,5 @@
-import { createApp, defineComponent } from '../src/index.js'
-import type { App, AppErrorContext, ProfileEvent } from '../src/index.js'
+import { createApp, defineComponent } from '../src/index.ts'
+import type { App, AppErrorContext, ProfileEvent } from '../src/index.ts'
 
 interface DxShowcaseDeps {
   app: App
@@ -83,13 +83,13 @@ export function initDxShowcase(deps: DxShowcaseDeps): void {
     }
 
     const beforeVersion = hook.version
-    let immutable = true
+    let immutable = false
     try {
       ;(hook as { version: string }).version = 'mutated'
+      immutable = hook.version === beforeVersion
     } catch {
       immutable = true
     }
-    immutable = immutable && hook.version === beforeVersion
 
     devHookOutput.textContent = JSON.stringify(
       {

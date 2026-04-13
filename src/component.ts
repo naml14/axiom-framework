@@ -60,7 +60,30 @@ export function invokeComponent<Props>(
   props: Props
 ): ComponentNode {
   const displayName = resolveComponentDisplayNameInternal(component._fn, component.displayName)
-  return withComponentRoute(displayName, () => annotateNodeDebugMeta(component._fn(props), displayName))
+  return invokeComponentInternal(component._fn, displayName, props)
+}
+
+function invokeComponentInternal<Props>(
+  fn: (props: Props) => ComponentNode,
+  displayName: string,
+  props: Props
+): ComponentNode {
+  return withComponentRoute(displayName, () => annotateNodeDebugMeta(fn(props), displayName))
+}
+
+function normalizeComponentDefinition<Props>(
+  nameOrFn: string | ((props: Props) => ComponentNode),
+  maybeFn?: (props: Props) => ComponentNode
+): { fn: (props: Props) => ComponentNode; displayName: string } {
+  const fn = typeof nameOrFn === 'function' ? nameOrFn : maybeFn
+  if (!fn) {
+    throw new Error('defineComponent requiere una función de componente válida')
+  }
+
+  const explicitDisplayName = typeof nameOrFn === 'string' ? nameOrFn : undefined
+  const displayName = resolveComponentDisplayNameInternal(fn, explicitDisplayName)
+
+  return { fn, displayName }
 }
 
 export function getNodeDebugMeta(node: ComponentNode): NodeDebugMeta | undefined {
@@ -80,18 +103,12 @@ export function defineComponent<Props = void>(
   nameOrFn: string | ((props: Props) => ComponentNode),
   maybeFn?: (props: Props) => ComponentNode
 ): ComponentDefinition<Props> & ((props: Props) => ComponentNode) {
-  const fn = typeof nameOrFn === 'function' ? nameOrFn : maybeFn
-  if (fn === undefined) {
-    throw new Error('defineComponent requiere una función de componente válida')
-  }
-
-  const explicitDisplayName = typeof nameOrFn === 'string' ? nameOrFn : undefined
-  const displayName = resolveComponentDisplayNameInternal(fn, explicitDisplayName)
+  const { fn, displayName } = normalizeComponentDefinition(nameOrFn, maybeFn)
 
   // Make it callable: Card({ title, body }) returns the ComponentNode directly.
   // This allows using components inline in children arrays without calling ._fn().
   const callable = (props: Props): ComponentNode => {
-    return withComponentRoute(displayName, () => annotateNodeDebugMeta(fn(props), displayName))
+    return invokeComponentInternal(fn, displayName, props)
   }
   callable._id = Symbol('axiom-component')
   callable._fn = fn

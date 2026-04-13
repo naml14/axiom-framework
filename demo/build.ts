@@ -10,8 +10,9 @@
 import { dirname, join } from 'node:path'
 import { watch, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import type { WatchOptionsWithStringEncoding } from 'node:fs'
 
-type BunRuntimeLike = {
+type BunBuildRuntime = {
   spawnSync: (
     cmd: string[],
     options: { cwd: string; stdout: 'pipe'; stderr: 'pipe' }
@@ -23,15 +24,15 @@ type BunRuntimeLike = {
   }) => Promise<{ success: boolean; logs: unknown[] }>
 }
 
-const BunRuntime = (globalThis as { Bun?: BunRuntimeLike }).Bun
 const ROOT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-function getBunRuntime(): BunRuntimeLike {
-  if (!BunRuntime) {
+function getBun(): BunBuildRuntime {
+  const bun = (globalThis as { Bun?: unknown }).Bun as BunBuildRuntime | undefined
+  if (!bun) {
     throw new Error('Bun runtime is required to build the demo. Run this script with Bun.')
   }
 
-  return BunRuntime
+  return bun
 }
 
 // ---------------------------------------------------------------------------
@@ -43,7 +44,7 @@ function getBunRuntime(): BunRuntimeLike {
  * Returns `true` on success, `false` on any compilation error.
  */
 export async function doBuild(): Promise<boolean> {
-  const bun = getBunRuntime()
+  const bun = getBun()
 
   console.log('📦 Building framework (dist)...')
 
@@ -66,7 +67,7 @@ export async function doBuild(): Promise<boolean> {
 
   console.log('📦 Building demo bundle (app.js)...')
 
-  // Step 2 — bundle demo entry point for the browser using dist/ as source
+  // Step 2 — bundle demo entry point for the browser using src/ as source
   const result = await bun.build({
     entrypoints: [join(ROOT_DIR, 'demo', 'app.ts')],
     outdir: join(ROOT_DIR, 'demo'),
@@ -79,7 +80,7 @@ export async function doBuild(): Promise<boolean> {
     return false
   }
 
-  console.log('✅ Built demo/app.js (from dist/)')
+  console.log('✅ Built demo/app.js (from src/)')
   return true
 }
 
@@ -99,26 +100,44 @@ export function setupWatch(): void {
 
   let rebuilding = false
 
-  const onFileChange = (_eventType: 'rename' | 'change', filename: string | null): void => {
+  const onFileChange = (
+    _eventType: 'rename' | 'change',
+    filename: string | Buffer | null
+  ): void => {
     if (rebuilding || !filename) return
-    if (filename.endsWith('.ts') || filename.endsWith('.css')) {
+
+    const normalizedFilename = typeof filename === 'string'
+      ? filename
+      : filename.toString('utf8')
+
+    if (normalizedFilename.endsWith('.ts') || normalizedFilename.endsWith('.css')) {
       rebuilding = true
-      console.log(`🔄 ${filename} changed — rebuilding...`)
+      console.log(`🔄 ${normalizedFilename} changed — rebuilding...`)
       doBuild().finally(() => { rebuilding = false })
     }
   }
 
-  const startWatch = (watchPath: string): void => {
+  function tryWatch(
+    watchPath: string,
+    options: WatchOptionsWithStringEncoding
+  ): boolean {
     try {
-      watch(watchPath, { recursive: true, encoding: 'utf8' }, onFileChange)
+      watch(watchPath, options, onFileChange)
+      return true
     } catch {
-      try {
-        watch(watchPath, { encoding: 'utf8' }, onFileChange)
-        console.warn(`⚠️ Recursive watch not available for ${watchPath}; using non-recursive mode.`)
-      } catch {
-        console.warn(`⚠️ Could not watch path: ${watchPath}`)
-      }
+      return false
     }
+  }
+
+  const startWatch = (watchPath: string): void => {
+    if (tryWatch(watchPath, { recursive: true, encoding: 'utf8' })) return
+
+    if (tryWatch(watchPath, { encoding: 'utf8' })) {
+      console.warn(`⚠️ Recursive watch not available for ${watchPath}; using non-recursive mode.`)
+      return
+    }
+
+    console.warn(`⚠️ Could not watch path: ${watchPath}`)
   }
 
   for (const watchPath of watchPaths) {
