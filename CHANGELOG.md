@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.2.7](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.6...axiom-framework-v0.2.7) (2026-04-13)
+
+
+### Features
+
+* actualizar importaciones a la carpeta src y mejorar la detección del entorno de desarrollo ([1ad555e](https://github.com/naml14/axiom-framework/commit/1ad555e4d032914ce336159646189545abe3bd29))
+* actualizar importaciones a TypeScript y mejorar la gestión de módulos en el demo ([f2557a9](https://github.com/naml14/axiom-framework/commit/f2557a9f5ed95ca0ea1fe41bbe93ee5a2686cbda))
+* agregar panel de demostración DX para capacidades de Sprint 6 y mejorar la gestión de errores y perfilado ([881c854](https://github.com/naml14/axiom-framework/commit/881c85437103a96a64a9f377de3279dabcfabcc7))
+* **demo:** add configurable SSR server demo route ([fdf7197](https://github.com/naml14/axiom-framework/commit/fdf71979dee9a01225521f5a1bccde885d02a3a8))
+* **hydration:** wire commitHydrate into createApp via hydrate option ([323c9c5](https://github.com/naml14/axiom-framework/commit/323c9c574256636eca289f15cbfc94d211162c22))
+* implement render scheduler and add portal demonstration components ([45ebbe2](https://github.com/naml14/axiom-framework/commit/45ebbe20527039eafaaba78aa15445aff7faaa1c))
+* mejorar prueba de scheduler para reflejar el comportamiento de agrupamiento de llamadas ([abd27a2](https://github.com/naml14/axiom-framework/commit/abd27a2160fc9e30a5e343d54aff11c4d2e30530))
+* Sprint 6 DX v0.2.7 — Developer Experience Capabilities ([7c77fe0](https://github.com/naml14/axiom-framework/commit/7c77fe06470d6eab1fda83b07a1b553e8acb2c06))
+* Sprint 6 DX v0.2.7 — Profiling, Dev Hook, Error Context, Hot Reload Recovery ([28c6048](https://github.com/naml14/axiom-framework/commit/28c6048c7a3368cd6eec807e375fa4781b650a0e)), closes [#19](https://github.com/naml14/axiom-framework/issues/19)
+* **ssr,hydration:** consolidate stash fixes for Sprint 6 ([2f92eb6](https://github.com/naml14/axiom-framework/commit/2f92eb650a72993e2b35cb51b9be1bf2281a98d5))
+* **ssr:** add SSR page handler and build utilities for demo server ([2f8db26](https://github.com/naml14/axiom-framework/commit/2f8db26a4750cfb5edaff3eee71a4388fa3a7759))
+* **ssr:** set default body styles for SSR pages to improve rendering ([6c34bc6](https://github.com/naml14/axiom-framework/commit/6c34bc69160c4556d466e078918d3dfc358df15c))
+
+
+### Bug Fixes
+
+* actualizar la importación del módulo SSR a la carpeta src ([64a0450](https://github.com/naml14/axiom-framework/commit/64a04503355cc1245c67129ea514668b048c9715))
+* handle potential undefined values in layout height calculations and improve type safety in tests ([7f8b7b4](https://github.com/naml14/axiom-framework/commit/7f8b7b4618396222f104d51681d6957eb3b28b9c))
+* **ssr:** restore HTML contract for tests while keeping meta/bodyStyle improvements ([1aab998](https://github.com/naml14/axiom-framework/commit/1aab9983ab272de52d68686d18139ea0c0c6db3a))
+
 ## [0.2.6](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.5...axiom-framework-v0.2.6) (2026-04-12)
 
 
