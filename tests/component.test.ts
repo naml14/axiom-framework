@@ -80,4 +80,17 @@ describe('defineComponent', () => {
     expect(el.attrs).toEqual({ 'data-id': '1' })
     expect(el.children).toHaveLength(1)
   })
+
+  test('acepta displayName explícito sin romper _fn', () => {
+    const fn = () => ({ type: 'text' as const, content: 'named' })
+    const def = defineComponent('NamedCard', fn)
+
+    expect(def._fn).toBe(fn)
+    expect(def.displayName).toBe('NamedCard')
+  })
+
+  test('genera fallback displayName cuando la función es anónima', () => {
+    const def = defineComponent(() => ({ type: 'text' as const, content: 'anon' }))
+    expect((def.displayName?.length ?? 0) > 0).toBe(true)
+  })
 })

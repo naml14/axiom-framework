@@ -3,9 +3,11 @@
 // ============================================================
 //
 // This is the ONLY surface consumers should import from.
-// Internal modules (prepare internals, diff, commit, scheduler)
+// Internal modules (prepare internals, diff, scheduler)
 // are NOT exported here — they are implementation details that
 // can change between minor versions without semver guarantees.
+//
+// Exception: `commitHydrate` is exported as an advanced hydration API.
 // ============================================================
 
 // --- Reactivity ---
@@ -19,7 +21,13 @@ export { createPortal } from './portal.js'
 
 // --- App ---
 export { createApp } from './app.js'
-export type { App, AppOptions, RenderMetrics } from './app.js'
+export type { App, AppOptions, AppErrorContext, AppErrorPhase, RenderMetrics } from './app.js'
+
+// --- SSR / Hydration ---
+export { renderToString } from './ssr.js'
+export { commitHydrate } from './commit.js'
+export type { SSRMetadata, SSRRenderOptions } from './ssr.js'
+export type { HydrationOptions, HydrationResult } from './types.js'
 
 // --- Router ---
 export { createRouter, defineAsyncComponent } from './router.js'
@@ -28,10 +36,6 @@ export type { Route, RouteState, Router } from './router.js'
 // --- Layout (advanced — for custom rendering pipelines) ---
 export { prepare } from './prepare.js'
 export { reflow } from './reflow.js'
-
-// --- SSR ---
-export { renderToString } from './ssr.js'
-export type { SSRMetadata, SSRRenderOptions } from './ssr.js'
 
 // --- Context ---
 export {
@@ -56,6 +60,9 @@ export type {
 
 // --- Types ---
 export type {
+  AxiomDevHook,
+  AxiomDevMetrics,
+  AxiomDevProfilingMetadata,
   // Signals
   Signal,
   ComputedSignal,
@@ -71,4 +78,6 @@ export type {
   LayoutResult,
   LayoutConstraints,
   LayoutProps,
+  ProfileEvent,
+  ProfileSubscriber,
 } from './types.js'

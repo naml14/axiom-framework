@@ -95,7 +95,7 @@ describe('reflow — fast path', () => {
     expect(result.height[1]).toBe(120)
     // Key invariant: constrained width produces taller text than wide width
     const wideResult = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
-    expect(result.height[1]).toBeGreaterThan(wideResult.height[1])
+    expect(result.height[1]).toBeGreaterThan(wideResult.height[1] ?? 0)
   })
 
   test('stacks multiple children vertically', () => {
@@ -128,7 +128,7 @@ describe('reflow — fast path', () => {
     const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
     const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
-    expect(result.height[0]).toBe(result.height[1] + result.height[2])
+    expect(result.height[0]).toBe((result.height[1] ?? 0) + (result.height[2] ?? 0))
   })
 
   test('handles empty children', () => {

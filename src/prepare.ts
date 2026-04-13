@@ -8,6 +8,7 @@ import type {
   FragmentNode,
   PortalNode,
 } from './types.js'
+import { getNodeDebugMeta, invokeComponent, resolveComponentDisplayName } from './component.js'
 
 // ============================================================
 // Text layout engine contract
@@ -40,6 +41,8 @@ interface PreparedInternal {
   textContent?: string
   textHandle?: unknown
   portalTarget?: HTMLElement
+  debugDisplayName?: string
+  debugRoute?: string
   children: PreparedInternal[]
   metrics: ComponentMetrics
 }
@@ -78,25 +81,39 @@ export function prepare<Props>(
   options?: PrepareOptions
 ): PreparedComponent {
   resetIndexCounter()
-  const node = component._fn(props)
-  const prepared = prepareNode(node, options)
+  const node = invokeComponent(component, props)
+  const fallbackDisplayName = resolveComponentDisplayName(component as ComponentDefinition<unknown>)
+  const prepared = prepareNode(node, options, {
+    displayName: fallbackDisplayName,
+    route: fallbackDisplayName,
+  })
   return brandPrepared(prepared)
 }
 
-function prepareNode(node: ComponentNode, options?: PrepareOptions): PreparedInternal {
+function prepareNode(
+  node: ComponentNode,
+  options?: PrepareOptions,
+  inheritedDebug?: { displayName: string; route: string }
+): PreparedInternal {
+  const ownDebug = getNodeDebugMeta(node) ?? inheritedDebug
+
   switch (node.type) {
     case 'text':
-      return prepareTextNode(node, options)
+      return prepareTextNode(node, options, ownDebug)
     case 'element':
-      return prepareElementNode(node, options)
+      return prepareElementNode(node, options, ownDebug)
     case 'fragment':
-      return prepareFragmentNode(node, options)
+      return prepareFragmentNode(node, options, ownDebug)
     case 'portal':
-      return preparePortalNode(node, options)
+      return preparePortalNode(node, options, ownDebug)
   }
 }
 
-function prepareTextNode(node: TextNode, options?: PrepareOptions): PreparedInternal {
+function prepareTextNode(
+  node: TextNode,
+  options?: PrepareOptions,
+  debug?: { displayName: string; route: string }
+): PreparedInternal {
   const textEngine = options?.textEngine
   let textHandle: unknown = undefined
 
@@ -109,6 +126,8 @@ function prepareTextNode(node: TextNode, options?: PrepareOptions): PreparedInte
     nodeType: 'text',
     textContent: node.content,
     textHandle,
+    debugDisplayName: debug?.displayName,
+    debugRoute: debug?.route,
     children: [],
     metrics: {
       hasText: true,
@@ -118,12 +137,16 @@ function prepareTextNode(node: TextNode, options?: PrepareOptions): PreparedInte
   }
 }
 
-function prepareElementNode(node: ElementNode, options?: PrepareOptions): PreparedInternal {
+function prepareElementNode(
+  node: ElementNode,
+  options?: PrepareOptions,
+  debug?: { displayName: string; route: string }
+): PreparedInternal {
   const index = allocIndex() // Assign index BEFORE processing children
 
   const children = node.children !== undefined
     ? node.children.flatMap(child => {
-        const prepared = prepareNode(child, options)
+        const prepared = prepareNode(child, options, debug)
         // Flatten fragments
         if (prepared.nodeType === 'fragment') {
           return prepared.children
@@ -146,6 +169,8 @@ function prepareElementNode(node: ElementNode, options?: PrepareOptions): Prepar
     attrs: node.attrs,
     on: node.on,
     layout: node.layout,
+    debugDisplayName: debug?.displayName,
+    debugRoute: debug?.route,
     children,
     metrics: {
       hasText,
@@ -155,9 +180,13 @@ function prepareElementNode(node: ElementNode, options?: PrepareOptions): Prepar
   }
 }
 
-function prepareFragmentNode(node: FragmentNode, options?: PrepareOptions): PreparedInternal {
+function prepareFragmentNode(
+  node: FragmentNode,
+  options?: PrepareOptions,
+  debug?: { displayName: string; route: string }
+): PreparedInternal {
   const children = node.children.flatMap(child => {
-    const prepared = prepareNode(child, options)
+    const prepared = prepareNode(child, options, debug)
     if (prepared.nodeType === 'fragment') {
       return prepared.children
     }
@@ -169,6 +198,8 @@ function prepareFragmentNode(node: FragmentNode, options?: PrepareOptions): Prep
   return {
     _index: allocIndex(),
     nodeType: 'fragment',
+    debugDisplayName: debug?.displayName,
+    debugRoute: debug?.route,
     children,
     metrics: {
       hasText,
@@ -178,11 +209,15 @@ function prepareFragmentNode(node: FragmentNode, options?: PrepareOptions): Prep
   }
 }
 
-function preparePortalNode(node: PortalNode, options?: PrepareOptions): PreparedInternal {
+function preparePortalNode(
+  node: PortalNode,
+  options?: PrepareOptions,
+  debug?: { displayName: string; route: string }
+): PreparedInternal {
   const index = allocIndex() // Assign portal's index BEFORE processing children
 
   const children = node.children.flatMap(child => {
-    const prepared = prepareNode(child, options)
+    const prepared = prepareNode(child, options, debug)
     if (prepared.nodeType === 'fragment') {
       return prepared.children
     }
@@ -195,6 +230,8 @@ function preparePortalNode(node: PortalNode, options?: PrepareOptions): Prepared
     _index: index,
     nodeType: 'portal',
     portalTarget: node.target,
+    debugDisplayName: debug?.displayName,
+    debugRoute: debug?.route,
     children,
     metrics: {
       hasText,
@@ -292,4 +329,12 @@ export function getOn(prepared: PreparedComponent): Record<string, EventListener
 
 export function getTextContent(prepared: PreparedComponent): string | undefined {
   return unbrandPrepared(prepared).textContent
+}
+
+export function getDebugDisplayName(prepared: PreparedComponent): string | undefined {
+  return unbrandPrepared(prepared).debugDisplayName
+}
+
+export function getDebugRoute(prepared: PreparedComponent): string | undefined {
+  return unbrandPrepared(prepared).debugRoute
 }

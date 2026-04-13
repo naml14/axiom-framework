@@ -17,6 +17,12 @@ export interface SSRMetadata {
   title?: string
   description?: string
   og?: Record<string, string>
+  /** Optional list of stylesheet URLs to inject as <link rel="stylesheet"> in <head>. */
+  stylesheets?: string[]
+  /** Optional inline CSS to inject in a <style> block in <head>. */
+  inlineStyles?: string
+  /** Optional inline style string applied to <body>. */
+  bodyStyle?: string
 }
 
 export interface SSRRenderOptions {
@@ -78,7 +84,13 @@ export function renderToString(
   const bodyHtml = renderNode(prepared, layout)
   const headHtml = renderHead(options?.metadata)
 
-  return `<!DOCTYPE html><html><head>${headHtml}</head><body><div id="${rootId}">${bodyHtml}</div></body></html>`
+  // bodyStyle is opt-in — only emit style attribute when the caller provides it
+  // so that the bare <body> contract expected by tests is preserved by default.
+  const bodyAttr = options?.metadata?.bodyStyle !== undefined && options.metadata.bodyStyle.length > 0
+    ? ` style="${escapeHtml(options.metadata.bodyStyle)}"`
+    : ''
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${headHtml}</head><body${bodyAttr}><div id="${rootId}">${bodyHtml}</div></body></html>`
 }
 
 function renderNode(
@@ -93,26 +105,30 @@ function renderNode(
   }
 
   const children = getPreparedChildren(node)
+  const idx = getNodeIndex(node)
 
   if (nodeType === 'fragment') {
     return children.map(child => renderNode(child, layout, isPortalChild)).join('')
   }
 
   if (nodeType === 'portal') {
-    // Los hijos de portal son gestionados por CSS — el layout del framework no aplica.
-    return children.map(child => renderNode(child, layout, true)).join('')
+    // Portals are transparent but need a boundary marker for hydration
+    const portalId = `portal-${idx}`
+    const markerContent = children.map(child => renderNode(child, layout, true)).join('')
+    return `<div data-axiom-id="${idx}" data-axiom-portal="${portalId}">${markerContent}</div>`
   }
 
   const tag = sanitizeTagName(getTag(node) ?? 'div')
   const attrs = getAttrs(node)
   const classes = getClasses(node)
-  const idx = getNodeIndex(node)
 
   const attrPairs: Array<[string, string]> = []
 
   if (classes !== undefined && classes.length > 0) {
     attrPairs.push(['class', classes.join(' ')])
   }
+
+  attrPairs.push(['data-axiom-id', String(idx)])
 
   // Emitir el mismo contrato de layout que el renderer de cliente: position:absolute + transform.
   // Los portal children son CSS-managed (reflow les asigna 0×0), así que se omite el layout.
@@ -155,9 +171,9 @@ function renderNode(
 }
 
 function renderHead(metadata?: SSRMetadata): string {
-  if (metadata === undefined) return ''
-
   let html = ''
+
+  if (metadata === undefined) return html
 
   if (metadata.title !== undefined) {
     html += `<title>${escapeHtml(metadata.title)}</title>`
@@ -174,7 +190,22 @@ function renderHead(metadata?: SSRMetadata): string {
     }
   }
 
+  if (metadata.stylesheets !== undefined) {
+    for (const href of metadata.stylesheets) {
+      html += `<link rel="stylesheet" href="${escapeHtml(href)}">`
+    }
+  }
+
+  if (metadata.inlineStyles !== undefined && metadata.inlineStyles.length > 0) {
+    // Preserve CSS content while preventing `</style>` from terminating the raw-text element.
+    html += `<style>${escapeStyleText(metadata.inlineStyles)}</style>`
+  }
+
   return html
+}
+
+function escapeStyleText(value: string): string {
+  return value.replace(/<\/style/gi, '<\\/style')
 }
 
 function escapeHtml(value: string): string {

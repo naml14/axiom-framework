@@ -6,31 +6,35 @@
 type RenderCallback = () => void
 export type SchedulerFn = (cb: RenderCallback) => void
 
-let pendingRender: RenderCallback | null = null
-let generation = 0
+const pendingRenders = new Set<RenderCallback>()
+let scheduled = false
 
 export function scheduleRender(callback: RenderCallback, scheduler?: SchedulerFn): void {
-  pendingRender = callback // last write wins
+  pendingRenders.add(callback)
 
-  const gen = ++generation
-  const sched = scheduler ?? defaultScheduler
+  if (!scheduled) {
+    scheduled = true
+    const sched = scheduler ?? defaultScheduler
 
-  sched(() => {
-    if (generation !== gen) return // stale callback
-    const cb = pendingRender
-    pendingRender = null
-    cb?.()
-  })
+    sched(() => {
+      scheduled = false
+      const cbs = Array.from(pendingRenders)
+      pendingRenders.clear()
+      for (const cb of cbs) {
+        cb()
+      }
+    })
+  }
 }
 
 export function cancelScheduled(): void {
-  generation++ // invalidate any pending callbacks
-  pendingRender = null
+  pendingRenders.clear()
+  scheduled = false
 }
 
 export function resetScheduler(): void {
-  generation = 0
-  pendingRender = null
+  pendingRenders.clear()
+  scheduled = false
 }
 
 export function setScheduler(scheduler: SchedulerFn): void {

@@ -1,10 +1,11 @@
-import { signal, defineComponent, createApp } from '../dist/index.js'
-import type { ComponentNode } from '../dist/index.js'
+import { signal, defineComponent, createApp } from '../src/index.ts'
+import type { ComponentNode } from '../src/index.ts'
 import { TEXTS, TAGS, COLORS } from './data.js'
 import { computeColumns, getTagWidth, distributeToColumns } from './layout.js'
 import { TagBubble, Card, HeroCard } from './components.js'
 import { initControls } from './controls.js'
 import { initPortalDemo } from './portal-demo.js'
+import { initDxShowcase } from './dx-showcase.js'
 
 // ============================================================
 // Signals
@@ -107,6 +108,7 @@ function syncContainerWidth(w: number) {
 // ============================================================
 
 initControls({ containerWidth, itemCount, app, appEl })
+initDxShowcase({ app })
 
 // ============================================================
 // Portal Demo — initialized after main app is mounted

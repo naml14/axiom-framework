@@ -1,4 +1,4 @@
-import { defineComponent } from '../dist/index.js'
+import { defineComponent } from '../src/index.ts'
 import { getTagWidth } from './layout.js'
 
 export const TagBubble = defineComponent((props: { label: string; color: string }) => {

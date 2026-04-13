@@ -121,7 +121,7 @@ describe('prepare — portal node', () => {
     const rootChildren = getPreparedChildren(prepared)
     expect(rootChildren).toHaveLength(1)
 
-    const portalPrepared = rootChildren[0]
+    const portalPrepared = rootChildren[0]!
     const portalIdx = getNodeIndex(portalPrepared)
     expect(portalIdx).toBe(1)
   })
@@ -137,7 +137,7 @@ describe('prepare — portal node', () => {
 
     const prepared = prepare(component, undefined)
     const rootChildren = getPreparedChildren(prepared)
-    const portalPrepared = rootChildren[0]
+    const portalPrepared = rootChildren[0]!
 
     expect(getNodeType(portalPrepared)).toBe('portal')
   })
@@ -156,12 +156,12 @@ describe('prepare — portal node', () => {
 
     const prepared = prepare(component, undefined)
     const rootChildren = getPreparedChildren(prepared)
-    const portalPrepared = rootChildren[0]
+    const portalPrepared = rootChildren[0]!
     const portalChildren = getPreparedChildren(portalPrepared)
 
     expect(portalChildren).toHaveLength(1)
     // Portal is at index 1, its text child at index 2
-    expect(getNodeIndex(portalChildren[0])).toBe(2)
+    expect(getNodeIndex(portalChildren[0]!)).toBe(2)
   })
 })
 
@@ -186,7 +186,7 @@ describe('reflow — portal layout', () => {
     const result = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
 
     const rootChildren = getPreparedChildren(prepared)
-    const portalPrepared = rootChildren[0]
+    const portalPrepared = rootChildren[0]!
     const portalIdx = getNodeIndex(portalPrepared)
 
     // Portal slot must be 0×0 — it must not occupy space in parent layout
@@ -211,7 +211,7 @@ describe('reflow — portal layout', () => {
 
     const rootChildren = getPreparedChildren(prepared)
     // rootChildren = [portal (idx 1), text (idx 2)]
-    const textSibling = rootChildren[1]
+    const textSibling = rootChildren[1]!
     const textIdx = getNodeIndex(textSibling)
 
     // The sibling text node must have a real height (non-zero after layout)
@@ -242,9 +242,9 @@ describe('reflow — portal layout', () => {
     const rootChildren = getPreparedChildren(prepared)
     // root=0, textA=1, portal=2, textB=3+
 
-    const textAIdx = getNodeIndex(rootChildren[0])
-    const portalIdx = getNodeIndex(rootChildren[1])
-    const textBIdx = getNodeIndex(rootChildren[2])
+    const textAIdx = getNodeIndex(rootChildren[0]!)
+    const portalIdx = getNodeIndex(rootChildren[1]!)
+    const textBIdx = getNodeIndex(rootChildren[2]!)
 
     // Portal is 0×0
     expect(result.width[portalIdx]).toBe(0)

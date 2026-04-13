@@ -1,6 +1,8 @@
 import type {
   PreparedComponent,
   LayoutResult,
+  HydrationOptions,
+  HydrationResult,
 } from './types.js'
 
 import type { DOMOperation } from './diff.js'
@@ -46,10 +48,8 @@ export function commitFull(
   root.style.position = 'relative'
   // Apply computed height to root so content is visible
   const rootIdx = 0
-  const rootHeight = layout.height[rootIdx]
-  if (rootHeight > 0) {
-    root.style.height = `${rootHeight}px`
-  }
+  const rootHeight = layout.height[rootIdx] ?? 0
+  root.style.height = `${rootHeight}px`
 
   while (state.domNodes.length < layout.nodeCount) {
     state.domNodes.push(null)
@@ -57,6 +57,189 @@ export function commitFull(
 
   buildDOMTree(prepared, layout, root, state)
   fireMountEvents(state.domNodes)
+}
+
+export function commitHydrate(
+  layout: LayoutResult,
+  prepared: PreparedComponent,
+  root: HTMLElement,
+  state: DOMState,
+  options?: HydrationOptions
+): HydrationResult {
+  const result: HydrationResult = {
+    mismatchCount: 0,
+    hydratedNodeCount: 0,
+    portalCount: 0,
+    warnings: [],
+  }
+
+  const strict = options?.strictMismatch === true
+  const byMarker = new Map<number, HTMLElement>()
+  const allElements = Array.from(root.getElementsByTagName('*')) as HTMLElement[]
+  for (const node of allElements) {
+    const raw = node.getAttribute('data-axiom-id')
+    if (raw === null) continue
+    const idx = Number.parseInt(raw, 10)
+    if (!Number.isNaN(idx)) byMarker.set(idx, node)
+  }
+
+  if (byMarker.size === 0) {
+    const preparedElementIndices: number[] = []
+    forEachNode(prepared, (node) => {
+      if (getPortalTarget(node) != null) return
+      if (getNodeType(node) === 'element') {
+        preparedElementIndices.push(getNodeIndex(node))
+      }
+    })
+
+    const limit = Math.min(preparedElementIndices.length, allElements.length)
+    for (let i = 0; i < limit; i++) {
+      byMarker.set(preparedElementIndices[i]!, allElements[i]!)
+    }
+  }
+
+  const nextDomNodes: Array<HTMLElement | Text | null> = []
+  const textCursorByParent = new WeakMap<HTMLElement, number>()
+
+  const fail = (message: string): void => {
+    result.mismatchCount++
+    result.warnings.push(message)
+    if (strict) throw new Error(message)
+  }
+
+  const hydrateNode = (node: PreparedComponent, parentEl?: HTMLElement): void => {
+    const idx = getNodeIndex(node)
+    const type = getNodeType(node)
+
+    if (type === 'fragment') {
+      const children = getPreparedChildren(node)
+      for (const child of children) hydrateNode(child, parentEl)
+      return
+    }
+
+    if (type === 'text') {
+      if (parentEl === undefined) {
+        fail(`Text node without parent context at index ${idx}`)
+        return
+      }
+
+      const start = textCursorByParent.get(parentEl) ?? 0
+      let found = -1
+      for (let i = start; i < parentEl.childNodes.length; i++) {
+        if (parentEl.childNodes[i] instanceof Text) {
+          found = i
+          break
+        }
+      }
+
+      if (found === -1) {
+        fail(`Hydration text node missing for index ${idx}`)
+        return
+      }
+
+      const textNode = parentEl.childNodes[found]
+      textCursorByParent.set(parentEl, found + 1)
+      if (textNode instanceof Text) {
+        nextDomNodes[idx] = textNode
+        result.hydratedNodeCount++
+        const expectedText = getTextContent(node) ?? ''
+        const actualText = textNode.nodeValue ?? ''
+        if (actualText !== expectedText) {
+          fail(`Text mismatch at index ${idx}: expected "${expectedText}" got "${actualText}"`)
+        }
+      }
+      return
+    }
+
+    const domEl = byMarker.get(idx)
+    if (domEl === undefined) {
+      fail(`Hydration marker missing for index ${idx}`)
+      return
+    }
+
+    const expectedTag = type === 'portal' ? 'div' : (getTag(node) ?? 'div')
+    const actualTag = domEl.tagName.toLowerCase()
+    if (actualTag !== expectedTag.toLowerCase()) {
+      fail(`Tag mismatch at index ${idx}: expected <${expectedTag}> got <${actualTag}>`)
+    }
+
+    nextDomNodes[idx] = domEl
+    result.hydratedNodeCount++
+
+    if (type === 'portal') {
+      const target = getPortalTarget(node)
+      if (target === undefined || !target.isConnected) {
+        const msg = `Portal target missing for index ${idx}`
+        if (options?.skipMissingPortals === false) {
+          fail(msg)
+        } else {
+          result.warnings.push(msg)
+        }
+      } else {
+        state.portalRoots.set(idx, {
+          target,
+          nodes: Array.from(target.childNodes),
+        })
+        result.portalCount++
+      }
+      return
+    }
+
+    const listeners = getOn(node)
+    if (listeners !== undefined) {
+      const oldListeners = (domEl as any)._listeners as Record<string, EventListener> | undefined
+      if (oldListeners !== undefined) {
+        for (const [evt, listener] of Object.entries(oldListeners)) {
+          domEl.removeEventListener(evt, listener)
+        }
+      }
+      for (const [evt, listener] of Object.entries(listeners)) {
+        domEl.addEventListener(evt, listener)
+      }
+      ;(domEl as any)._listeners = listeners
+    }
+
+    const children = getPreparedChildren(node)
+    if (children.length === 1 && getNodeType(children[0]!) === 'text') {
+      const expectedText = getTextContent(children[0]!) ?? ''
+      const actualText = domEl.textContent ?? ''
+      if (actualText !== expectedText) {
+        fail(`Text mismatch at index ${idx}: expected "${expectedText}" got "${actualText}"`)
+      }
+    }
+
+    const elementChildren = children.filter(child => {
+      const childType = getNodeType(child)
+      return childType === 'element' || childType === 'portal'
+    })
+    const actualChildCount = domEl.children.length
+    if (actualChildCount !== elementChildren.length) {
+      fail(`Children count mismatch at index ${idx}: expected ${elementChildren.length} got ${actualChildCount}`)
+    }
+
+    for (const child of children) hydrateNode(child, domEl)
+  }
+
+  // Root invariants from commitFull
+  root.style.position = 'relative'
+  const rootHeight = layout.height[0] ?? 0
+  root.style.height = `${rootHeight}px`
+
+  hydrateNode(prepared)
+
+  state.domNodes = nextDomNodes
+
+  if (options?.debug === true) {
+    ;(globalThis as any).__AXIOM_HYDRATION_DEBUG__ = {
+      mismatchCount: result.mismatchCount,
+      hydratedNodeCount: result.hydratedNodeCount,
+      portalCount: result.portalCount,
+      warnings: [...result.warnings],
+      timestamp: Date.now(),
+    }
+  }
+
+  return result
 }
 
 export function fireMountEvents(domNodes: Array<HTMLElement | Text | null>): void {
@@ -91,7 +274,7 @@ export function applyOps(
   for (const op of ops) {
     if (op.type === 'remove') {
       const node = domNodes[op.index]
-      if (node !== null) {
+      if (node !== null && node !== undefined) {
         if (node instanceof HTMLElement) {
           const listeners = (node as any)._listeners
           if (listeners && listeners.unmount) {
@@ -110,7 +293,7 @@ export function applyOps(
   for (const op of ops) {
     if (op.type === 'update') {
       const el = domNodes[op.index]
-      if (el === null) continue
+      if (el === null || el === undefined) continue
 
       // Only apply layout to framework-managed nodes — skip portal children.
       if (op.x !== undefined && el instanceof HTMLElement) {
@@ -137,7 +320,7 @@ export function applyOps(
 
     if (op.type === 'move') {
       const oldNode = domNodes[op.oldIndex!]
-      if (oldNode === null) continue
+      if (oldNode === null || oldNode === undefined) continue
 
       // Update position — skip portal children (CSS-managed)
       if (op.x !== undefined && oldNode instanceof HTMLElement) {
@@ -264,7 +447,11 @@ function buildDOMTree(
 
   // Element node
   const tag = getTag(prepared) || 'div'
+  assertValidTagName(tag)
   const el = document.createElement(tag)
+
+  // Add hydration marker for all elements
+  el.setAttribute('data-axiom-id', String(idx))
 
   // Apply layout ONLY for framework-managed nodes.
   // Portal children are CSS-managed — no inline position/size applied.
@@ -311,6 +498,7 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
   }
 
   const tag = op.tag || 'div'
+  assertValidTagName(tag)
   const el = document.createElement(tag)
 
   // Apply layout ONLY for framework-managed nodes.
@@ -339,4 +527,10 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
   }
 
   return el
+}
+
+function assertValidTagName(tag: string): void {
+  if (/\s/.test(tag)) {
+    throw new Error(`Invalid tag name: "${tag}"`)
+  }
 }
