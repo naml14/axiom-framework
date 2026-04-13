@@ -33,10 +33,10 @@ describe('scheduler', () => {
     scheduleRender(() => { callCount++ }, mockScheduler)
     scheduleRender(() => { callCount++ }, mockScheduler)
 
-    // Only one callback stored — last write wins
+    // Scheduler is invoked only once (batching), but all 3 callbacks run in that single flush
     expect(storedCb).not.toBeNull()
     storedCb!()
-    expect(callCount).toBe(1)
+    expect(callCount).toBe(3)
   })
 
   test('cancelScheduled clears pending render', () => {
