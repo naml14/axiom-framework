@@ -48,7 +48,7 @@ export function commitFull(
   root.style.position = 'relative'
   // Apply computed height to root so content is visible
   const rootIdx = 0
-  const rootHeight = layout.height[rootIdx]
+  const rootHeight = layout.height[rootIdx] ?? 0
   if (rootHeight > 0) {
     root.style.height = `${rootHeight}px`
   }
@@ -77,7 +77,7 @@ export function commitHydrate(
 
   const strict = options?.strictMismatch === true
   const byMarker = new Map<number, HTMLElement>()
-  const allElements = root.getElementsByTagName('*')
+  const allElements = root.querySelectorAll<HTMLElement>('*')
   for (const node of allElements) {
     const raw = node.getAttribute('data-axiom-id')
     if (raw === null) continue
@@ -156,8 +156,8 @@ export function commitHydrate(
     }
 
     const children = getPreparedChildren(node)
-    if (children.length === 1 && getNodeType(children[0]) === 'text') {
-      const expectedText = getTextContent(children[0]) ?? ''
+    if (children.length === 1 && getNodeType(children[0]!) === 'text') {
+      const expectedText = getTextContent(children[0]!) ?? ''
       const actualText = domEl.textContent ?? ''
       if (actualText !== expectedText) {
         fail(`Text mismatch at index ${idx}: expected "${expectedText}" got "${actualText}"`)
@@ -178,7 +178,7 @@ export function commitHydrate(
 
   // Root invariants from commitFull
   root.style.position = 'relative'
-  const rootHeight = layout.height[0]
+  const rootHeight = layout.height[0] ?? 0
   if (rootHeight > 0) {
     root.style.height = `${rootHeight}px`
   }
@@ -232,7 +232,7 @@ export function applyOps(
   for (const op of ops) {
     if (op.type === 'remove') {
       const node = domNodes[op.index]
-      if (node !== null) {
+      if (node !== null && node !== undefined) {
         if (node instanceof HTMLElement) {
           const listeners = (node as any)._listeners
           if (listeners && listeners.unmount) {
@@ -278,7 +278,7 @@ export function applyOps(
 
     if (op.type === 'move') {
       const oldNode = domNodes[op.oldIndex!]
-      if (oldNode === null) continue
+      if (oldNode === null || oldNode === undefined) continue
 
       // Update position — skip portal children (CSS-managed)
       if (op.x !== undefined && oldNode instanceof HTMLElement) {

@@ -164,9 +164,9 @@ describe('commitFull', () => {
     commitFull(layout, prepared, root, { domNodes, portalRoots: new Map() })
 
     expect(root.children.length).toBe(1)
-    expect(root.children[0].tagName.toLowerCase()).toBe('div')
-    expect(root.children[0].className).toBe('container')
-    expect(root.children[0].textContent).toBe('Hello')
+    expect(root.children[0]!.tagName.toLowerCase()).toBe('div')
+    expect(root.children[0]!.className).toBe('container')
+    expect(root.children[0]!.textContent).toBe('Hello')
   })
 
   test('applies layout positions via transform', () => {

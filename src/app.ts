@@ -157,7 +157,7 @@ export function createApp(
       const ops = fullDiff(state.prevPrepared, state.prevLayout, prepared, layout, state.domState.domNodes)
       applyOps(ops, root, state.domState.domNodes)
       // Update root height (commitFull does this internally, but applyOps doesn't)
-      const rootHeight = layout.height[0]
+      const rootHeight = layout.height[0] ?? 0
       if (rootHeight > 0) {
         root.style.height = `${rootHeight}px`
       }

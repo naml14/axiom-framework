@@ -51,7 +51,7 @@ export function measureSimple(
     // Layout child
     layoutChild(child, childWidth, result, lineHeight)
 
-    offsetY += result.height[childIdx]
+    offsetY += result.height[childIdx] ?? 0
     if (realIdx < realChildren.length - 1) {
       offsetY += gap
     }

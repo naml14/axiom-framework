@@ -110,7 +110,7 @@ function layoutNode(
       let totalHeight = 0
       for (const child of children) {
         const childIdx = getNodeIndex(child)
-        totalHeight += result.height[childIdx]
+        totalHeight += result.height[childIdx] ?? 0
       }
       totalHeight += (children.length - 1) * (layout?.gap ?? 0)
       result.height[idx] = totalHeight
@@ -118,8 +118,9 @@ function layoutNode(
       let maxHeight = 0
       for (const child of children) {
         const childIdx = getNodeIndex(child)
-        if (result.height[childIdx] > maxHeight) {
-          maxHeight = result.height[childIdx]
+        const childHeight = result.height[childIdx] ?? 0
+        if (childHeight > maxHeight) {
+          maxHeight = childHeight
         }
       }
       result.height[idx] = maxHeight

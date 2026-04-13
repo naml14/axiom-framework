@@ -92,7 +92,7 @@ export function useContext<T>(ctx: Context<T>): Signal<T> {
   // Search from top of stack to bottom (innermost wins — ADR-1)
   for (let i = contextStack.length - 1; i >= 0; i--) {
     const frame = contextStack[i]
-    if (frame.has(ctx._id)) {
+    if (frame !== undefined && frame.has(ctx._id)) {
       return frame.get(ctx._id) as Signal<T>
     }
   }
