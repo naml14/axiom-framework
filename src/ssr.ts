@@ -89,12 +89,10 @@ export function renderToString(
   const rootHeight = layout.height[0] ?? 0
   const rootDivStyle = `position:relative;height:${rootHeight}px;`
 
-  const bodyStyle = options?.metadata?.bodyStyle
-  const bodyOpenTag = bodyStyle !== undefined && bodyStyle.length > 0
-    ? `<body style="${escapeHtml(bodyStyle)}">`
-    : '<body>'
+  // Apply a sensible body default so SSR pages don't render on a white canvas.
+  const bodyStyle = options?.metadata?.bodyStyle ?? 'margin:0;background:#0a0a14;color:#e2e2f0;font-family:system-ui,sans-serif;'
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${headHtml}</head>${bodyOpenTag}<div id="${rootId}"><div style="${rootDivStyle}">${bodyHtml}</div></div></body></html>`
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${headHtml}</head><body style="${bodyStyle}"><div id="${rootId}" style="${rootDivStyle}">${bodyHtml}</div></body></html>`
 }
 
 function renderNode(
