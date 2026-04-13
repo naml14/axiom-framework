@@ -7,7 +7,7 @@ import type { Router } from './router.js'
 import { prepare, resetIndexCounter } from './prepare.js'
 import { reflow } from './reflow.js'
 import { fullDiff, type DOMOperation } from './diff.js'
-import { commitFull, applyOps, fireUnmountEvents, type DOMState } from './commit.js'
+import { commitFull, commitHydrate, applyOps, fireUnmountEvents, type DOMState } from './commit.js'
 import { effect } from './signals.js'
 import { scheduleRender, cancelScheduled } from './scheduler.js'
 import { getNodeType, getTag, getChildren } from './prepare.js'
@@ -43,6 +43,9 @@ export interface AppOptions {
   textEngine?: TextLayoutEngine
   scheduler?: SchedulerFn
   router?: Router
+  hydrate?: boolean
+  strictHydration?: boolean
+  hydrationDebug?: boolean
 }
 
 export interface App {
@@ -141,7 +144,14 @@ export function createApp(
       root.innerHTML = ''
       state.domState.domNodes = []
       state.domState.portalRoots = new Map()
-      commitFull(layout, prepared, root, state.domState)
+      if (options?.hydrate === true) {
+        commitHydrate(layout, prepared, root, state.domState, {
+          strictMismatch: options.strictHydration,
+          debug: options.hydrationDebug,
+        })
+      } else {
+        commitFull(layout, prepared, root, state.domState)
+      }
     } else {
       // Value change only — incremental diff and apply
       const ops = fullDiff(state.prevPrepared, state.prevLayout, prepared, layout, state.domState.domNodes)
@@ -172,7 +182,14 @@ export function createApp(
       state.metrics.reflowMs = performance.now() - t1
 
       const t2 = performance.now()
-      commitFull(layout, prepared, root, state.domState)
+      if (options?.hydrate === true) {
+        commitHydrate(layout, prepared, root, state.domState, {
+          strictMismatch: options.strictHydration,
+          debug: options.hydrationDebug,
+        })
+      } else {
+        commitFull(layout, prepared, root, state.domState)
+      }
       state.metrics.commitMs = performance.now() - t2
 
       state.prevPrepared = prepared
