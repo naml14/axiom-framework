@@ -67,7 +67,7 @@ export interface ComponentMetrics {
   simpleLayout: boolean
 }
 
-// Brand type — opaque prepared component handle
+// Brand type — opaque handle, like PreparedText from pretext
 declare const preparedBrand: unique symbol
 
 export type PreparedComponent = {
@@ -103,4 +103,19 @@ export interface LayoutResult {
   width: Float32Array
   height: Float32Array
   nodeCount: number
+}
+
+// --- Hydration Types (SSR v0.2.7) ---
+
+export interface HydrationOptions {
+  strictMismatch?: boolean
+  skipMissingPortals?: boolean
+  debug?: boolean
+}
+
+export interface HydrationResult {
+  mismatchCount: number
+  hydratedNodeCount: number
+  portalCount: number
+  warnings: string[]
 }

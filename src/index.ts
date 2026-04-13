@@ -21,6 +21,12 @@ export { createPortal } from './portal.js'
 export { createApp } from './app.js'
 export type { App, AppOptions, RenderMetrics } from './app.js'
 
+// --- SSR / Hydration ---
+export { renderToString } from './ssr.js'
+export { commitHydrate } from './commit.js'
+export type { SSRRenderOptions } from './ssr.js'
+export type { HydrationOptions, HydrationResult } from './types.js'
+
 // --- Router ---
 export { createRouter, defineAsyncComponent } from './router.js'
 export type { Route, RouteState, Router } from './router.js'
@@ -28,10 +34,6 @@ export type { Route, RouteState, Router } from './router.js'
 // --- Layout (advanced — for custom rendering pipelines) ---
 export { prepare } from './prepare.js'
 export { reflow } from './reflow.js'
-
-// --- SSR ---
-export { renderToString } from './ssr.js'
-export type { SSRMetadata, SSRRenderOptions } from './ssr.js'
 
 // --- Context ---
 export {

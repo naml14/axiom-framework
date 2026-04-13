@@ -1,6 +1,8 @@
 import type {
   PreparedComponent,
   LayoutResult,
+  HydrationOptions,
+  HydrationResult,
 } from './types.js'
 
 import type { DOMOperation } from './diff.js'
@@ -57,6 +59,145 @@ export function commitFull(
 
   buildDOMTree(prepared, layout, root, state)
   fireMountEvents(state.domNodes)
+}
+
+export function commitHydrate(
+  layout: LayoutResult,
+  prepared: PreparedComponent,
+  root: HTMLElement,
+  state: DOMState,
+  options?: HydrationOptions
+): HydrationResult {
+  const result: HydrationResult = {
+    mismatchCount: 0,
+    hydratedNodeCount: 0,
+    portalCount: 0,
+    warnings: [],
+  }
+
+  const strict = options?.strictMismatch === true
+  const byMarker = new Map<number, HTMLElement>()
+  const allElements = root.getElementsByTagName('*')
+  for (const node of allElements) {
+    const raw = node.getAttribute('data-axiom-id')
+    if (raw === null) continue
+    const idx = Number.parseInt(raw, 10)
+    if (!Number.isNaN(idx)) byMarker.set(idx, node)
+  }
+
+  const nextDomNodes: Array<HTMLElement | Text | null> = []
+
+  const fail = (message: string): void => {
+    result.mismatchCount++
+    result.warnings.push(message)
+    if (strict) throw new Error(message)
+  }
+
+  const hydrateNode = (node: PreparedComponent): void => {
+    const idx = getNodeIndex(node)
+    const type = getNodeType(node)
+
+    if (type === 'fragment') {
+      const children = getPreparedChildren(node)
+      for (const child of children) hydrateNode(child)
+      return
+    }
+
+    if (type === 'text') {
+      return
+    }
+
+    const domEl = byMarker.get(idx)
+    if (domEl === undefined) {
+      fail(`Hydration marker missing for index ${idx}`)
+      return
+    }
+
+    const expectedTag = type === 'portal' ? 'div' : (getTag(node) ?? 'div')
+    const actualTag = domEl.tagName.toLowerCase()
+    if (actualTag !== expectedTag.toLowerCase()) {
+      fail(`Tag mismatch at index ${idx}: expected <${expectedTag}> got <${actualTag}>`)
+    }
+
+    nextDomNodes[idx] = domEl
+    result.hydratedNodeCount++
+
+    if (type === 'portal') {
+      const target = getPortalTarget(node)
+      if (target === undefined || !target.isConnected) {
+        const msg = `Portal target missing for index ${idx}`
+        if (options?.skipMissingPortals === false) {
+          fail(msg)
+        } else {
+          result.warnings.push(msg)
+        }
+      } else {
+        state.portalRoots.set(idx, {
+          target,
+          nodes: Array.from(target.childNodes),
+        })
+        result.portalCount++
+      }
+      return
+    }
+
+    const listeners = getOn(node)
+    if (listeners !== undefined) {
+      const oldListeners = (domEl as any)._listeners as Record<string, EventListener> | undefined
+      if (oldListeners !== undefined) {
+        for (const [evt, listener] of Object.entries(oldListeners)) {
+          domEl.removeEventListener(evt, listener)
+        }
+      }
+      for (const [evt, listener] of Object.entries(listeners)) {
+        domEl.addEventListener(evt, listener)
+      }
+      ;(domEl as any)._listeners = listeners
+    }
+
+    const children = getPreparedChildren(node)
+    if (children.length === 1 && getNodeType(children[0]) === 'text') {
+      const expectedText = getTextContent(children[0]) ?? ''
+      const actualText = domEl.textContent ?? ''
+      if (actualText !== expectedText) {
+        fail(`Text mismatch at index ${idx}: expected "${expectedText}" got "${actualText}"`)
+      }
+    }
+
+    const elementChildren = children.filter(child => {
+      const childType = getNodeType(child)
+      return childType === 'element' || childType === 'portal'
+    })
+    const actualChildCount = domEl.children.length
+    if (actualChildCount !== elementChildren.length) {
+      fail(`Children count mismatch at index ${idx}: expected ${elementChildren.length} got ${actualChildCount}`)
+    }
+
+    for (const child of children) hydrateNode(child)
+  }
+
+  // Root invariants from commitFull
+  root.style.position = 'relative'
+  const rootHeight = layout.height[0]
+  if (rootHeight > 0) {
+    root.style.height = `${rootHeight}px`
+  }
+
+  hydrateNode(prepared)
+
+  state.domNodes = nextDomNodes
+
+  if (options?.debug === true) {
+    ;(globalThis as any).__AXIOM_HYDRATION_DEBUG__ = {
+      mismatchCount: result.mismatchCount,
+      hydratedNodeCount: result.hydratedNodeCount,
+      portalCount: result.portalCount,
+      warnings: [...result.warnings],
+      timestamp: Date.now(),
+    }
+  }
+
+  return result
 }
 
 export function fireMountEvents(domNodes: Array<HTMLElement | Text | null>): void {

@@ -17,6 +17,12 @@ export interface SSRMetadata {
   title?: string
   description?: string
   og?: Record<string, string>
+  /** Optional list of stylesheet URLs to inject as <link rel="stylesheet"> in <head>. */
+  stylesheets?: string[]
+  /** Optional inline CSS to inject in a <style> block in <head>. */
+  inlineStyles?: string
+  /** Optional inline style string applied to <body>. */
+  bodyStyle?: string
 }
 
 export interface SSRRenderOptions {
@@ -78,7 +84,17 @@ export function renderToString(
   const bodyHtml = renderNode(prepared, layout)
   const headHtml = renderHead(options?.metadata)
 
-  return `<!DOCTYPE html><html><head>${headHtml}</head><body><div id="${rootId}">${bodyHtml}</div></body></html>`
+  // The root div must be position:relative with explicit height so that
+  // the absolutely-positioned child nodes are contained and visible.
+  const rootHeight = layout.height[0] ?? 0
+  const rootDivStyle = `position:relative;height:${rootHeight}px;`
+
+  const bodyStyle = options?.metadata?.bodyStyle
+  const bodyOpenTag = bodyStyle !== undefined && bodyStyle.length > 0
+    ? `<body style="${escapeHtml(bodyStyle)}">`
+    : '<body>'
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${headHtml}</head>${bodyOpenTag}<div id="${rootId}"><div style="${rootDivStyle}">${bodyHtml}</div></div></body></html>`
 }
 
 function renderNode(
@@ -155,9 +171,9 @@ function renderNode(
 }
 
 function renderHead(metadata?: SSRMetadata): string {
-  if (metadata === undefined) return ''
-
   let html = ''
+
+  if (metadata === undefined) return html
 
   if (metadata.title !== undefined) {
     html += `<title>${escapeHtml(metadata.title)}</title>`
@@ -172,6 +188,17 @@ function renderHead(metadata?: SSRMetadata): string {
     for (const key of keys) {
       html += `<meta property="og:${escapeHtml(key)}" content="${escapeHtml(metadata.og[key]!)}">`
     }
+  }
+
+  if (metadata.stylesheets !== undefined) {
+    for (const href of metadata.stylesheets) {
+      html += `<link rel="stylesheet" href="${escapeHtml(href)}">`
+    }
+  }
+
+  if (metadata.inlineStyles !== undefined && metadata.inlineStyles.length > 0) {
+    // inlineStyles comes from the framework author, not from user input — no HTML-escaping needed.
+    html += `<style>${metadata.inlineStyles}</style>`
   }
 
   return html
