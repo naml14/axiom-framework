@@ -19,7 +19,7 @@ export { createPortal } from './portal.js'
 
 // --- App ---
 export { createApp } from './app.js'
-export type { App, AppOptions, RenderMetrics } from './app.js'
+export type { App, AppOptions, AppErrorContext, AppErrorPhase, RenderMetrics } from './app.js'
 
 // --- SSR / Hydration ---
 export { renderToString } from './ssr.js'
@@ -58,6 +58,9 @@ export type {
 
 // --- Types ---
 export type {
+  AxiomDevHook,
+  AxiomDevMetrics,
+  AxiomDevProfilingMetadata,
   // Signals
   Signal,
   ComputedSignal,
@@ -73,4 +76,6 @@ export type {
   LayoutResult,
   LayoutConstraints,
   LayoutProps,
+  ProfileEvent,
+  ProfileSubscriber,
 } from './types.js'

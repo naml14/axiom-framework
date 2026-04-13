@@ -57,6 +57,7 @@ export interface PortalNode {
 export interface ComponentDefinition<Props = void> {
   _id: symbol
   _fn: (props: Props) => ComponentNode
+  displayName?: string
 }
 
 // --- Prepare Types ---
@@ -118,4 +119,45 @@ export interface HydrationResult {
   hydratedNodeCount: number
   portalCount: number
   warnings: string[]
+}
+
+// --- Profiling Types (DX v0.2.7, Fase A) ---
+
+export type ProfilePhase = 'prepare' | 'reflow' | 'commit' | 'total'
+
+export interface ProfileEvent {
+  cycle: number
+  phase: ProfilePhase
+  durationMs: number
+}
+
+export type ProfileSubscriber = (event: ProfileEvent) => void
+
+// --- Devtools Hook Types (DX v0.2.7, Fase B) ---
+
+export interface AxiomDevMetrics {
+  readonly prepareMs: number
+  readonly reflowMs: number
+  readonly commitMs: number
+}
+
+export interface AxiomDevProfilingMetadata {
+  readonly enabled: boolean
+  readonly cycle: number
+  readonly subscriberCount: number
+}
+
+export interface AxiomDevHook {
+  readonly version: string
+  readonly mounted: boolean
+  readonly metrics: AxiomDevMetrics
+  readonly profiling: AxiomDevProfilingMetadata
+}
+
+declare global {
+  interface Window {
+    __AXIOM__?: AxiomDevHook
+  }
+
+  var __AXIOM_DEV__: boolean | undefined
 }

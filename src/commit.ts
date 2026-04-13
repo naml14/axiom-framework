@@ -77,7 +77,7 @@ export function commitHydrate(
 
   const strict = options?.strictMismatch === true
   const byMarker = new Map<number, HTMLElement>()
-  const allElements = root.querySelectorAll<HTMLElement>('*')
+  const allElements = root.getElementsByTagName('*') as HTMLCollectionOf<HTMLElement>
   for (const node of allElements) {
     const raw = node.getAttribute('data-axiom-id')
     if (raw === null) continue
@@ -405,6 +405,7 @@ function buildDOMTree(
 
   // Element node
   const tag = getTag(prepared) || 'div'
+  assertValidTagName(tag)
   const el = document.createElement(tag)
 
   // Apply layout ONLY for framework-managed nodes.
@@ -452,6 +453,7 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
   }
 
   const tag = op.tag || 'div'
+  assertValidTagName(tag)
   const el = document.createElement(tag)
 
   // Apply layout ONLY for framework-managed nodes.
@@ -480,4 +482,10 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
   }
 
   return el
+}
+
+function assertValidTagName(tag: string): void {
+  if (/\s/.test(tag)) {
+    throw new Error(`Invalid tag name: "${tag}"`)
+  }
 }
