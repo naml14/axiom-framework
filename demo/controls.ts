@@ -1,4 +1,4 @@
-import type { App } from '../dist/index.js'
+import type { App } from '../src/index.js'
 
 interface ControlsDeps {
   containerWidth: { value: number }

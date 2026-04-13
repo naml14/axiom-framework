@@ -43,7 +43,7 @@ function isDevEnvironment(): boolean {
   if (globalThis.__AXIOM_DEV__ === true) return true
   if (globalThis.__AXIOM_DEV__ === false) return false
 
-  const nodeEnv = globalThis.process?.env?.NODE_ENV
+  const nodeEnv = (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process?.env?.NODE_ENV
   return nodeEnv === 'development'
 }
 

@@ -24,7 +24,7 @@ export type { App, AppOptions, AppErrorContext, AppErrorPhase, RenderMetrics } f
 // --- SSR / Hydration ---
 export { renderToString } from './ssr.js'
 export { commitHydrate } from './commit.js'
-export type { SSRRenderOptions } from './ssr.js'
+export type { SSRMetadata, SSRRenderOptions } from './ssr.js'
 export type { HydrationOptions, HydrationResult } from './types.js'
 
 // --- Router ---
