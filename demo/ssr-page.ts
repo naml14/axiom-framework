@@ -12,8 +12,8 @@
 // Types
 // ---------------------------------------------------------------------------
 
-/** Lazy-loaded SSR module (compiled dist) kept as a module-level singleton. */
-type SSRModule = typeof import('../dist/index.js')
+/** Lazy-loaded SSR module (compiled src) kept as a module-level singleton. */
+type SSRModule = typeof import('../src/index.js')
 
 // ---------------------------------------------------------------------------
 // Node factory helpers
@@ -47,7 +47,7 @@ function txt(content: string): TextNode {
 let ssrModulePromise: Promise<SSRModule> | null = null
 
 function loadSSRModule(): Promise<SSRModule> {
-  ssrModulePromise ??= import('../dist/index.js') as Promise<SSRModule>
+  ssrModulePromise ??= import('../src/index.js') as Promise<SSRModule>
   return ssrModulePromise
 }
 
