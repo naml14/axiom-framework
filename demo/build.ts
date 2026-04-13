@@ -15,7 +15,7 @@ type BunRuntimeLike = {
   spawnSync: (
     cmd: string[],
     options: { cwd: string; stdout: 'pipe'; stderr: 'pipe' }
-  ) => { exitCode: number; stderr: Uint8Array }
+  ) => { exitCode: number; stdout: Uint8Array; stderr: Uint8Array }
   build: (options: {
     entrypoints: string[]
     outdir: string
@@ -56,7 +56,11 @@ export async function doBuild(): Promise<boolean> {
 
   if (tsc.exitCode !== 0) {
     console.error('❌ Framework typecheck/build failed:')
-    console.error(new TextDecoder().decode(tsc.stderr))
+    const stderr = new TextDecoder().decode(tsc.stderr).trim()
+    const stdout = new TextDecoder().decode(tsc.stdout).trim()
+
+    if (stderr.length > 0) console.error(stderr)
+    if (stdout.length > 0) console.error(stdout)
     return false
   }
 

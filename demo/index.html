@@ -32,6 +32,31 @@
   <!-- Framework canvas — Axiom renders here -->
   <div id="app"></div>
 
+  <!-- DX Showcase — Sprint 6 capabilities -->
+  <section class="dx-panel">
+    <h2>🧪 Sprint 6 DX Showcase</h2>
+    <div class="dx-actions">
+      <button id="dx-profiling-btn" class="btn-toggle active">📈 Profiling: ON</button>
+      <button id="dx-hotreload-btn" class="btn-toggle">♻️ Hot Reload Recovery: OFF</button>
+      <button id="dx-devhook-refresh" class="btn-toggle">🔍 Refresh Dev Hook</button>
+      <button id="dx-error-test" class="btn-toggle">💥 Test Error Context</button>
+    </div>
+    <div class="dx-grid">
+      <article class="dx-card">
+        <h3>Profiling Events</h3>
+        <p id="dx-profile-order">Esperando eventos…</p>
+      </article>
+      <article class="dx-card">
+        <h3>Dev Hook (__AXIOM__)</h3>
+        <pre id="dx-devhook-output">Sin datos aún.</pre>
+      </article>
+      <article class="dx-card">
+        <h3>Error Context (onError)</h3>
+        <pre id="dx-error-output">Sin errores capturados aún.</pre>
+      </article>
+    </div>
+  </section>
+
   <!-- Metrics panel — updated directly, NOT through the framework -->
   <footer class="metrics-footer" id="metrics-footer">
     <div class="metric-item">

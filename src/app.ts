@@ -336,11 +336,6 @@ export function createApp(
           // Hot reload incompatible change: deterministic internal refresh.
           // Use commitFull to avoid hydration mismatch loops during runtime recovery.
           commitFull(layout, prepared, root, state.domState)
-        } else if (options?.hydrate === true) {
-          commitHydrate(layout, prepared, root, state.domState, {
-            strictMismatch: options.strictHydration,
-            debug: options.hydrationDebug,
-          })
         } else {
           commitFull(layout, prepared, root, state.domState)
         }
@@ -350,9 +345,7 @@ export function createApp(
         applyOps(ops, root, state.domState.domNodes)
         // Update root height (commitFull does this internally, but applyOps doesn't)
         const rootHeight = layout.height[0] ?? 0
-        if (rootHeight > 0) {
-          root.style.height = `${rootHeight}px`
-        }
+         root.style.height = `${rootHeight}px`
       }
     } catch (err) {
       reportError(err, resolveContextFromPrepared('commit', cycle, prepared))

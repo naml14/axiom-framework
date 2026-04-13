@@ -84,8 +84,6 @@ export function renderToString(
   const bodyHtml = renderNode(prepared, layout)
   const headHtml = renderHead(options?.metadata)
 
-  // The inner wrapper carries position:relative + height so that absolutely-
-  // positioned child nodes are contained and visible.
   const rootHeight = layout.height[0] ?? 0
   const innerStyle = `position:relative;height:${rootHeight}px;`
 
@@ -110,20 +108,22 @@ function renderNode(
   }
 
   const children = getPreparedChildren(node)
+  const idx = getNodeIndex(node)
 
   if (nodeType === 'fragment') {
     return children.map(child => renderNode(child, layout, isPortalChild)).join('')
   }
 
   if (nodeType === 'portal') {
-    // Los hijos de portal son gestionados por CSS — el layout del framework no aplica.
-    return children.map(child => renderNode(child, layout, true)).join('')
+    // Portals are transparent but need a boundary marker for hydration
+    const portalId = `portal-${idx}`
+    const markerContent = children.map(child => renderNode(child, layout, true)).join('')
+    return `<div data-axiom-id="${idx}" data-axiom-portal="${portalId}">${markerContent}</div>`
   }
 
   const tag = sanitizeTagName(getTag(node) ?? 'div')
   const attrs = getAttrs(node)
   const classes = getClasses(node)
-  const idx = getNodeIndex(node)
 
   const attrPairs: Array<[string, string]> = []
 

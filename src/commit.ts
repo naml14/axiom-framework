@@ -408,6 +408,9 @@ function buildDOMTree(
   assertValidTagName(tag)
   const el = document.createElement(tag)
 
+  // Add hydration marker for all elements
+  el.setAttribute('data-axiom-id', String(idx))
+
   // Apply layout ONLY for framework-managed nodes.
   // Portal children are CSS-managed — no inline position/size applied.
   applyFrameworkLayout(el, {
