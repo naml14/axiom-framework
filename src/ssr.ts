@@ -84,15 +84,18 @@ export function renderToString(
   const bodyHtml = renderNode(prepared, layout)
   const headHtml = renderHead(options?.metadata)
 
-  // The root div must be position:relative with explicit height so that
-  // the absolutely-positioned child nodes are contained and visible.
+  // The inner wrapper carries position:relative + height so that absolutely-
+  // positioned child nodes are contained and visible.
   const rootHeight = layout.height[0] ?? 0
-  const rootDivStyle = `position:relative;height:${rootHeight}px;`
+  const innerStyle = `position:relative;height:${rootHeight}px;`
 
-  // Apply a sensible body default so SSR pages don't render on a white canvas.
-  const bodyStyle = options?.metadata?.bodyStyle ?? 'margin:0;background:#0a0a14;color:#e2e2f0;font-family:system-ui,sans-serif;'
+  // bodyStyle is opt-in — only emit style attribute when the caller provides it
+  // so that the bare <body> contract expected by tests is preserved by default.
+  const bodyAttr = options?.metadata?.bodyStyle !== undefined && options.metadata.bodyStyle.length > 0
+    ? ` style="${escapeHtml(options.metadata.bodyStyle)}"`
+    : ''
 
-  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${headHtml}</head><body style="${bodyStyle}"><div id="${rootId}" style="${rootDivStyle}">${bodyHtml}</div></body></html>`
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${headHtml}</head><body${bodyAttr}><div id="${rootId}"><div style="${innerStyle}">${bodyHtml}</div></div></body></html>`
 }
 
 function renderNode(
