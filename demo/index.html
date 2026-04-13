@@ -4,60 +4,96 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Axiom — Two-Phase Rendering Demo</title>
+  <meta name="description" content="Demostración interactiva del framework Axiom: renderizado en dos fases, cero lecturas DOM, layout masonry reactivo y métricas en tiempo real.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Controls — static HTML, event listeners in app.ts -->
-  <header class="demo-header">
-    <div class="brand">
-      <span class="brand-icon">⚡</span>
-      <h1>AXIOM</h1>
-    </div>
-    <p class="tagline">"El DOM es solo la pantalla de salida"</p>
-    <div class="controls">
-      <label>
-        Ancho: <strong id="width-display">800px</strong>
-        <input type="range" id="width-slider" min="320" max="1400" step="8" value="800">
-      </label>
-      <label>
-        Items: <strong id="items-display">20</strong>
-        <input type="range" id="items-slider" min="5" max="60" step="5" value="20">
-      </label>
-      <button id="anim-btn" class="btn-toggle active">▶ Animación</button>
-      <button id="metrics-btn" class="btn-toggle active">📊 Métricas</button>
-      <a href="/ssr?name=Dev&width=960&root=ssr-root" class="btn-toggle btn-link">🧪 SSR Demo (server)</a>
-    </div>
-  </header>
 
-  <!-- Framework canvas — Axiom renders here -->
-  <div id="app"></div>
+  <div class="dashboard-layout">
 
-  <!-- DX Showcase — Sprint 6 capabilities -->
-  <section class="dx-panel">
-    <h2>🧪 Sprint 6 DX Showcase</h2>
-    <div class="dx-actions">
-      <button id="dx-profiling-btn" class="btn-toggle active">📈 Profiling: ON</button>
-      <button id="dx-hotreload-btn" class="btn-toggle">♻️ Hot Reload Recovery: OFF</button>
-      <button id="dx-devhook-refresh" class="btn-toggle">🔍 Refresh Dev Hook</button>
-      <button id="dx-error-test" class="btn-toggle">💥 Test Error Context</button>
-    </div>
-    <div class="dx-grid">
-      <article class="dx-card">
-        <h3>Profiling Events</h3>
-        <p id="dx-profile-order">Esperando eventos…</p>
-      </article>
-      <article class="dx-card">
-        <h3>Dev Hook (__AXIOM__)</h3>
-        <pre id="dx-devhook-output">Sin datos aún.</pre>
-      </article>
-      <article class="dx-card">
-        <h3>Error Context (onError)</h3>
-        <pre id="dx-error-output">Sin errores capturados aún.</pre>
-      </article>
-    </div>
-  </section>
+    <!-- ========================================================
+         SIDEBAR — Controles, DX tools, Portal Demo
+         ======================================================== -->
+    <aside class="dashboard-sidebar">
 
-  <!-- Metrics panel — updated directly, NOT through the framework -->
+      <!-- Branding -->
+      <div class="sidebar-brand">
+        <div class="brand">
+          <span class="brand-icon">⚡</span>
+          <h1>AXIOM</h1>
+        </div>
+        <p class="tagline">"El DOM es solo la pantalla de salida"</p>
+      </div>
+
+      <!-- Controles del canvas -->
+      <section class="sidebar-section" aria-label="Controles del canvas">
+        <h2 class="sidebar-section-title">Canvas Controls</h2>
+        <div class="controls-stack">
+          <label class="control-row">
+            <span class="control-label">Ancho</span>
+            <div class="control-input-group">
+              <input type="range" id="width-slider" min="320" max="1400" step="8" value="800">
+              <strong id="width-display" class="control-value">800px</strong>
+            </div>
+          </label>
+          <label class="control-row">
+            <span class="control-label">Items</span>
+            <div class="control-input-group">
+              <input type="range" id="items-slider" min="5" max="60" step="5" value="20">
+              <strong id="items-display" class="control-value">20</strong>
+            </div>
+          </label>
+          <div class="control-buttons">
+            <button id="anim-btn" class="btn-toggle active">▶ Animación</button>
+            <button id="metrics-btn" class="btn-toggle active">📊 Métricas</button>
+            <a href="/ssr?name=Dev&width=960&root=ssr-root" class="btn-toggle btn-link">🧪 SSR</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- DX Showcase — Sprint 6 -->
+      <section class="sidebar-section dx-panel" aria-label="DX Showcase">
+        <h2 class="sidebar-section-title">🧪 Sprint 6 DX Showcase</h2>
+        <div class="dx-actions">
+          <button id="dx-profiling-btn" class="btn-toggle active">📈 Profiling: ON</button>
+          <button id="dx-hotreload-btn" class="btn-toggle">♻️ Hot Reload</button>
+          <button id="dx-devhook-refresh" class="btn-toggle">🔍 Dev Hook</button>
+          <button id="dx-error-test" class="btn-toggle">💥 Test Error</button>
+        </div>
+        <div class="dx-grid">
+          <article class="dx-card">
+            <h3>Profiling Events</h3>
+            <p id="dx-profile-order">Esperando eventos…</p>
+          </article>
+          <article class="dx-card">
+            <h3>Dev Hook (__AXIOM__)</h3>
+            <pre id="dx-devhook-output">Sin datos aún.</pre>
+          </article>
+          <article class="dx-card">
+            <h3>Error Context (onError)</h3>
+            <pre id="dx-error-output">Sin errores capturados aún.</pre>
+          </article>
+        </div>
+      </section>
+
+      <!-- Portal Demo — montado por portal-demo.ts -->
+      <section class="sidebar-section" aria-label="Portal Demo">
+        <h2 class="sidebar-section-title">🌀 Portal Demo</h2>
+        <div id="portal-demo-root"></div>
+      </section>
+
+    </aside>
+
+    <!-- ========================================================
+         MAIN — Framework canvas
+         ======================================================== -->
+    <main class="dashboard-main">
+      <div id="app"></div>
+    </main>
+
+  </div><!-- /.dashboard-layout -->
+
+  <!-- Metrics footer — updated directly, NOT through the framework -->
   <footer class="metrics-footer" id="metrics-footer">
     <div class="metric-item">
       <span class="metric-label">prepare</span>

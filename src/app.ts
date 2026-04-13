@@ -438,8 +438,8 @@ export function createApp(
         if (!state.mounted) return
         // Read signals to establish dependencies
         component._fn(undefined as void)
-        // Schedule the actual render
-        scheduleRender(() => performUpdate(), scheduler)
+        // Schedule the actual render directly with performUpdate reference
+        scheduleRender(performUpdate, scheduler)
       })
     },
 

@@ -1,177 +1,276 @@
 /* ============================================================
-    Axiom Demo — Dark Editorial Theme
+    Axiom Demo — Dark Editorial Theme  (v2 — Dashboard Layout)
     Framework handles layout (position/size).
     CSS handles everything visual (colors, fonts, shadows).
    ============================================================ */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ============================================================
+    Design Tokens
+   ============================================================ */
+
 :root {
-  --bg: #0a0a14;
-  --surface: #12121f;
-  --surface-2: #1a1a2e;
-  --border: #2a2a4a;
-  --text: #e2e2f0;
-  --text-muted: #7070a0;
+  --bg:            #080812;
+  --bg-sidebar:    #0d0d1c;
+  --surface:       #111128;
+  --surface-2:     #191930;
+  --surface-3:     #20203a;
+  --border:        #252545;
+  --border-subtle: #1e1e38;
+
+  --text:        #e4e4f4;
+  --text-muted:  #6868a0;
+  --text-dim:    #3a3a65;
+
   --accent-violet: #7c3aed;
-  --accent-teal: #0d9488;
-  --accent-amber: #d97706;
-  --accent-rose: #e11d48;
-  --accent-sky: #0284c7;
+  --accent-teal:   #0d9488;
+  --accent-amber:  #d97706;
+  --accent-rose:   #e11d48;
+  --accent-sky:    #0284c7;
+
+  --sidebar-width: 340px;
+  --footer-height: 52px;
+  --gap-section:   20px;
+  --radius-md:     10px;
+  --radius-lg:     14px;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* ============================================================
+    Reset
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ============================================================
+    Base
+   ============================================================ */
+
+html, body {
+  height: 100%;
+}
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, sans-serif;
-  padding-bottom: 70px; /* Space for metrics footer */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden; /* dashboard handles scrolling per-region */
 }
 
 /* ============================================================
-    Header & Controls
+    Dashboard Layout  (sidebar | main)
    ============================================================ */
 
-.demo-header {
-  padding: 20px 32px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+.dashboard-layout {
+  display: flex;
+  height: calc(100vh - var(--footer-height));
+}
+
+/* ============================================================
+    Sidebar
+   ============================================================ */
+
+.dashboard-sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.dashboard-sidebar::-webkit-scrollbar { width: 4px; }
+.dashboard-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ---- Sidebar Branding ---- */
+
+.sidebar-brand {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: linear-gradient(160deg, rgba(124,58,237,0.08), transparent 70%);
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .brand h1 {
   font-size: 20px;
   font-weight: 800;
   letter-spacing: 4px;
+  background: linear-gradient(135deg, var(--text), var(--accent-violet));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.brand-icon { font-size: 24px; }
+.brand-icon { font-size: 22px; }
 
 .tagline {
   color: var(--text-muted);
-  font-size: 13px;
-  margin-bottom: 16px;
+  font-size: 11.5px;
   font-style: italic;
+  letter-spacing: 0.2px;
 }
 
-.controls {
+/* ---- Sidebar Sections ---- */
+
+.sidebar-section {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sidebar-section:last-child {
+  border-bottom: none;
+  flex: 1;
+}
+
+.sidebar-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+/* ---- Canvas Controls ---- */
+
+.controls-stack {
   display: flex;
-  gap: 16px;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.controls label {
+.control-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: default;
+}
+
+.control-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+
+.control-input-group {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 10px;
 }
 
-.controls input[type="range"] {
-  width: 160px;
+.control-input-group input[type="range"] {
+  flex: 1;
   accent-color: var(--accent-violet);
+  height: 4px;
+  cursor: pointer;
 }
 
-.controls strong {
+.control-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--accent-violet);
-  min-width: 52px;
-  display: inline-block;
+  min-width: 46px;
+  text-align: right;
 }
+
+.control-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+/* ---- Button Toggles ---- */
 
 .btn-toggle {
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 20px;
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 12px;
-  transition: all 0.15s;
+  font-size: 11.5px;
+  font-family: 'Inter', system-ui, sans-serif;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }
 
 .btn-toggle:hover {
   border-color: var(--accent-violet);
   color: var(--text);
+  background: var(--surface-3);
 }
 
 .btn-toggle.active {
   border-color: var(--accent-violet);
   color: var(--accent-violet);
-  background: rgba(124, 58, 237, 0.1);
+  background: rgba(124, 58, 237, 0.12);
 }
 
 /* ============================================================
-    App Canvas — Framework renders here
+    Sprint 6 DX Panel — within the sidebar
    ============================================================ */
 
-#app {
-  margin: 24px auto;
-  position: relative;
-  transition: none; /* Framework handles all positioning */
-}
-
-/* ============================================================
-    Sprint 6 DX Showcase Panel
-   ============================================================ */
-
-.dx-panel {
-  margin: 0 auto 24px;
-  width: min(1100px, calc(100% - 64px));
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-}
-
-.dx-panel h2 {
-  font-size: 16px;
-  margin-bottom: 12px;
+.dx-panel.sidebar-section {
+  background: linear-gradient(160deg, rgba(124,58,237,0.05), transparent 80%);
 }
 
 .dx-actions {
   display: flex;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .dx-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .dx-card {
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px;
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
   background: var(--surface-2);
 }
 
 .dx-card h3 {
-  font-size: 13px;
-  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
   color: var(--accent-violet);
+  text-transform: uppercase;
 }
 
 .dx-card p {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11.5px;
   line-height: 1.5;
 }
 
 .dx-card pre {
-  font-family: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', monospace, system-ui;
-  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
   line-height: 1.45;
   color: var(--text-muted);
   white-space: pre-wrap;
@@ -179,24 +278,56 @@ body {
 }
 
 /* ============================================================
+    Portal Demo — within the sidebar
+   ============================================================ */
+
+#portal-demo-root {
+  /* Reset: el framework Axiom gestiona ancho/posición internamente */
+}
+
+/* Prevent Axiom from making the portal root invisible */
+#portal-demo-root > * {
+  position: relative !important;
+  width: 100% !important;
+}
+
+/* ============================================================
+    Main Area — Framework canvas
+   ============================================================ */
+
+.dashboard-main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  padding: 24px 32px;
+}
+
+.dashboard-main::-webkit-scrollbar { width: 5px; }
+.dashboard-main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ---- Canvas wrapper ---- */
+
+#app {
+  position: relative;
+  margin: 0 auto;
+  transition: none; /* Framework handles all positioning */
+}
+
+/* ============================================================
     Masonry Layout — Framework handles positioning
    ============================================================ */
 
-.masonry-grid {
-  display: block; /* Framework positions children absolutely */
-}
-
-.masonry-col {
-  display: block; /* Framework positions children absolutely */
-}
+.masonry-grid { display: block; }
+.masonry-col  { display: block; }
 
 /* ============================================================
     Tags Cloud
    ============================================================ */
 
-.tags-cloud {
-  display: block;
-}
+.tags-cloud { display: block; }
 
 /* ============================================================
     Cards — Framework controls position/size via absolute+translate
@@ -205,68 +336,73 @@ body {
 .card {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card:hover {
+  border-color: rgba(124, 58, 237, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
 .card-hero {
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(13, 148, 136, 0.15));
-  border-color: rgba(124, 58, 237, 0.4);
-  box-shadow: 0 8px 32px rgba(124, 58, 237, 0.15);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(13, 148, 136, 0.12));
+  border-color: rgba(124, 58, 237, 0.35);
+  box-shadow: 0 8px 32px rgba(124, 58, 237, 0.1);
 }
 
 .hero-badge {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 2px;
   color: var(--accent-violet);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   text-transform: uppercase;
 }
 
 .hero-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   line-height: 1.3;
 }
 
 .hero-body {
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.6;
 }
 
 .card-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   line-height: 1.3;
 }
 
 .card-body {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.5;
 }
 
 /* Accent variants — top border color */
-.accent-violet { border-top: 3px solid var(--accent-violet); }
-.accent-teal   { border-top: 3px solid var(--accent-teal); }
-.accent-amber  { border-top: 3px solid var(--accent-amber); }
-.accent-rose   { border-top: 3px solid var(--accent-rose); }
-.accent-sky    { border-top: 3px solid var(--accent-sky); }
+.accent-violet { border-top: 2px solid var(--accent-violet); }
+.accent-teal   { border-top: 2px solid var(--accent-teal); }
+.accent-amber  { border-top: 2px solid var(--accent-amber); }
+.accent-rose   { border-top: 2px solid var(--accent-rose); }
+.accent-sky    { border-top: 2px solid var(--accent-sky); }
 
 /* ============================================================
     Tag Bubbles
    ============================================================ */
 
 .tag-bubble {
-  /* margin: 12px 0px; */
-  padding: 4px 12px;
+  padding: 3px 10px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -280,17 +416,19 @@ body {
 .tag-sky    { border-color: var(--accent-sky);    color: var(--accent-sky); }
 
 /* ============================================================
-    Metrics Footer
+    Metrics Footer — Fixed bottom bar
    ============================================================ */
 
 .metrics-footer {
   display: flex;
   gap: 24px;
   align-items: center;
-  padding: 12px 32px;
+  padding: 0 24px;
+  height: var(--footer-height);
   background: var(--surface);
-  border-top: 2px solid var(--accent-violet);
-  font-family: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', monospace, system-ui;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  font-family: 'JetBrains Mono', monospace;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -300,71 +438,70 @@ body {
 
 .metric-item {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   align-items: baseline;
 }
 
 .metric-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
   letter-spacing: 1px;
   text-transform: uppercase;
 }
 
 .metric-value {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
 }
 
 .metric-item.highlight .metric-value { color: var(--accent-teal); }
-.metric-item.total .metric-value { color: var(--accent-violet); font-size: 16px; }
-.metric-item.fps .metric-value { color: var(--accent-amber); }
+.metric-item.total .metric-value     { color: var(--accent-violet); font-size: 15px; }
+.metric-item.fps .metric-value       { color: var(--accent-amber); }
 
 .metric-badge {
   margin-left: auto;
   padding: 3px 10px;
   border-radius: 20px;
-  font-size: 11px;
-  background: rgba(13, 148, 136, 0.15);
+  font-size: 10.5px;
+  background: rgba(13, 148, 136, 0.12);
   border: 1px solid var(--accent-teal);
   color: var(--accent-teal);
   white-space: nowrap;
 }
 
 /* ============================================================
-    Portal Demo — Trigger section & Modal overlay
+    Portal Modal — Rendered by portal into #portal-modal-root
    ============================================================ */
 
 .portal-demo-section {
   background: linear-gradient(135deg, rgba(13, 148, 136, 0.1), rgba(124, 58, 237, 0.1));
-  border-color: rgba(13, 148, 136, 0.4);
-  box-shadow: 0 8px 32px rgba(13, 148, 136, 0.1);
+  border-color: rgba(13, 148, 136, 0.35);
 }
 
 .portal-trigger-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-radius: 8px;
   border: 1px solid var(--accent-teal);
-  background: rgba(13, 148, 136, 0.15);
+  background: rgba(13, 148, 136, 0.12);
   color: var(--accent-teal);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
+  font-family: 'Inter', system-ui, sans-serif;
   font-weight: 600;
   transition: all 0.15s;
   width: fit-content;
 }
 
 .portal-trigger-btn:hover {
-  background: rgba(13, 148, 136, 0.3);
-  box-shadow: 0 0 16px rgba(13, 148, 136, 0.25);
+  background: rgba(13, 148, 136, 0.25);
+  box-shadow: 0 0 14px rgba(13, 148, 136, 0.2);
 }
 
-/* Modal overlay — rendered by portal into document.body */
-
+/* Modal overlay */
 .portal-overlay {
   position: fixed;
   inset: 0;
@@ -385,12 +522,12 @@ body {
 
 .portal-modal {
   background: var(--surface-2);
-  border: 1px solid rgba(124, 58, 237, 0.5);
+  border: 1px solid rgba(124, 58, 237, 0.45);
   border-radius: 16px;
   padding: 28px 32px;
   max-width: 500px;
   width: 90%;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(124, 58, 237, 0.15);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(124, 58, 237, 0.12);
   animation: portal-slide-up 0.2s ease;
 }
 
@@ -407,14 +544,14 @@ body {
 }
 
 .portal-modal-title {
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 700;
   color: var(--text);
 }
 
 .portal-close-btn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -423,7 +560,8 @@ body {
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
+  font-family: 'Inter', system-ui, sans-serif;
   transition: all 0.15s;
 }
 
@@ -435,7 +573,16 @@ body {
 
 .portal-modal-body {
   color: var(--text-muted);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13.5px;
+  line-height: 1.65;
   margin-top: 12px;
+}
+
+/* ============================================================
+    SSR Page — shared typography for the standalone SSR route
+   ============================================================ */
+
+.ssr-root {
+  font-family: 'Inter', system-ui, sans-serif;
+  padding: 32px;
 }

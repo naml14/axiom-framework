@@ -178,12 +178,13 @@ export function initPortalDemo() {
   // it ensures Axiom only removes what it inserted on cleanup.
   getOrCreateModalRoot()
 
-  const container = document.createElement('div')
-  container.id = 'portal-demo-root'
-
-  // Insert after #app so it appears below the main demo
-  const appEl = document.getElementById('app')!
-  appEl.after(container)
+  // Mount into the static #portal-demo-root already present in the sidebar HTML.
+  // This replaces the old approach of dynamically inserting after #app.
+  const container = document.getElementById('portal-demo-root')
+  if (!container) {
+    console.warn('[PortalDemo] container #portal-demo-root not found in DOM')
+    return
+  }
 
   const portalApp = createApp(PortalDemo, container, { lineHeight: 20 })
   portalApp.mount()
