@@ -125,7 +125,7 @@ export interface AppOptions {
   onError?: (err: unknown, context: AppErrorContext) => void
 }
 
-export type AppErrorPhase = 'prepare' | 'reflow' | 'commit'
+export type AppErrorPhase = 'prepare' | 'reflow' | 'commit' | 'hydrate'
 
 export interface AppErrorContext {
   phase: AppErrorPhase
@@ -133,6 +133,7 @@ export interface AppErrorContext {
   route: string
   cycle: number
   hydrated: boolean
+  nodeKey?: string
 }
 
 export interface App {
@@ -252,6 +253,7 @@ export function createApp(
       route,
       cycle,
       hydrated: options?.hydrate === true,
+      nodeKey: undefined,
     }
   }
 
@@ -410,15 +412,22 @@ export function createApp(
       const t2 = performance.now()
       try {
         if (options?.hydrate === true) {
-          commitHydrate(layout, prepared, root, state.domState, {
-            strictMismatch: options.strictHydration,
-            debug: options.hydrationDebug,
-          })
+          try {
+            commitHydrate(layout, prepared, root, state.domState, {
+              strictMismatch: options.strictHydration,
+              debug: options.hydrationDebug,
+            })
+          } catch (err) {
+            reportError(err, resolveContextFromPrepared('hydrate', cycle, prepared))
+            throw err
+          }
         } else {
           commitFull(layout, prepared, root, state.domState)
         }
       } catch (err) {
-        reportError(err, resolveContextFromPrepared('commit', cycle, prepared))
+        if (!((err instanceof Error) && (options?.hydrate === true))) {
+          reportError(err, resolveContextFromPrepared('commit', cycle, prepared))
+        }
         throw err
       }
       state.metrics.commitMs = performance.now() - t2
