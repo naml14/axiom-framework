@@ -542,7 +542,7 @@ describe('createApp', () => {
     expect(root.textContent).toContain('dev-hot:4')
   })
 
-  test('hydrate + hot reload: fallback mínimo verificable', () => {
+  test('hydrate + hot reload: en root vacío no rompe y permite fallback posterior', () => {
     const scheduled: Array<() => void> = []
     const mockScheduler = (cb: () => void) => {
       scheduled.push(cb)
@@ -566,7 +566,9 @@ describe('createApp', () => {
 
     app.enableHotReloadRecovery()
     app.mount()
-    expect(root.textContent === '' || root.textContent?.includes('SSR:0')).toBe(true)
+    // No hay HTML SSR previo en root; con strictHydration=false no debe lanzar.
+    // El contenido inicial puede quedar vacío (sin markers para hidratar).
+    expect(root.textContent ?? '').toBe('')
 
     ;(comp as unknown as { _fn: () => unknown })._fn = () => ({
       type: 'element' as const,

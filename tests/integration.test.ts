@@ -1,7 +1,16 @@
-import { describe, test, expect, mock } from 'bun:test'
+import { describe, test, expect, mock, beforeEach } from 'bun:test'
+import { Window } from 'happy-dom'
 // Public API imports only — validates that the integration tests work
 // against the same surface that consumers see
-import { signal, computed, effect, defineComponent, prepare } from '../src/index.js'
+import {
+  signal,
+  computed,
+  effect,
+  defineComponent,
+  prepare,
+  createApp,
+  renderToString,
+} from '../src/index.js'
 import type { ComponentNode } from '../src/index.js'
 
 // ============================================================
@@ -13,6 +22,26 @@ const fakeTextEngine = {
   layout: mock((_p: unknown, _w: number, lh: number) => ({ lineCount: 1, height: lh })),
   clearCache: mock(),
 }
+
+function setupDOM(html?: string): Window {
+  const window = new Window()
+  globalThis.window = window as unknown as typeof globalThis.window
+  globalThis.document = window.document as unknown as Document
+  globalThis.HTMLElement = window.HTMLElement as unknown as typeof HTMLElement
+  globalThis.Text = window.Text as unknown as typeof Text
+  globalThis.requestAnimationFrame = ((cb: () => void) => {
+    cb()
+    return 0
+  }) as typeof requestAnimationFrame
+  if (html !== undefined) {
+    window.document.write(html)
+  }
+  return window
+}
+
+beforeEach(() => {
+  setupDOM()
+})
 
 // ============================================================
 // Integration: Signal → Effect → Prepare
@@ -123,5 +152,53 @@ describe('integration: signal triggers prepare', () => {
     expect(prepareCalls).toBe(1)
     items.value = ['hello', 'world']
     expect(prepareCalls).toBe(2)
+  })
+})
+
+describe('integration: SSR -> hydrate -> interaction', () => {
+  test('hidrata HTML SSR, reusa nodo y mantiene interacción reactiva', () => {
+    const count = signal(0)
+
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'button',
+          on: {
+            click: () => {
+              count.value = count.value + 1
+            },
+          },
+          children: [{ type: 'text' as const, content: `Count: ${count.value}` }],
+        },
+      ],
+    }))
+
+    const html = renderToString(App, { textEngine: fakeTextEngine })
+    setupDOM(html)
+
+    const root = document.getElementById('app') as HTMLElement | null
+    expect(root).not.toBeNull()
+
+    const before = root?.getElementsByTagName('button')[0] ?? null
+    expect(before).not.toBeNull()
+    expect(before?.textContent).toContain('Count: 0')
+
+    const app = createApp(App, root!, {
+      textEngine: fakeTextEngine,
+      hydrate: true,
+      strictHydration: true,
+      scheduler: (cb) => cb(),
+    })
+
+    app.mount()
+
+    const hydratedButton = root?.getElementsByTagName('button')[0] ?? null
+    expect(hydratedButton).toBe(before)
+
+    hydratedButton?.dispatchEvent(new window.Event('click'))
+    expect((root?.getElementsByTagName('button')[0] ?? null)?.textContent).toContain('Count: 1')
   })
 })
