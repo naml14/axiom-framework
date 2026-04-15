@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.2.8](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.7...axiom-framework-v0.2.8) (2026-04-15)
+
+
+### Features
+
+* **errors:** P0-B — error envelope with phase/component context ([593aac8](https://github.com/naml14/axiom-framework/commit/593aac8822bcb2687b61f11e4599bdeceada2287))
+
+
+### Bug Fixes
+
+* **ci:** restore test green and align docs/api ([6d71265](https://github.com/naml14/axiom-framework/commit/6d7126580ac57dfa9739fbb4a73cc74107be643c))
+
+
+### Performance Improvements
+
+* **benchmark:** P0-C — per-phase thresholds and hydration baseline ([02dbf4e](https://github.com/naml14/axiom-framework/commit/02dbf4e8f0645a5273f82edef43efbcff82b72ac))
+
 ## [0.2.7](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.6...axiom-framework-v0.2.7) (2026-04-13)
 
 
