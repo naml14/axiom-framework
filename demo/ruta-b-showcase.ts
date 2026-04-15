@@ -14,7 +14,6 @@ import {
   createPlugin,
   registerPlugin,
   clearPlugins,
-  applyPluginHook,
   matchesBreakpoint,
   resolveLayoutDimension,
 } from '../src/index.ts'
@@ -354,18 +353,26 @@ function initPluginDemo(): void {
 
   appendLog(`2 plugins registrados: ${loggerPlugin.name}, ${metricsPlugin.name}`)
 
-  const ctx = { appId: 'demo-ruta-b' }
+  // Real createApp instance — lifecycle hooks fire automatically via runtime
+  const demoCounter = signal(0)
+  const DemoComp = defineComponent(() => ({
+    type: 'element' as const,
+    tag: 'span',
+    children: [{ type: 'text' as const, content: `updates: ${demoCounter.value}` }],
+  }))
+  const demoRoot = document.createElement('div')
+  const demoApp = createApp(DemoComp, demoRoot, { appId: 'demo-ruta-b' })
 
   mountBtn?.addEventListener('click', () => {
-    applyPluginHook('onMount', ctx)
+    demoApp.mount() // guarded: no-op if already mounted
   })
 
   updateBtn?.addEventListener('click', () => {
-    applyPluginHook('onUpdate', ctx)
+    demoCounter.value++ // reactive update → triggers performUpdate → onUpdate hook
   })
 
   unmountBtn?.addEventListener('click', () => {
-    applyPluginHook('onUnmount', ctx)
+    demoApp.unmount() // onUnmount only fires if app was mounted (wasMounted guard)
   })
 
   clearBtn?.addEventListener('click', () => {

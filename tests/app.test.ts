@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll, beforeEach, afterEach, mock } from 'bun:test'
 import { Window } from 'happy-dom'
 // Public API imports — these are the only things consumers can use
-import { createApp, defineComponent, signal, renderToString } from '../src/index.js'
+import { createApp, defineComponent, signal, renderToString, createPlugin, registerPlugin, clearPlugins } from '../src/index.js'
 import type { App, AppErrorContext } from '../src/index.js'
 import type { ProfileEvent } from '../src/index.js'
 // Internal import — resetScheduler is not public API but is required to make
@@ -41,6 +41,7 @@ afterEach(() => {
   delete window.__AXIOM__
   globalThis.__AXIOM_DEV__ = undefined
   process.env.NODE_ENV = initialNodeEnv
+  clearPlugins()
 })
 
 // ============================================================
@@ -656,3 +657,216 @@ function scheduleAndFlush(queue: Array<() => void>): void {
   }
   queue.length = 0
 }
+
+// ============================================================
+// Plugin Lifecycle Integration tests (Issue #32)
+// ============================================================
+
+describe('Plugin Lifecycle Integration', () => {
+  // Shared simple component for all plugin tests
+  function makeComp() {
+    return defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'plugin-test' }],
+    }))
+  }
+
+  test('1.2 — onMount fires with appId after successful mount', () => {
+    const calls: string[] = []
+    registerPlugin(createPlugin({
+      name: 'mount-tracker',
+      onMount: (ctx) => { calls.push(ctx.appId) },
+    }))
+
+    const root = document.createElement('div')
+    const app = createApp(makeComp(), root, { textEngine: fakeTextEngine })
+    app.mount()
+
+    expect(calls).toHaveLength(1)
+    expect(typeof calls[0]).toBe('string')
+    expect((calls[0] ?? '').length).toBeGreaterThan(0)
+  })
+
+  test('1.3 — onMount does NOT fire when mount() throws during pipeline', () => {
+    const calls: string[] = []
+    registerPlugin(createPlugin({
+      name: 'mount-tracker',
+      onMount: (ctx) => { calls.push(ctx.appId) },
+    }))
+
+    const FaultyComp = defineComponent('FaultyComp', () => {
+      throw new Error('deliberate-prepare-failure')
+    })
+    const root = document.createElement('div')
+    const app = createApp(FaultyComp, root, { textEngine: fakeTextEngine })
+
+    expect(() => app.mount()).toThrow('deliberate-prepare-failure')
+    expect(calls).toHaveLength(0)
+  })
+
+  test('1.4 — onUpdate fires after reactive update; NOT on initial mount', () => {
+    const mountCalls: string[] = []
+    const updateCalls: string[] = []
+    registerPlugin(createPlugin({
+      name: 'update-tracker',
+      onMount: (ctx) => { mountCalls.push(ctx.appId) },
+      onUpdate: (ctx) => { updateCalls.push(ctx.appId) },
+    }))
+
+    const scheduled: Array<() => void> = []
+    const mockScheduler = (cb: () => void) => { scheduled.push(cb) }
+
+    const count = signal(0)
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: `count:${count.value}` }],
+    }))
+
+    const root = document.createElement('div')
+    const app = createApp(comp, root, { textEngine: fakeTextEngine, scheduler: mockScheduler })
+    app.mount()
+
+    // After mount: onMount fired once, onUpdate must NOT have fired
+    expect(mountCalls).toHaveLength(1)
+    expect(updateCalls).toHaveLength(0)
+
+    // Trigger a reactive update
+    count.value = 1
+    scheduleAndFlush(scheduled)
+
+    expect(updateCalls).toHaveLength(1)
+  })
+
+  test('1.5 — onUnmount fires after app.unmount()', () => {
+    const calls: string[] = []
+    registerPlugin(createPlugin({
+      name: 'unmount-tracker',
+      onUnmount: (ctx) => { calls.push(ctx.appId) },
+    }))
+
+    const root = document.createElement('div')
+    const app = createApp(makeComp(), root, { textEngine: fakeTextEngine })
+    app.mount()
+    app.unmount()
+
+    expect(calls).toHaveLength(1)
+    expect(typeof calls[0]).toBe('string')
+    expect((calls[0] ?? '').length).toBeGreaterThan(0)
+  })
+
+  test('1.6 — onUnmount does NOT fire if app was never mounted', () => {
+    const calls: string[] = []
+    registerPlugin(createPlugin({
+      name: 'unmount-guard',
+      onUnmount: (ctx) => { calls.push(ctx.appId) },
+    }))
+
+    const root = document.createElement('div')
+    const app = createApp(makeComp(), root, { textEngine: fakeTextEngine })
+    // Never call app.mount()
+    app.unmount()
+
+    expect(calls).toHaveLength(0)
+  })
+
+  test('1.7 — custom appId from AppOptions is passed to all hooks', () => {
+    const received: string[] = []
+    registerPlugin(createPlugin({
+      name: 'id-tracker',
+      onMount: (ctx) => { received.push('mount:' + ctx.appId) },
+      onUnmount: (ctx) => { received.push('unmount:' + ctx.appId) },
+    }))
+
+    const scheduled: Array<() => void> = []
+    const mockScheduler = (cb: () => void) => { scheduled.push(cb) }
+
+    const count = signal(0)
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: `v:${count.value}` }],
+    }))
+
+    const root = document.createElement('div')
+    const app = createApp(comp, root, {
+      textEngine: fakeTextEngine,
+      scheduler: mockScheduler,
+      appId: 'my-custom-app',
+    } as Parameters<typeof createApp>[2])
+    app.mount()
+    app.unmount()
+
+    expect(received).toContain('mount:my-custom-app')
+    expect(received).toContain('unmount:my-custom-app')
+  })
+
+  test('1.8 — auto-generated appId is a stable non-empty string for the same instance', () => {
+    const seenIds: string[] = []
+    registerPlugin(createPlugin({
+      name: 'id-stability',
+      onMount: (ctx) => { seenIds.push('mount:' + ctx.appId) },
+      onUnmount: (ctx) => { seenIds.push('unmount:' + ctx.appId) },
+    }))
+
+    const root = document.createElement('div')
+    const app = createApp(makeComp(), root, { textEngine: fakeTextEngine })
+    app.mount()
+    app.unmount()
+
+    expect(seenIds).toHaveLength(2)
+    const mountId = seenIds[0]?.replace('mount:', '')
+    const unmountId = seenIds[1]?.replace('unmount:', '')
+    expect(mountId).toBeTruthy()
+    expect(mountId).toBe(unmountId) // stable across hooks for same instance
+  })
+
+  test('1.9 — plugin throwing in onMount does not abort mount pipeline', () => {
+    registerPlugin(createPlugin({
+      name: 'thrower',
+      onMount: () => { throw new Error('plugin-crash') },
+    }))
+    registerPlugin(createPlugin({
+      name: 'survivor',
+      onMount: (_ctx) => { /* must be reached */ },
+    }))
+
+    const root = document.createElement('div')
+    const app = createApp(makeComp(), root, { textEngine: fakeTextEngine })
+
+    // mount() must not throw — plugin errors are swallowed
+    expect(() => app.mount()).not.toThrow()
+    // DOM should still be populated
+    expect(root.childNodes.length).toBeGreaterThan(0)
+  })
+
+  test('1.10 — hydration path also fires onMount', () => {
+    const calls: string[] = []
+    registerPlugin(createPlugin({
+      name: 'hydration-mount',
+      onMount: (ctx) => { calls.push(ctx.appId) },
+    }))
+
+    const HydrateComp = defineComponent('HydrateComp', () => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'hydrated' }],
+    }))
+
+    const root = document.createElement('div')
+    // Provide SSR HTML so hydration can succeed
+    const ssrHtml = renderToString(HydrateComp, { textEngine: fakeTextEngine })
+    root.innerHTML = ssrHtml
+
+    const app = createApp(HydrateComp, root, {
+      textEngine: fakeTextEngine,
+      hydrate: true,
+      strictHydration: false,
+    })
+    app.mount()
+
+    expect(calls).toHaveLength(1)
+    expect((calls[0] ?? '').length).toBeGreaterThan(0)
+  })
+})
