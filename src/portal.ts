@@ -48,11 +48,16 @@ import type { ComponentNode, PortalNode } from './types.js'
  */
 export function createPortal(
   children: ComponentNode[],
-  target: HTMLElement
+  target: HTMLElement,
+  options?: { cssManaged?: boolean }
 ): PortalNode {
-  return {
+  const node: PortalNode = {
     type: 'portal',
     target,
     children,
   }
+  if (options?.cssManaged !== undefined) {
+    node.cssManaged = options.cssManaged
+  }
+  return node
 }

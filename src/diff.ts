@@ -17,6 +17,7 @@ import {
   countNodes,
   getPreparedChildren,
   getPortalTarget,
+  getPortalCssManaged,
 } from './prepare.js'
 
 // ============================================================
@@ -37,6 +38,8 @@ export interface DOMOperation {
   key?: string
   /** When set, this insert targets a portal container instead of the app root */
   portalTarget?: HTMLElement
+  /** For portal children with cssManaged:false — framework manages layout styles */
+  portalCssManaged?: boolean
   // For update/move
   x?: number
   y?: number
@@ -48,25 +51,33 @@ export interface DOMOperation {
 }
 
 // ============================================================
-// Portal Map — maps every descendant node index to its portalTarget
+// Portal Map — maps every descendant node index to its portalTarget + cssManaged flag
 // ============================================================
 
-function buildPortalMap(prepared: PreparedComponent): Map<number, HTMLElement> {
-  const map = new Map<number, HTMLElement>()
-  function walk(node: PreparedComponent, currentPortalTarget?: HTMLElement): void {
+interface PortalMapEntry {
+  target: HTMLElement
+  cssManaged: boolean
+}
+
+function buildPortalMap(prepared: PreparedComponent): Map<number, PortalMapEntry> {
+  const map = new Map<number, PortalMapEntry>()
+  function walk(node: PreparedComponent, currentEntry?: PortalMapEntry): void {
     const nodeType = getNodeType(node)
-    const idx = getNodeIndex(node)
     if (nodeType === 'portal') {
       const target = getPortalTarget(node)
-      for (const child of getPreparedChildren(node)) {
-        walk(child, target)
+      if (target !== undefined) {
+        const cssManaged = getPortalCssManaged(node)
+        const entry: PortalMapEntry = { target, cssManaged }
+        for (const child of getPreparedChildren(node)) {
+          walk(child, entry)
+        }
       }
     } else {
-      if (currentPortalTarget !== undefined) {
-        map.set(idx, currentPortalTarget)
+      if (currentEntry !== undefined) {
+        map.set(getNodeIndex(node), currentEntry)
       }
       for (const child of getPreparedChildren(node)) {
-        walk(child, currentPortalTarget)
+        walk(child, currentEntry)
       }
     }
   }
@@ -126,9 +137,12 @@ export function fullDiff(
         op.textContent = getTextContent(node)
       }
 
-      const portalTarget = portalMap.get(idx)
-      if (portalTarget !== undefined) {
-        op.portalTarget = portalTarget
+      const portalEntry = portalMap.get(idx)
+      if (portalEntry !== undefined) {
+        op.portalTarget = portalEntry.target
+        if (!portalEntry.cssManaged) {
+          op.portalCssManaged = false
+        }
       }
 
       ops.push(op)
@@ -284,9 +298,12 @@ function fullTreeDiff(
       } else if (nodeType === 'text') {
         op.textContent = getTextContent(node)
       }
-      const portalTarget = portalMap.get(idx)
-      if (portalTarget !== undefined) {
-        op.portalTarget = portalTarget
+      const portalEntry = portalMap.get(idx)
+      if (portalEntry !== undefined) {
+        op.portalTarget = portalEntry.target
+        if (!portalEntry.cssManaged) {
+          op.portalCssManaged = false
+        }
       }
       ops.push(op)
     } else {

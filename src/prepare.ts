@@ -42,6 +42,7 @@ interface PreparedInternal {
   textContent?: string
   textHandle?: unknown
   portalTarget?: HTMLElement
+  portalCssManaged?: boolean
   debugDisplayName?: string
   debugRoute?: string
   children: PreparedInternal[]
@@ -232,6 +233,7 @@ function preparePortalNode(
     _index: index,
     nodeType: 'portal',
     portalTarget: node.target,
+    portalCssManaged: node.cssManaged,
     debugDisplayName: debug?.displayName,
     debugRoute: debug?.route,
     children,
@@ -270,6 +272,11 @@ export function getNodeType(prepared: PreparedComponent): 'element' | 'text' | '
 
 export function getPortalTarget(prepared: PreparedComponent): HTMLElement | undefined {
   return unbrandPrepared(prepared).portalTarget
+}
+
+export function getPortalCssManaged(prepared: PreparedComponent): boolean {
+  // cssManaged defaults to true (undefined means CSS-managed)
+  return unbrandPrepared(prepared).portalCssManaged !== false
 }
 
 export function getTag(prepared: PreparedComponent): string | undefined {

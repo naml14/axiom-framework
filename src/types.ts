@@ -53,6 +53,7 @@ export interface PortalNode {
   type: 'portal'
   target: HTMLElement
   children: ComponentNode[]
+  cssManaged?: boolean
 }
 
 export interface ComponentDefinition<Props = void> {
