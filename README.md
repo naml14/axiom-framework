@@ -302,6 +302,65 @@ All positions (`x`, `y`) are **relative to the direct parent** — not absolute 
 
 ---
 
+## SSR & Hydration
+
+axiom-framework supports server-side rendering and client rehydration out of the box.
+
+```ts
+// server (Node.js / Bun / Edge)
+import { renderToString } from 'axiom-framework'
+
+const html = renderToString(MyComponent, {
+  width: 1200,
+  metadata: { title: 'My App', description: 'Built with axiom' },
+})
+// → complete <!DOCTYPE html>…</html> string, zero DOM dependency
+
+// client
+import { createApp } from 'axiom-framework'
+
+const root = document.getElementById('app')!
+const app = createApp(root, MyComponent, {
+  hydrate: true,          // reuse server-rendered DOM (no teardown)
+  strictHydration: false, // warn on mismatch; set true to throw
+  hydrationDebug: false,  // set true to log per-node hydration details
+})
+await app.mount()
+```
+
+`renderToString` stamps every element with a `data-axiom-id` marker.
+`createApp({ hydrate: true })` uses those markers to reattach event handlers
+and reuse existing DOM nodes rather than rebuilding the tree.
+
+See [docs/SSR-HYDRATION-CONTRACT.md](./docs/SSR-HYDRATION-CONTRACT.md) for the
+full API reference, runtime/browser matrix, mismatch modes, portal behavior,
+and error envelope spec.
+
+If something goes wrong, see [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md).
+
+---
+
+## Limitations
+
+The following features are **not yet supported** in v0.2.7:
+
+| Area | Status |
+| ------ | -------- |
+| SSR-safe router (URL → route matching on server) | Planned v0.3.x |
+| Streaming SSR (`renderToReadableStream`) | Planned v0.3.x |
+| Portal relocation to `document.body` at runtime | Planned |
+| CSS Grid layout algorithm | Not planned (use flex + masonry) |
+| CSS-in-JS / styled components | Out of scope |
+| Animation primitives | Out of scope for core |
+| Accessibility helpers (ARIA wiring, focus management) | Community contribution welcome |
+| i18n / RTL support | Community contribution welcome |
+| Plugin / middleware pipeline | Under evaluation |
+
+axiom-framework is a **low-level layout + rendering engine**. Features that belong
+in application-level layers will not be added to the core package.
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for detailed guidelines, architecture constraints, and commit conventions.
