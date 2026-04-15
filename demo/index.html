@@ -120,9 +120,9 @@
 
   <script>
     (function () {
-      var ssrLink = document.getElementById('launcher-ssr-link');
-      var note = document.getElementById('launcher-note');
-      var isFile = window.location.protocol === 'file:';
+      const ssrLink = document.getElementById('launcher-ssr-link');
+      const note = document.getElementById('launcher-note');
+      const isFile = window.location.protocol === 'file:';
 
       if (!ssrLink || !isFile) return;
 

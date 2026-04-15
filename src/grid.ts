@@ -85,8 +85,9 @@ export function measureGrid(
   const children = getPreparedChildren(prepared)
   const parentIdx = getNodeIndex(prepared)
   const padding = resolvedLayout?.padding ?? 0
-  const columnGap = resolvedLayout?.columnGap ?? 0
-  const rowGap = resolvedLayout?.rowGap ?? 0
+  const gap = resolvedLayout?.gap ?? 0
+  const columnGap = resolvedLayout?.columnGap ?? gap
+  const rowGap = resolvedLayout?.rowGap ?? gap
 
   const columns = resolveColumnCount(resolvedLayout?.gridTemplateColumns)
   const innerWidth = Math.max(0, availableWidth - padding * 2)

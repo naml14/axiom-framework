@@ -157,33 +157,17 @@ function initResponsiveDemo(containerWidth: Signal<number>): void {
     }
   }
 
-  // Suscribirse al signal observable con effect manual
-  const origSetter = Object.getOwnPropertyDescriptor(containerWidth, 'value')?.set
-  if (origSetter === undefined) {
-    // Fallback: poll on animation frame (safe path)
-    let last = containerWidth.value
-    function poll(): void {
-      const next = containerWidth.value
-      if (next !== last) {
-        last = next
-        update()
-      }
-      requestAnimationFrame(poll)
+  // Observación ligera del signal con rAF (sin monkey-patching ni setInterval).
+  let last = containerWidth.value
+  function poll(): void {
+    const next = containerWidth.value
+    if (next !== last) {
+      last = next
+      update()
     }
     requestAnimationFrame(poll)
-  } else {
-    // Parchear setter para detectar cambios
-    let last = containerWidth.value
-    const interval = setInterval(() => {
-      const next = containerWidth.value
-      if (next !== last) {
-        last = next
-        update()
-      }
-    }, 50)
-    // Limpiar en cleanup no disponible aquí; el intervalo es barato
-    void interval
   }
+  requestAnimationFrame(poll)
 
   update()
 }

@@ -157,6 +157,11 @@ export function fullDiff(
         if (newOn !== oldOn && !changed.includes(idx)) {
           changed.push(idx)
         }
+        const newStyle = getStyle(node)
+        const oldStyle = oldNode ? getStyle(oldNode) : undefined
+        if (newStyle !== oldStyle && !changed.includes(idx)) {
+          changed.push(idx)
+        }
       }
     })
 
@@ -185,6 +190,11 @@ export function fullDiff(
         const oldOn = oldNode ? getOn(oldNode) : undefined
         if (newOn !== oldOn) {
           op.newOn = newOn
+        }
+        const newStyle = getStyle(newNode)
+        const oldStyle = oldNode ? getStyle(oldNode) : undefined
+        if (newStyle !== oldStyle) {
+          op.newStyle = newStyle
         }
       }
 

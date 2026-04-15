@@ -41,6 +41,8 @@ export interface DOMState {
   portalRoots: Map<number, PortalEntry>  // _index → { target, nodes[] }
 }
 
+const MANAGED_STYLE_KEYS_PROP = '__axiomManagedStyleKeys'
+
 export function commitFull(
   layout: LayoutResult,
   prepared: PreparedComponent,
@@ -320,8 +322,12 @@ export function applyOps(
         ;(el as any)._listeners = op.newOn
       }
 
-      if (op.newStyle !== undefined && el instanceof HTMLElement) {
-        applyStyleToElement(el, op.newStyle)
+      if ('newStyle' in op && el instanceof HTMLElement) {
+        if (op.newStyle === undefined) {
+          clearManagedStyleFromElement(el)
+        } else {
+          applyManagedStyleToElement(el, op.newStyle)
+        }
       }
     }
 
@@ -493,7 +499,7 @@ function buildDOMTree(
   // Apply style props (write-only, after layout)
   const style = getStyle(prepared)
   if (style !== undefined) {
-    applyStyleToElement(el, style)
+    applyManagedStyleToElement(el, style)
   }
 
   state.domNodes[idx] = el
@@ -541,7 +547,7 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
 
   // Apply style props (write-only)
   if (op.style !== undefined) {
-    applyStyleToElement(el, op.style)
+    applyManagedStyleToElement(el, op.style)
   }
 
   return el
@@ -551,4 +557,25 @@ function assertValidTagName(tag: string): void {
   if (/\s/.test(tag)) {
     throw new Error(`Invalid tag name: "${tag}"`)
   }
+}
+
+function applyManagedStyleToElement(
+  el: HTMLElement,
+  props: import('./style.js').SafeStyleProps
+): void {
+  applyStyleToElement(el, props)
+  ;(el as unknown as Record<string, unknown>)[MANAGED_STYLE_KEYS_PROP] = Object.keys(props)
+}
+
+function clearManagedStyleFromElement(el: HTMLElement): void {
+  const keys = (el as unknown as Record<string, unknown>)[MANAGED_STYLE_KEYS_PROP]
+  if (!Array.isArray(keys)) return
+
+  for (const key of keys) {
+    if (typeof key === 'string') {
+      ;(el.style as unknown as Record<string, string>)[key] = ''
+    }
+  }
+
+  ;(el as unknown as Record<string, unknown>)[MANAGED_STYLE_KEYS_PROP] = []
 }

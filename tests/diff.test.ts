@@ -245,6 +245,99 @@ describe('fullDiff', () => {
     // Key reconciliation should minimize removes/inserts
     expect(inserts.length + removes.length).toBeLessThan(4)
   })
+
+  test('same-shape fast path incluye cambios de style en update ops', () => {
+    const compA = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'span',
+          style: { color: 'red' as const },
+          children: [{ type: 'text' as const, content: 'A' }],
+        },
+      ],
+    }))
+
+    const compB = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'span',
+          style: { color: 'blue' as const },
+          children: [{ type: 'text' as const, content: 'A' }],
+        },
+      ],
+    }))
+
+    const prevPrepared = prepare(compA, undefined, { textEngine: fakeTextEngine })
+    const newPrepared = prepare(compB, undefined, { textEngine: fakeTextEngine })
+    const prevLayout = createLayoutResult(prevPrepared)
+    const newLayout = createLayoutResult(newPrepared)
+
+    const domNodes: (HTMLElement | Text | null)[] = [
+      document.createElement('div'),
+      document.createElement('span'),
+      document.createTextNode('A'),
+    ]
+
+    const ops = fullDiff(prevPrepared, prevLayout, newPrepared, newLayout, domNodes)
+    const styleUpdate = ops.find((op) => op.type === 'update' && op.index === 1)
+    expect(styleUpdate).toBeDefined()
+    expect(styleUpdate && 'newStyle' in styleUpdate).toBe(true)
+    if (styleUpdate && styleUpdate.type === 'update') {
+      expect(styleUpdate.newStyle?.color).toBe('blue')
+    }
+  })
+
+  test('same-shape fast path marca eliminación de style (newStyle undefined)', () => {
+    const compA = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'span',
+          style: { color: 'red' as const },
+          children: [{ type: 'text' as const, content: 'A' }],
+        },
+      ],
+    }))
+
+    const compB = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'span',
+          children: [{ type: 'text' as const, content: 'A' }],
+        },
+      ],
+    }))
+
+    const prevPrepared = prepare(compA, undefined, { textEngine: fakeTextEngine })
+    const newPrepared = prepare(compB, undefined, { textEngine: fakeTextEngine })
+    const prevLayout = createLayoutResult(prevPrepared)
+    const newLayout = createLayoutResult(newPrepared)
+
+    const domNodes: (HTMLElement | Text | null)[] = [
+      document.createElement('div'),
+      document.createElement('span'),
+      document.createTextNode('A'),
+    ]
+
+    const ops = fullDiff(prevPrepared, prevLayout, newPrepared, newLayout, domNodes)
+    const styleUpdate = ops.find((op) => op.type === 'update' && op.index === 1)
+    expect(styleUpdate).toBeDefined()
+    expect(styleUpdate && 'newStyle' in styleUpdate).toBe(true)
+    if (styleUpdate && styleUpdate.type === 'update') {
+      expect(styleUpdate.newStyle).toBeUndefined()
+    }
+  })
 })
 
 // ============================================================

@@ -100,6 +100,25 @@ describe('applyOps', () => {
     expect(textNode.nodeValue).toBe('World')
   })
 
+  test('clears managed style keys when style is removed', () => {
+    const root = document.createElement('div')
+    const child = document.createElement('div')
+    child.style.color = 'red'
+    ;(child as any).__axiomManagedStyleKeys = ['color']
+    root.appendChild(child)
+
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+
+    const ops: DOMOperation[] = [
+      { type: 'update', index: 0, newStyle: undefined },
+    ]
+
+    applyOps(ops, root, domNodes)
+
+    expect(child.style.color).toBe('')
+    expect(Array.isArray((child as any).__axiomManagedStyleKeys)).toBe(true)
+  })
+
   test('operations are applied in order: removes → updates → inserts', () => {
     const root = document.createElement('div')
     const oldChild = document.createElement('span')

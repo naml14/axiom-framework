@@ -85,7 +85,7 @@ export interface ActiveTransition {
   transition: TransitionDefinition
   from: string
   to: string
-  /** Epoch ms when this transition started (set on first tick) */
+  /** Epoch ms when this transition was scheduled */
   startTime: number
 }
 

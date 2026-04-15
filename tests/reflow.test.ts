@@ -537,6 +537,35 @@ describe('reflow — grid layout MVP', () => {
     expect(result.y[4]).toBe(15)
   })
 
+  test('usa gap como shorthand cuando rowGap/columnGap no están definidos', () => {
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: {
+        display: 'grid',
+        gridTemplateColumns: 2,
+        gap: 10,
+      } as any,
+      children: [
+        { type: 'element' as const, tag: 'div', layout: { height: 10 } },
+        { type: 'element' as const, tag: 'div', layout: { height: 10 } },
+        { type: 'element' as const, tag: 'div', layout: { height: 10 } },
+        { type: 'element' as const, tag: 'div', layout: { height: 10 } },
+      ],
+    }))
+
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const result = reflow(prepared, { maxWidth: 210, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+
+    // col width = (210 - 10) / 2 = 100
+    expect(result.x[1]).toBe(0)
+    expect(result.x[2]).toBe(110)
+
+    // y segunda fila = 10 + gap(10)
+    expect(result.y[3]).toBe(20)
+    expect(result.y[4]).toBe(20)
+  })
+
   test('explicit span across 2 columns reserva rectángulo y expande ancho efectivo', () => {
     const comp = defineComponent(() => ({
       type: 'element' as const,
