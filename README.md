@@ -381,7 +381,10 @@ bun install
 bun test           # run tests
 bun run typecheck  # type check
 bun run build      # emit dist/
-bun run demo       # run the interactive demo (la demo importa desde ./dist)
+bun run demo:build # build demo/app.js
+bun run demo       # launcher + SSR server at http://localhost:3000
+# static-only demo: open demo/static.html directly (file://) or via any static server
+# SSR demo: http://localhost:3000/ssr?name=Dev&width=960&root=ssr-root
 ```
 
 Tests use [Bun's built-in test runner](https://bun.sh/docs/cli/test) and [Happy DOM](https://github.com/capricorn86/happy-dom) for DOM simulation.

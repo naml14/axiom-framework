@@ -225,6 +225,15 @@ body {
   background: rgba(124, 58, 237, 0.12);
 }
 
+.btn-toggle.is-disabled,
+.btn-toggle.is-disabled:hover {
+  opacity: 0.55;
+  cursor: not-allowed;
+  border-color: var(--border);
+  color: var(--text-muted);
+  background: var(--surface-2);
+}
+
 /* ============================================================
     Sprint 6 DX Panel — within the sidebar
    ============================================================ */

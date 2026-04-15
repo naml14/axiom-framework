@@ -1,5 +1,5 @@
 import { defineComponent } from '../src/index.ts'
-import { getTagWidth } from './layout.js'
+import { getTagWidth } from './layout.ts'
 
 export const TagBubble = defineComponent((props: { label: string; color: string }) => {
   const calcWidth = getTagWidth(props.label)

@@ -1,12 +1,12 @@
 import { signal, defineComponent, createApp } from '../src/index.ts'
 import type { ComponentNode } from '../src/index.ts'
-import { TEXTS, TAGS, COLORS } from './data.js'
-import { computeColumns, getTagWidth, distributeToColumns } from './layout.js'
-import { TagBubble, Card, HeroCard } from './components.js'
-import { initControls } from './controls.js'
-import { initPortalDemo } from './portal-demo.js'
-import { initDxShowcase } from './dx-showcase.js'
-import { initRutaBShowcase } from './ruta-b-showcase.js'
+import { TEXTS, TAGS, COLORS } from './data.ts'
+import { computeColumns, getTagWidth, distributeToColumns } from './layout.ts'
+import { TagBubble, Card, HeroCard } from './components.ts'
+import { initControls } from './controls.ts'
+import { initPortalDemo } from './portal-demo.ts'
+import { initDxShowcase } from './dx-showcase.ts'
+import { initRutaBShowcase } from './ruta-b-showcase.ts'
 
 // Activar modo desarrollo para que __AXIOM__ dev hook esté disponible en el demo
 ;(globalThis as { __AXIOM_DEV__?: boolean }).__AXIOM_DEV__ = true
