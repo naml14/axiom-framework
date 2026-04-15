@@ -36,6 +36,22 @@ Plantilla:
 
 ## Entradas
 
+### 2026-04-15 — Implementación P0: Plugin lifecycle runtime
+
+- Issue: #32
+- PR: TBD (rama local `feat/v1-0-0-kickoff`)
+- Verificación:
+  - [x] `bun test tests/app.test.ts`
+  - [x] `bun test tests/plugin.test.ts`
+  - [x] Integración runtime `onMount`/`onUpdate`/`onUnmount`
+- Evidencia:
+  - tests: `app.test.ts` + `plugin.test.ts` (41 passed / 0 failed)
+  - archivos: `src/app.ts`, `tests/app.test.ts`, `demo/ruta-b-showcase.ts`
+  - comportamiento validado: hooks de plugin conectados al ciclo real de `createApp`; `onUnmount` solo cuando la app estuvo montada; `appId` estable por instancia.
+- Resultado: PASS
+- Notas/Riesgos:
+  - Riesgo residual bajo: mantener hooks post-pipeline (`prepare -> reflow -> commit`) en futuros refactors.
+
 ### 2026-04-15 — Implementación P0: Aislamiento SSR en `prepare`
 
 - Issue: #31
