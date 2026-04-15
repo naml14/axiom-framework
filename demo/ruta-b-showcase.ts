@@ -5,7 +5,6 @@ import {
   createTransition,
   createAnimationState,
   scheduleTransition,
-  applyImmediately,
   getTransitionProgress,
   isTransitioning,
   createTheme,
