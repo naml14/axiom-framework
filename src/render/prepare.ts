@@ -49,14 +49,20 @@ interface PreparedInternal {
   metrics: ComponentMetrics
 }
 
-let nextIndex = 0
+interface PrepareContext {
+  nextIndex: number
+}
 
-function allocIndex(): number {
-  return nextIndex++
+function allocIndex(ctx: PrepareContext): number {
+  const index = ctx.nextIndex
+  ctx.nextIndex += 1
+  return index
 }
 
 export function resetIndexCounter(): void {
-  nextIndex = 0
+  // Compatibilidad pública:
+  // El contador ahora es local por invocación de `prepare`, por lo que
+  // ya no existe estado global que reiniciar.
 }
 
 // ============================================================
@@ -82,10 +88,10 @@ export function prepare<Props>(
   props: Props,
   options?: PrepareOptions
 ): PreparedComponent {
-  resetIndexCounter()
+  const ctx: PrepareContext = { nextIndex: 0 }
   const node = invokeComponent(component, props)
   const fallbackDisplayName = resolveComponentDisplayName(component as ComponentDefinition<unknown>)
-  const prepared = prepareNode(node, options, {
+  const prepared = prepareNode(node, ctx, options, {
     displayName: fallbackDisplayName,
     route: fallbackDisplayName,
   })
@@ -94,6 +100,7 @@ export function prepare<Props>(
 
 function prepareNode(
   node: ComponentNode,
+  ctx: PrepareContext,
   options?: PrepareOptions,
   inheritedDebug?: { displayName: string; route: string }
 ): PreparedInternal {
@@ -101,18 +108,19 @@ function prepareNode(
 
   switch (node.type) {
     case 'text':
-      return prepareTextNode(node, options, ownDebug)
+      return prepareTextNode(node, ctx, options, ownDebug)
     case 'element':
-      return prepareElementNode(node, options, ownDebug)
+      return prepareElementNode(node, ctx, options, ownDebug)
     case 'fragment':
-      return prepareFragmentNode(node, options, ownDebug)
+      return prepareFragmentNode(node, ctx, options, ownDebug)
     case 'portal':
-      return preparePortalNode(node, options, ownDebug)
+      return preparePortalNode(node, ctx, options, ownDebug)
   }
 }
 
 function prepareTextNode(
   node: TextNode,
+  ctx: PrepareContext,
   options?: PrepareOptions,
   debug?: { displayName: string; route: string }
 ): PreparedInternal {
@@ -124,7 +132,7 @@ function prepareTextNode(
   }
 
   return {
-    _index: allocIndex(),
+    _index: allocIndex(ctx),
     nodeType: 'text',
     textContent: node.content,
     textHandle,
@@ -141,14 +149,15 @@ function prepareTextNode(
 
 function prepareElementNode(
   node: ElementNode,
+  ctx: PrepareContext,
   options?: PrepareOptions,
   debug?: { displayName: string; route: string }
 ): PreparedInternal {
-  const index = allocIndex() // Assign index BEFORE processing children
+  const index = allocIndex(ctx) // Assign index BEFORE processing children
 
   const children = node.children !== undefined
     ? node.children.flatMap(child => {
-        const prepared = prepareNode(child, options, debug)
+        const prepared = prepareNode(child, ctx, options, debug)
         // Flatten fragments
         if (prepared.nodeType === 'fragment') {
           return prepared.children
@@ -185,11 +194,12 @@ function prepareElementNode(
 
 function prepareFragmentNode(
   node: FragmentNode,
+  ctx: PrepareContext,
   options?: PrepareOptions,
   debug?: { displayName: string; route: string }
 ): PreparedInternal {
   const children = node.children.flatMap(child => {
-    const prepared = prepareNode(child, options, debug)
+    const prepared = prepareNode(child, ctx, options, debug)
     if (prepared.nodeType === 'fragment') {
       return prepared.children
     }
@@ -199,7 +209,7 @@ function prepareFragmentNode(
   const hasText = children.some(c => c.metrics.hasText)
 
   return {
-    _index: allocIndex(),
+    _index: allocIndex(ctx),
     nodeType: 'fragment',
     debugDisplayName: debug?.displayName,
     debugRoute: debug?.route,
@@ -214,13 +224,14 @@ function prepareFragmentNode(
 
 function preparePortalNode(
   node: PortalNode,
+  ctx: PrepareContext,
   options?: PrepareOptions,
   debug?: { displayName: string; route: string }
 ): PreparedInternal {
-  const index = allocIndex() // Assign portal's index BEFORE processing children
+  const index = allocIndex(ctx) // Assign portal's index BEFORE processing children
 
   const children = node.children.flatMap(child => {
-    const prepared = prepareNode(child, options, debug)
+    const prepared = prepareNode(child, ctx, options, debug)
     if (prepared.nodeType === 'fragment') {
       return prepared.children
     }
