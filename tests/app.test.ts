@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeAll, beforeEach, afterEach, mock } from 'bun:test'
 import { Window } from 'happy-dom'
 // Public API imports — these are the only things consumers can use
-import { createApp, defineComponent, signal } from '../src/index.js'
-import type { App } from '../src/index.js'
+import { createApp, defineComponent, signal, renderToString } from '../src/index.js'
+import type { App, AppErrorContext } from '../src/index.js'
 import type { ProfileEvent } from '../src/index.js'
 // Internal import — resetScheduler is not public API but is required to make
 // the reactive test deterministic (controls rAF scheduling in test environment)
@@ -416,6 +416,72 @@ describe('createApp', () => {
     expect(contexts[0]?.route).toBe(contexts[0]?.displayName)
   })
 
+  test('error en hydrate incluye phase:hydrate (no commit)', () => {
+    const contexts: AppErrorContext[] = []
+
+    const App = defineComponent('HydrateError', () => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'hello' }],
+    }))
+
+    const html = renderToString(App, { textEngine: fakeTextEngine })
+    // safely inject rendered HTML into test DOM
+    const rootContainer = document.createElement('div')
+    rootContainer.id = 'app'
+    rootContainer.innerHTML = html
+    document.body.appendChild(rootContainer)
+
+    const root = rootContainer.getElementsByTagName('div')[0] as HTMLElement
+    // mutar el primer nodo hijo real del root SSR para provocar mismatch strict
+    root.firstElementChild!.textContent = 'TAMPERED'
+
+    const app = createApp(App, root, {
+      textEngine: fakeTextEngine,
+      hydrate: true,
+      strictHydration: true,
+      scheduler: (cb) => cb(),
+      onError: (_err, ctx) => {
+        contexts.push(ctx)
+      },
+    })
+
+    expect(() => app.mount()).toThrow()
+    expect(contexts).toHaveLength(1)
+    expect(contexts[0]?.phase).toBe('hydrate')
+    expect(contexts[0]?.displayName).toBe('HydrateError')
+    expect('nodeKey' in (contexts[0] ?? {})).toBe(true)
+  })
+
+  test('AppErrorContext incluye campo nodeKey (opcional)', () => {
+    const contexts: AppErrorContext[] = []
+
+    const App = defineComponent('NodeKeyTest', () => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'x' }],
+    }))
+
+    const root = document.createElement('div')
+    createApp(App, root, {
+      textEngine: fakeTextEngine,
+      onError: (_err, ctx) => contexts.push(ctx),
+    }).mount()
+
+    // context fuera de error path — verificar que el tipo acepta nodeKey
+    const partial: Partial<AppErrorContext> = {
+      phase: 'commit',
+      displayName: 'Test',
+      route: 'Test',
+      cycle: 1,
+      hydrated: false,
+      nodeKey: 'div[0]',
+    }
+    // nodeKey is optional: must be assignable
+    expect(partial.nodeKey).toBe('div[0]')
+    expect(partial.phase).toBe('commit')
+  })
+
   test('hot reload recovery parcial preserva nodo cuando topología es compatible', () => {
     const scheduled: Array<() => void> = []
     const mockScheduler = (cb: () => void) => {
@@ -542,7 +608,7 @@ describe('createApp', () => {
     expect(root.textContent).toContain('dev-hot:4')
   })
 
-  test('hydrate + hot reload: fallback mínimo verificable', () => {
+  test('hydrate + hot reload: en root vacío no rompe y permite fallback posterior', () => {
     const scheduled: Array<() => void> = []
     const mockScheduler = (cb: () => void) => {
       scheduled.push(cb)
@@ -566,7 +632,9 @@ describe('createApp', () => {
 
     app.enableHotReloadRecovery()
     app.mount()
-    expect(root.textContent === '' || root.textContent?.includes('SSR:0')).toBe(true)
+    // No hay HTML SSR previo en root; con strictHydration=false no debe lanzar.
+    // El contenido inicial puede quedar vacío (sin markers para hidratar).
+    expect(root.textContent ?? '').toBe('')
 
     ;(comp as unknown as { _fn: () => unknown })._fn = () => ({
       type: 'element' as const,

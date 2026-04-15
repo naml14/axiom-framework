@@ -3,7 +3,8 @@ import { Window } from 'happy-dom'
 import { defineComponent } from '../src/component.js'
 import { prepare } from '../src/prepare.js'
 import { reflow } from '../src/reflow.js'
-import { commitFull } from '../src/commit.js'
+import { commitFull, commitHydrate } from '../src/commit.js'
+import { renderToString } from '../src/ssr.js'
 import type { DOMState } from '../src/commit.js'
 
 // ============================================================
@@ -141,5 +142,112 @@ describe('benchmark: 1000-node tree', () => {
     // 500ms is a very generous limit for a test environment (no JIT warm-up, no browser engine)
     // In a real browser with JIT, this should be < 16ms
     expect(total).toBeLessThan(500)
+  })
+
+  // ----------------------------------------------------------
+  // P0-C: per-phase thresholds
+  // Thresholds are CI-safe (generous for Bun / no JIT) but
+  // still catch O(n²) regressions on 1000-node trees.
+  // Browser targets (AGENTS.md): prepare<5ms reflow<0.5ms commit<2ms
+  // ----------------------------------------------------------
+
+  test('prepare() stays under 200ms for 1000 nodes (CI threshold)', () => {
+    const t0 = performance.now()
+    prepare(BenchComp, undefined)
+    const elapsed = performance.now() - t0
+    console.log(`[benchmark:threshold] prepare: ${elapsed.toFixed(2)}ms`)
+    expect(elapsed).toBeLessThan(200)
+  })
+
+  test('reflow() stays under 100ms for 1000 nodes (CI threshold)', () => {
+    const p = prepare(BenchComp, undefined)
+    const t0 = performance.now()
+    reflow(p, CONSTRAINTS, { lineHeight: 20 })
+    const elapsed = performance.now() - t0
+    console.log(`[benchmark:threshold] reflow: ${elapsed.toFixed(2)}ms`)
+    expect(elapsed).toBeLessThan(100)
+  })
+
+  test('commit() stays under 300ms for 1000 nodes (CI threshold)', () => {
+    const p = prepare(BenchComp, undefined)
+    const layout = reflow(p, CONSTRAINTS, { lineHeight: 20 })
+    const root = document.createElement('div')
+    const state: DOMState = { domNodes: [], portalRoots: new Map() }
+    const t0 = performance.now()
+    commitFull(layout, p, root, state)
+    const elapsed = performance.now() - t0
+    console.log(`[benchmark:threshold] commit: ${elapsed.toFixed(2)}ms`)
+    expect(elapsed).toBeLessThan(300)
+  })
+})
+
+// ============================================================
+// P0-C: small tree (fast path) — 10 items ≈ 51 nodes
+// Tighter thresholds: catches regressions in the near-O(1) path.
+// ============================================================
+
+describe('benchmark: small tree (fast path)', () => {
+  const SmallComp = buildBenchmarkComponent(10)
+
+  test('full cycle for 51 nodes completes under 50ms (CI threshold)', () => {
+    const t0 = performance.now()
+    const p = prepare(SmallComp, undefined)
+    const layout = reflow(p, CONSTRAINTS, { lineHeight: 20 })
+    const root = document.createElement('div')
+    const state: DOMState = { domNodes: [], portalRoots: new Map() }
+    commitFull(layout, p, root, state)
+    const elapsed = performance.now() - t0
+    console.log(`[benchmark:small] full cycle: ${elapsed.toFixed(2)}ms`)
+    expect(elapsed).toBeLessThan(50)
+  })
+})
+
+// ============================================================
+// P0-C: hydration scenario — SSR HTML + commitHydrate
+// Validates that the hydration path does not regress under load.
+// ============================================================
+
+const fakeTextEngine = {
+  prepare: (text: string, _font: string) => ({ text }),
+  layout: (_p: unknown, maxWidth: number, _lh: number) => {
+    const t = (_p as { text: string }).text
+    const cpl = Math.max(1, Math.floor(maxWidth / 6))
+    return { lineCount: Math.max(1, Math.ceil(t.length / cpl)), height: 20 }
+  },
+  clearCache: () => {},
+}
+
+describe('benchmark: hydration (200-item SSR + commitHydrate)', () => {
+  const HydrateComp = buildBenchmarkComponent(200)
+
+  test('renderToString() completes under 500ms (CI threshold)', () => {
+    const t0 = performance.now()
+    const html = renderToString(HydrateComp, { textEngine: fakeTextEngine })
+    const elapsed = performance.now() - t0
+    console.log(`[benchmark:hydration] renderToString: ${elapsed.toFixed(2)}ms`)
+    expect(html.length).toBeGreaterThan(0)
+    expect(elapsed).toBeLessThan(500)
+  })
+
+  test('commitHydrate() completes under 500ms for 1000-node SSR tree (CI threshold)', () => {
+    const html = renderToString(HydrateComp, { textEngine: fakeTextEngine })
+    // safely inject rendered HTML into test DOM
+    // to ensure HTMLElement instanceof checks use the same class
+    const rootContainer = document.createElement('div')
+    rootContainer.id = 'app'
+    rootContainer.innerHTML = html
+    document.body.appendChild(rootContainer)
+    const root = rootContainer
+
+    const p = prepare(HydrateComp, undefined, { textEngine: fakeTextEngine })
+    const layout = reflow(p, CONSTRAINTS, { lineHeight: 20 })
+    const state: DOMState = { domNodes: [], portalRoots: new Map() }
+
+    const t0 = performance.now()
+    const result = commitHydrate(layout, p, root, state, { strictMismatch: false })
+    const elapsed = performance.now() - t0
+    console.log(`[benchmark:hydration] commitHydrate(${result.hydratedNodeCount} nodes): ${elapsed.toFixed(2)}ms, mismatches: ${result.mismatchCount}`)
+    expect(result.mismatchCount).toBe(0)
+    expect(elapsed).toBeLessThan(500)
   })
 })
