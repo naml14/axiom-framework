@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.2.9](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.8...axiom-framework-v0.2.9) (2026-04-15)
+
+
+### Features
+
+* **demo:** actualizar la demostración de Axiom — agregar soporte para demo estático y SSR, mejorar la interfaz y la documentación ([fbcebdb](https://github.com/naml14/axiom-framework/commit/fbcebdbba24e593568ac28d9f5e5e8713e33eeab))
+* **ruta-b:** agregar demostración de Ruta B — grid, responsive, estilo, animación, plugins y manejo de errores ([89ee25b](https://github.com/naml14/axiom-framework/commit/89ee25b71e4d56d6f8665696754e4d6c5ec49d0b))
+* **ruta-b:** completar integración Ruta B en estado actual ([49e47c9](https://github.com/naml14/axiom-framework/commit/49e47c903a99f0f59dc9e4f990a91c9de7c06465))
+* **ruta-b:** complete all 6 phases — responsive, grid, style, motion, plugins, hardening ([49f61ef](https://github.com/naml14/axiom-framework/commit/49f61eff57ee876ef3884bbe27c9f57e460da806))
+
+
+### Bug Fixes
+
+* **review:** resolve copilot and gemini findings for PR [#26](https://github.com/naml14/axiom-framework/issues/26) ([32ea4c5](https://github.com/naml14/axiom-framework/commit/32ea4c56ef3a1bf1c1d5bc98733332ad61edc3a3))
+
 ## [0.2.8](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.7...axiom-framework-v0.2.8) (2026-04-15)
 
 
