@@ -1,4 +1,4 @@
-import type { ComponentNode, PortalNode } from './types.js'
+import type { ComponentNode, PortalNode } from '../core/types.js'
 
 // ============================================================
 // Portal factory — creates a PortalNode for rendering children
@@ -48,11 +48,16 @@ import type { ComponentNode, PortalNode } from './types.js'
  */
 export function createPortal(
   children: ComponentNode[],
-  target: HTMLElement
+  target: HTMLElement,
+  options?: { cssManaged?: boolean }
 ): PortalNode {
-  return {
+  const node: PortalNode = {
     type: 'portal',
     target,
     children,
   }
+  if (options?.cssManaged !== undefined) {
+    node.cssManaged = options.cssManaged
+  }
+  return node
 }

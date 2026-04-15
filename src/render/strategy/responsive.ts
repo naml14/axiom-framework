@@ -3,7 +3,7 @@ import type {
   LayoutDimension,
   LayoutProps,
   ResponsiveLayoutProps,
-} from './types.js'
+} from '../../core/types.js'
 
 export type ResolvedLayoutProps = Omit<ResponsiveLayoutProps, 'width' | 'height'> & {
   width?: number

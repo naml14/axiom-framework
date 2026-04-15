@@ -75,7 +75,7 @@ to `container` to better reflect its purpose. Update all call sites:
 
 ### Scopes (optional but helpful)
 
-`signals`, `prepare`, `reflow`, `commit`, `diff`, `scheduler`, `app`, `types`, `demo`, `ci`, `deps`
+`core`, `reactivity`, `render/component`, `render/prepare`, `render/reflow`, `render/engines`, `render/diff`, `render/commit`, `render/strategy`, `features`, `scheduler`, `app`, `router`, `ssr`, `testing`, `demo`, `ci`, `deps`
 
 ---
 
@@ -85,7 +85,7 @@ Before contributing code, understand the **core invariant**:
 
 > **The hot path (reflow + commit) must never read from the DOM.**
 
-Specifically, these are **forbidden** inside `reflow.ts`, `fast-path.ts`, `flex.ts`, and `commit.ts` after the initial setup:
+Specifically, these are **forbidden** inside `src/render/reflow.ts`, `src/render/engines/fast-path.ts`, `src/render/engines/flex.ts`, and `src/render/commit.ts` after the initial setup:
 
 ```typescript
 // ❌ NEVER in the hot path:
@@ -104,18 +104,24 @@ The only intentional DOM read is in `app.ts:getConstraints()`, which runs once p
 
 ```Text
 src/
-  signals.ts     — signal(), computed(), effect() — reactive core
-  component.ts   — defineComponent() — component definition
-  types.ts       — all shared types, zero imports
-  prepare.ts     — tree analysis, metrics caching
-  reflow.ts      — layout entry point, routes to fast/flex path
-  fast-path.ts   — simple top-to-bottom block layout
-  flex.ts        — full flex engine (row/col, gap, justify, align, padding)
-  diff.ts        — fastDiff() and fullDiff() with key reconciliation
-  commit.ts      — batched DOM writes (removes → updates → inserts)
-  scheduler.ts   — rAF batching, injectable for testing
-  app.ts         — createApp(), mount(), unmount(), getMetrics()
-  index.ts       — public API surface
+  core/types.ts                  — all shared types, zero imports
+  reactivity/signals.ts          — signal(), computed(), effect() — reactive core
+  render/component.ts            — defineComponent() — component definition
+  render/prepare.ts              — tree analysis, metrics caching
+  render/reflow.ts               — layout entry point, routes to strategy engines
+  render/engines/fast-path.ts    — simple top-to-bottom block layout
+  render/engines/flex.ts         — full flex engine (row/col, gap, justify, align, padding)
+  render/engines/grid.ts         — grid engine
+  render/strategy/responsive.ts  — responsive strategy by constraints
+  render/diff.ts                 — fastDiff() and fullDiff() with key reconciliation
+  render/commit.ts               — batched DOM writes (removes → updates → inserts)
+  features/{animation,context,forms,plugin,portal,style}.ts — optional features
+  scheduler.ts                   — rAF batching, injectable for testing
+  app.ts                         — createApp(), mount(), unmount(), getMetrics()
+  router.ts                      — client-side router runtime
+  ssr.ts                         — SSR and hydration helpers
+  testing.ts                     — public testing helpers
+  index.ts                       — public API surface
 
 tests/           — bun:test suite (166+ tests)
 demo/            — interactive browser demo

@@ -47,15 +47,15 @@ commit()   → escrituras DOM batcheadas (removes → updates → inserts)
                             │
          ┌──────────────────┼──────────────────┐
          ▼                  ▼                  ▼
-   signals.ts         component.ts        app.ts
-   Reactive core      Component def       Mount + update loop
-   Push + pull        Callable defs       Scheduler integration
+         reactivity/signals.ts  render/component.ts  app.ts
+         Reactive core          Component def         Mount + update loop
+         Push + pull            Callable defs         Scheduler integration
          │                  │                  │
          ▼                  ▼                  ▼
-   prepare.ts         reflow.ts          commit.ts
-   Tree analysis      Layout arithmetic  DOM batch writes
-   Metrics cache      Fast paths         Diff + apply
-                      Flex engine
+         render/prepare.ts  render/reflow.ts   render/commit.ts
+         Tree analysis      Layout arithmetic   DOM batch writes
+         Metrics cache      Fast paths          Diff + apply
+                Flex engine + grid
 ```
 
 ### El ciclo de actualización
@@ -82,18 +82,29 @@ performUpdate():
 
 ```Text
 src/
-  signals.ts        — Signal primitives (push effects + pull computed)
-  component.ts      — defineComponent() — callable component definitions
-  prepare.ts        — Tree analysis, metrics, brand types
-  reflow.ts         — Layout orchestration, routes to fast-path or flex
-  fast-path.ts      — Simple top-to-bottom block layout
-  flex.ts           — Flex layout (row/column, gap, justify, align, padding)
-  diff.ts           — DOM diffing with key reconciliation
-  commit.ts         — DOM tree creation + batched apply
-  scheduler.ts      — rAF batching with generation invalidation
-  app.ts            — createApp(), mount, update loop, metrics
-  types.ts          — Shared types (zero dependencies)
-  index.ts          — Public API surface
+  core/types.ts                    — Shared types (zero dependencies)
+  reactivity/signals.ts            — Signal primitives (push effects + pull computed)
+  render/component.ts              — defineComponent() — callable component definitions
+  render/prepare.ts                — Tree analysis, metrics, brand types
+  render/reflow.ts                 — Layout orchestration, routes to fast-path/flex/grid
+  render/engines/fast-path.ts      — Simple top-to-bottom block layout
+  render/engines/flex.ts           — Flex layout (row/column, gap, justify, align, padding)
+  render/engines/grid.ts           — Grid layout engine
+  render/strategy/responsive.ts    — Responsive strategy by constraints
+  render/diff.ts                   — DOM diffing with key reconciliation
+  render/commit.ts                 — DOM tree creation + batched apply
+  features/animation.ts            — Animation feature module
+  features/context.ts              — Context/store feature module
+  features/forms.ts                — Forms/validation feature module
+  features/plugin.ts               — Plugin extensibility feature module
+  features/portal.ts               — Portal rendering feature module
+  features/style.ts                — Style feature module
+  scheduler.ts                     — rAF batching with generation invalidation
+  app.ts                           — createApp(), mount, update loop, metrics
+  router.ts                        — Router runtime
+  ssr.ts                           — SSR + hydration helpers
+  testing.ts                       — Public testing helpers
+  index.ts                         — Public API surface
 
 demo/
   app.ts            — Demo application with masonry layout
@@ -130,7 +141,7 @@ demo/
 - **Brand types** para handles opacos: `declare const preparedBrand: unique symbol`
 - **`as const`** para discriminantes de uniones: `type: 'element' as const`
 - **`Float32Array`** para arrays de layout (x, y, width, height) — cero allocations innecesarias
-- Interfaces en `types.ts`, implementación en módulos específicos
+- Interfaces en `core/types.ts`, implementación en módulos específicos
 
 ### Estructura de archivos
 
@@ -182,7 +193,7 @@ Todas las posiciones (`x`, `y`) son **relativas al padre directo**, no absolutas
 - **Columna:** height = suma de heights de hijos + gaps
 - **Fila:** height = máximo de heights de hijos
 - **Padre sin height explícito:** se calcula automáticamente desde los hijos
-- **`measureFlex`** calcula el height del padre al final — `reflow.ts` NO debe sobreescribirlo
+- **`measureFlex`** calcula el height del padre al final — `render/reflow.ts` NO debe sobrescribirlo
 
 ### Fast path vs Flex path
 

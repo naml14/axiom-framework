@@ -1,5 +1,5 @@
-import type { ComponentDefinition, PreparedComponent, LayoutResult } from './types.js'
-import type { TextLayoutEngine } from './prepare.js'
+import type { ComponentDefinition, PreparedComponent, LayoutResult } from './core/types.js'
+import type { TextLayoutEngine } from './render/prepare.js'
 
 import {
   prepare,
@@ -10,8 +10,8 @@ import {
   getAttrs,
   getPreparedChildren,
   getNodeIndex,
-} from './prepare.js'
-import { reflow } from './reflow.js'
+} from './render/prepare.js'
+import { reflow } from './render/reflow.js'
 
 export interface SSRMetadata {
   title?: string

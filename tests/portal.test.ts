@@ -1,16 +1,16 @@
 import { describe, test, expect, beforeEach, beforeAll } from 'bun:test'
 import { Window } from 'happy-dom'
-import { createPortal } from '../src/portal.js'
-import { prepare, resetIndexCounter, getNodeIndex, getNodeType, getPreparedChildren } from '../src/prepare.js'
-import { reflow } from '../src/reflow.js'
-import { commitFull } from '../src/commit.js'
-import type { DOMState } from '../src/commit.js'
-import { defineComponent } from '../src/component.js'
-import { signal } from '../src/signals.js'
+import { createPortal } from '../src/features/portal.js'
+import { prepare, resetIndexCounter, getNodeIndex, getNodeType, getPreparedChildren, getPortalCssManaged } from '../src/render/prepare.js'
+import { reflow } from '../src/render/reflow.js'
+import { commitFull } from '../src/render/commit.js'
+import type { DOMState } from '../src/render/commit.js'
+import { defineComponent } from '../src/render/component.js'
+import { signal } from '../src/reactivity/signals.js'
 import { createApp } from '../src/app.js'
 import { resetScheduler } from '../src/scheduler.js'
-import type { PortalNode, ElementNode } from '../src/types.js'
-import { fullDiff } from '../src/diff.js'
+import type { PortalNode, ElementNode } from '../src/core/types.js'
+import { fullDiff } from '../src/render/diff.js'
 
 // ============================================================
 // DOM setup for commit/app tests
@@ -833,5 +833,305 @@ describe('portal reactivity — signal update inside portal', () => {
     expect((targetEl.childNodes[0] as Text).nodeValue).toBe('world')
 
     app.unmount()
+  })
+})
+
+// ============================================================
+// Issue #9: cssManaged flag — factory, prepare, reflow, commit
+// ============================================================
+
+describe('createPortal — cssManaged flag (issue #9)', () => {
+  let target: HTMLElement
+
+  beforeEach(() => {
+    target = { tagName: 'DIV' } as unknown as HTMLElement
+  })
+
+  test('createPortal without options has cssManaged undefined (default: CSS-managed)', () => {
+    const portal = createPortal([{ type: 'text' as const, content: 'hello' }], target)
+    expect((portal as PortalNode).cssManaged).toBeUndefined()
+  })
+
+  test('createPortal with cssManaged:true stores the flag', () => {
+    const portal = createPortal([{ type: 'text' as const, content: 'hello' }], target, { cssManaged: true })
+    expect(portal.cssManaged).toBe(true)
+  })
+
+  test('createPortal with cssManaged:false stores the flag', () => {
+    const portal = createPortal([{ type: 'text' as const, content: 'hello' }], target, { cssManaged: false })
+    expect(portal.cssManaged).toBe(false)
+  })
+
+  test('existing API createPortal(children, target) still works (backward compat)', () => {
+    const children = [{ type: 'text' as const, content: 'hi' }]
+    const portal = createPortal(children, target)
+    expect(portal.type).toBe('portal')
+    expect(portal.target).toBe(target)
+    expect(portal.children).toBe(children)
+  })
+})
+
+describe('prepare — getPortalCssManaged helper (issue #9)', () => {
+  let target: HTMLElement
+
+  beforeEach(() => {
+    resetIndexCounter()
+    target = { tagName: 'DIV' } as unknown as HTMLElement
+  })
+
+  test('default portal (no options) returns true from getPortalCssManaged', () => {
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [createPortal([{ type: 'text' as const, content: 'hi' }], target)],
+    }))
+    const prepared = prepare(component, undefined)
+    const rootChildren = getPreparedChildren(prepared)
+    const portalPrepared = rootChildren[0]!
+    expect(getPortalCssManaged(portalPrepared)).toBe(true)
+  })
+
+  test('cssManaged:true portal returns true from getPortalCssManaged', () => {
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [createPortal([{ type: 'text' as const, content: 'hi' }], target, { cssManaged: true })],
+    }))
+    const prepared = prepare(component, undefined)
+    const rootChildren = getPreparedChildren(prepared)
+    const portalPrepared = rootChildren[0]!
+    expect(getPortalCssManaged(portalPrepared)).toBe(true)
+  })
+
+  test('cssManaged:false portal returns false from getPortalCssManaged', () => {
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [createPortal([{ type: 'text' as const, content: 'hi' }], target, { cssManaged: false })],
+    }))
+    const prepared = prepare(component, undefined)
+    const rootChildren = getPreparedChildren(prepared)
+    const portalPrepared = rootChildren[0]!
+    expect(getPortalCssManaged(portalPrepared)).toBe(false)
+  })
+})
+
+describe('reflow — cssManaged:false portal children participate in layout (issue #9)', () => {
+  let target: HTMLElement
+  let nestedTarget: HTMLElement
+
+  beforeEach(() => {
+    resetIndexCounter()
+    target = { tagName: 'DIV' } as unknown as HTMLElement
+    nestedTarget = { tagName: 'DIV' } as unknown as HTMLElement
+  })
+
+  test('cssManaged:false portal slot is still 0x0 in parent', () => {
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [{ type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 }, children: [] }],
+          target,
+          { cssManaged: false }
+        ),
+      ],
+    }))
+    const prepared = prepare(component, undefined)
+    const result = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+    const rootChildren = getPreparedChildren(prepared)
+    const portalPrepared = rootChildren[0]!
+    const portalIdx = getNodeIndex(portalPrepared)
+    expect(result.width[portalIdx]).toBe(0)
+    expect(result.height[portalIdx]).toBe(0)
+  })
+
+  test('cssManaged:false portal children get computed layout dimensions', () => {
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [{ type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 }, children: [] }],
+          target,
+          { cssManaged: false }
+        ),
+      ],
+    }))
+    const prepared = prepare(component, undefined)
+    const result = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+    const rootChildren = getPreparedChildren(prepared)
+    const portalPrepared = rootChildren[0]!
+    const portalChildren = getPreparedChildren(portalPrepared)
+    const childIdx = getNodeIndex(portalChildren[0]!)
+    expect(result.width[childIdx]).toBe(100)
+    expect(result.height[childIdx]).toBe(50)
+  })
+
+  test('default portal children keep 0x0 layout — CSS-managed unchanged', () => {
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [{ type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 }, children: [] }],
+          target
+        ),
+      ],
+    }))
+    const prepared = prepare(component, undefined)
+    const result = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+    const rootChildren = getPreparedChildren(prepared)
+    const portalPrepared = rootChildren[0]!
+    const portalChildren = getPreparedChildren(portalPrepared)
+    const childIdx = getNodeIndex(portalChildren[0]!)
+    expect(result.width[childIdx]).toBe(0)
+    expect(result.height[childIdx]).toBe(0)
+  })
+
+  test('nested cssManaged:false inside cssManaged:true remains CSS-managed by outer portal', () => {
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [
+            {
+              type: 'element' as const,
+              tag: 'div',
+              children: [
+                createPortal(
+                  [{ type: 'element' as const, tag: 'span', layout: { width: 123, height: 45 }, children: [] }],
+                  nestedTarget,
+                  { cssManaged: false }
+                ),
+              ],
+            },
+          ],
+          target
+        ),
+      ],
+    }))
+
+    const prepared = prepare(component, undefined)
+    const result = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+
+    const outerPortal = getPreparedChildren(prepared)[0]!
+    expect(getPortalCssManaged(outerPortal)).toBe(true)
+
+    const outerPortalHost = getPreparedChildren(outerPortal)[0]!
+    const innerPortal = getPreparedChildren(outerPortalHost)[0]!
+    expect(getPortalCssManaged(innerPortal)).toBe(false)
+
+    const innerPortalChild = getPreparedChildren(innerPortal)[0]!
+    const innerChildIdx = getNodeIndex(innerPortalChild)
+
+    // Outer cssManaged:true makes subtree CSS-managed, so inner child remains 0x0.
+    expect(result.width[innerChildIdx]).toBe(0)
+    expect(result.height[innerChildIdx]).toBe(0)
+  })
+
+  test('nested cssManaged:true inside cssManaged:false keeps inner portal children CSS-managed', () => {
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [
+            {
+              type: 'element' as const,
+              tag: 'div',
+              layout: { width: 220, height: 120 },
+              children: [
+                createPortal(
+                  [{ type: 'element' as const, tag: 'span', layout: { width: 111, height: 44 }, children: [] }],
+                  nestedTarget
+                ),
+              ],
+            },
+          ],
+          target,
+          { cssManaged: false }
+        ),
+      ],
+    }))
+
+    const prepared = prepare(component, undefined)
+    const result = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+
+    const outerPortal = getPreparedChildren(prepared)[0]!
+    expect(getPortalCssManaged(outerPortal)).toBe(false)
+
+    const outerPortalHost = getPreparedChildren(outerPortal)[0]!
+    const outerPortalHostIdx = getNodeIndex(outerPortalHost)
+    // Outer cssManaged:false participates in framework layout.
+    expect(result.width[outerPortalHostIdx]).toBe(220)
+    expect(result.height[outerPortalHostIdx]).toBe(120)
+
+    const innerPortal = getPreparedChildren(outerPortalHost)[0]!
+    expect(getPortalCssManaged(innerPortal)).toBe(true)
+
+    const innerPortalChild = getPreparedChildren(innerPortal)[0]!
+    const innerChildIdx = getNodeIndex(innerPortalChild)
+    // Inner cssManaged:true still isolates its own subtree from framework layout.
+    expect(result.width[innerChildIdx]).toBe(0)
+    expect(result.height[innerChildIdx]).toBe(0)
+  })
+})
+
+describe('commitFull — cssManaged:false portal children get inline layout styles (issue #9)', () => {
+  beforeEach(() => {
+    resetIndexCounter()
+  })
+
+  test('cssManaged:false portal children have position:absolute and transform applied', () => {
+    const targetEl = document.createElement('div')
+    const root = document.createElement('div')
+
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [{ type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 }, children: [] }],
+          targetEl,
+          { cssManaged: false }
+        ),
+      ],
+    }))
+    const prepared = prepare(component, undefined)
+    const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+    const state: DOMState = { domNodes: [], portalRoots: new Map() }
+    commitFull(layout, prepared, root, state)
+
+    expect(targetEl.childNodes.length).toBe(1)
+    const child = targetEl.childNodes[0] as HTMLElement
+    expect(child.style.position).toBe('absolute')
+    expect(child.style.transform).toContain('translate(')
+  })
+
+  test('default portal children (cssManaged:true) still have NO inline position styles', () => {
+    const targetEl = document.createElement('div')
+    const root = document.createElement('div')
+
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [{ type: 'element' as const, tag: 'div', children: [] }],
+          targetEl
+        ),
+      ],
+    }))
+    const prepared = prepare(component, undefined)
+    const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+    const state: DOMState = { domNodes: [], portalRoots: new Map() }
+    commitFull(layout, prepared, root, state)
+
+    const child = targetEl.childNodes[0] as HTMLElement
+    expect(child.style.position).toBe('')
+    expect(child.style.transform).toBe('')
   })
 })

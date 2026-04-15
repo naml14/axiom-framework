@@ -7,20 +7,20 @@ import type {
   ProfileEvent,
   ProfilePhase,
   ProfileSubscriber,
-} from './types.js'
-import type { TextLayoutEngine, PrepareOptions } from './prepare.js'
+} from './core/types.js'
+import type { TextLayoutEngine, PrepareOptions } from './render/prepare.js'
 import type { SchedulerFn } from './scheduler.js'
-import type { ReflowOptions } from './reflow.js'
+import type { ReflowOptions } from './render/reflow.js'
 import type { Router } from './router.js'
 
-import { prepare } from './prepare.js'
-import { reflow } from './reflow.js'
-import { fullDiff, type DOMOperation } from './diff.js'
-import { commitFull, commitHydrate, applyOps, fireUnmountEvents, type DOMState } from './commit.js'
-import { effect } from './signals.js'
+import { prepare } from './render/prepare.js'
+import { reflow } from './render/reflow.js'
+import { fullDiff, type DOMOperation } from './render/diff.js'
+import { commitFull, commitHydrate, applyOps, fireUnmountEvents, type DOMState } from './render/commit.js'
+import { effect } from './reactivity/signals.js'
 import { scheduleRender, cancelScheduled } from './scheduler.js'
-import { getNodeType, getTag, getChildren, getDebugDisplayName, getDebugRoute } from './prepare.js'
-import { resolveComponentDisplayName } from './component.js'
+import { getNodeType, getTag, getChildren, getDebugDisplayName, getDebugRoute } from './render/prepare.js'
+import { resolveComponentDisplayName } from './render/component.js'
 
 // ============================================================
 // Internal helpers

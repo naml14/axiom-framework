@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
 import { GlobalWindow } from 'happy-dom'
-import { signal } from '../src/signals.js'
-import { bind, validate, required, minLength, maxLength, pattern } from '../src/forms.js'
+import { signal } from '../src/reactivity/signals.js'
+import { bind, validate, required, minLength, maxLength, pattern } from '../src/features/forms.js'
 
 // Setup happy-dom globals for DOM tests.
 // We use GlobalWindow (extends Window) because it correctly sets [PropertySymbol.window]

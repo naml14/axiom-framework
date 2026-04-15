@@ -6,7 +6,7 @@ import type {
   JustifyContent,
   AlignItems,
   LayoutConstraints,
-} from './types.js'
+} from '../../core/types.js'
 
 import {
   getNodeIndex,
@@ -16,10 +16,10 @@ import {
   getTextHandle,
   getTextContent,
   getLayoutProps,
-} from './prepare.js'
+} from '../prepare.js'
 
 import { measureSimple } from './fast-path.js'
-import { resolveResponsiveLayout } from './responsive.js'
+import { resolveResponsiveLayout } from '../strategy/responsive.js'
 import { measureGrid } from './grid.js'
 
 // ============================================================

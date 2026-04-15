@@ -1,4 +1,4 @@
-import type { PreparedComponent, LayoutResult, LayoutProps } from './types.js'
+import type { PreparedComponent, LayoutResult, LayoutProps } from '../../core/types.js'
 
 import {
   getNodeIndex,
@@ -8,7 +8,7 @@ import {
   getTextHandle,
   getTextContent,
   getLayoutProps,
-} from './prepare.js'
+} from '../prepare.js'
 
 import { measureFlex } from './flex.js'
 import { measureGrid } from './grid.js'

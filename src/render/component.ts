@@ -1,4 +1,4 @@
-import type { ComponentDefinition, ComponentNode } from './types.js'
+import type { ComponentDefinition, ComponentNode } from '../core/types.js'
 
 const NODE_DEBUG_META = Symbol('axiom-node-debug-meta')
 

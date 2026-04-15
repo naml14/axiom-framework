@@ -1,9 +1,9 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
 import { Window } from 'happy-dom'
-import { fastDiff, fullDiff, type DOMOperation } from '../src/diff.js'
-import { createLayoutResult } from '../src/reflow.js'
-import { defineComponent } from '../src/component.js'
-import { prepare } from '../src/prepare.js'
+import { fastDiff, fullDiff, type DOMOperation } from '../src/render/diff.js'
+import { createLayoutResult } from '../src/render/reflow.js'
+import { defineComponent } from '../src/render/component.js'
+import { prepare } from '../src/render/prepare.js'
 
 // Setup happy-dom for tests that need DOM
 let win: ReturnType<typeof setupDOM>

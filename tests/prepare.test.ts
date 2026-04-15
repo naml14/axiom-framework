@@ -1,7 +1,7 @@
 import { describe, test, expect, mock, beforeEach } from 'bun:test'
-import { defineComponent } from '../src/component.js'
-import { prepare } from '../src/prepare.js'
-import type { ComponentNode } from '../src/types.js'
+import { defineComponent } from '../src/render/component.js'
+import { prepare } from '../src/render/prepare.js'
+import type { ComponentNode } from '../src/core/types.js'
 
 // ============================================================
 // Fake text layout engine — mimics the TextLayoutEngine contract

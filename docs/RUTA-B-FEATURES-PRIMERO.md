@@ -6,6 +6,8 @@
 **Horizonte estimado:** 20–24 semanas (hacia `v1.0.0`)  
 **Estrategia:** maximizar competitividad funcional (layout, styling, motion y ecosistema) asumiendo mayor riesgo operativo inicial.
 
+> **Nota de actualización (2026-04-15):** se conserva el contexto histórico de la ruta, pero las rutas operativas se alinearon con el árbol híbrido actual de `src/`.
+
 ---
 
 ## 1) Propósito de esta ruta
@@ -47,10 +49,10 @@ Aunque es una ruta agresiva en features, estas reglas NO cambian:
 
 ### 4.1 Base técnica ya disponible
 
-- Core pipeline: `src/prepare.ts`, `src/reflow.ts`, `src/commit.ts`
+- Core pipeline: `src/render/prepare.ts`, `src/render/reflow.ts`, `src/render/commit.ts`
 - Router SPA: `src/router.ts`
-- SSR/hydration base: `src/ssr.ts` + integración en `src/app.ts`/`src/commit.ts`
-- Forms/context/portal/scheduler: `src/forms.ts`, `src/context.ts`, `src/portal.ts`, `src/scheduler.ts`
+- SSR/hydration base: `src/ssr.ts` + integración en `src/app.ts`/`src/render/commit.ts`
+- Forms/context/portal/scheduler: `src/features/forms.ts`, `src/features/context.ts`, `src/features/portal.ts`, `src/scheduler.ts`
 - CI/security/release: `.github/workflows/*.yml`, `release-please-config.json`
 
 ### 4.2 Gaps funcionales que Ruta B ataca primero
@@ -86,19 +88,19 @@ Aunque es una ruta agresiva en features, estas reglas NO cambian:
 
 #### Módulos existentes impactados
 
-- `src/reflow.ts` (dispatcher de estrategias de layout)
-- `src/prepare.ts` (normalización de constraints y reglas responsive)
-- `src/commit.ts` (aplicación segura de estilos/actualizaciones visuales)
+- `src/render/reflow.ts` (dispatcher de estrategias de layout)
+- `src/render/prepare.ts` (normalización de constraints y reglas responsive)
+- `src/render/commit.ts` (aplicación segura de estilos/actualizaciones visuales)
 - `src/app.ts` y `src/scheduler.ts` (orquestación temporal de motion)
 - `src/index.ts` (surface de exportación)
 - `tests/reflow.test.ts`, `tests/integration.test.ts`, `tests/benchmark.test.ts`
 
 #### Módulos nuevos propuestos
 
-- `src/grid.ts` (layout grid incremental)
-- `src/responsive.ts` (evaluación de breakpoints por constraints)
-- `src/style.ts` (validación de style keys + tokens)
-- `src/animation.ts` (estado temporal + integración con scheduler)
+- `src/render/engines/grid.ts` (layout grid incremental)
+- `src/render/strategy/responsive.ts` (evaluación de breakpoints por constraints)
+- `src/features/style.ts` (validación de style keys + tokens)
+- `src/features/animation.ts` (estado temporal + integración con scheduler)
 - `src/testing.ts` (helpers públicos para apps consumidoras)
 
 ---
@@ -173,8 +175,8 @@ Agregar layout 2D utilizable para casos reales.
 
 #### Trabajo F2
 
-- motor `src/grid.ts` (subset incremental).
-- integración con `reflow` por estrategia (`flex`/`grid`).
+- motor `src/render/engines/grid.ts` (subset incremental).
+- integración con `src/render/reflow.ts` por estrategia (`flex`/`grid`).
 - matrix de pruebas grid/flex coexistencia.
 
 #### Riesgos F2

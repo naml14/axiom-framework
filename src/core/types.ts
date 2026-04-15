@@ -35,7 +35,7 @@ export interface ElementNode {
   attrs?: Record<string, string>
   on?: Record<string, EventListener>
   layout?: LayoutProps
-  style?: import('./style.js').SafeStyleProps
+  style?: import('../features/style.js').SafeStyleProps
   children?: ComponentNode[]
 }
 
@@ -53,6 +53,7 @@ export interface PortalNode {
   type: 'portal'
   target: HTMLElement
   children: ComponentNode[]
+  cssManaged?: boolean
 }
 
 export interface ComponentDefinition<Props = void> {

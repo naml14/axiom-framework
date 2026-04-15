@@ -1,8 +1,8 @@
 import { describe, test, expect } from 'bun:test'
-import { defineComponent } from '../src/component.js'
-import { prepare } from '../src/prepare.js'
-import { reflow } from '../src/reflow.js'
-import { resolveResponsiveLayout } from '../src/responsive.js'
+import { defineComponent } from '../src/render/component.js'
+import { prepare } from '../src/render/prepare.js'
+import { reflow } from '../src/render/reflow.js'
+import { resolveResponsiveLayout } from '../src/render/strategy/responsive.js'
 
 describe('responsive resolver', () => {
   test('resuelve width en porcentaje usando maxWidth del contenedor', () => {

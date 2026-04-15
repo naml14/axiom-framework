@@ -3,7 +3,7 @@ import type {
   LayoutResult,
   HydrationOptions,
   HydrationResult,
-} from './types.js'
+} from '../core/types.js'
 
 import type { DOMOperation } from './diff.js'
 
@@ -23,9 +23,13 @@ import {
   forEachNode,
   getPreparedChildren,
   getPortalTarget,
+  getPortalCssManaged,
 } from './prepare.js'
 
-import { applyStyleToElement } from './style.js'
+// ARCHITECTURAL EXCEPTION: render/ → features/style allowed
+// Reason: commit phase applies managed CSS. Decoupling requires
+// functional refactoring (strategy pattern or callback injection).
+import { applyStyleToElement } from '../features/style.js'
 
 // ============================================================
 // Public API
@@ -351,9 +355,9 @@ export function applyOps(
   const fragments = new Map<HTMLElement, DocumentFragment>()
   for (const op of ops) {
     if (op.type === 'insert') {
-      // Portal inserts are CSS-managed — presence of portalTarget is sufficient,
-      // regardless of whether the target happens to equal root.
-      const isPortalChild = op.portalTarget !== undefined
+      // Portal inserts: CSS-managed by default (portalTarget set, portalCssManaged not false).
+      // When portalCssManaged===false, framework applies layout styles even to portal children.
+      const isPortalChild = op.portalTarget !== undefined && op.portalCssManaged !== false
       const el = createDOMElement(op, isPortalChild)
       domNodes[op.index] = el
       const container = op.portalTarget ?? root
@@ -444,11 +448,13 @@ function buildDOMTree(
     if (portalTarget !== undefined) {
       const entry: PortalEntry = { target: portalTarget, nodes: [] }
       state.portalRoots.set(idx, entry)
+      // cssManaged:false → children participate in framework layout (portalChild=false)
+      // cssManaged:true (default) → CSS-managed, skip inline styles (portalChild=true)
+      const childrenAreCssManaged = getPortalCssManaged(prepared)
       for (const child of children) {
         // Capture childNodes count before insertion to track root-level nodes added
         const before = portalTarget.childNodes.length
-        // Children of portals are CSS-managed — pass portalChild=true so no inline styles are applied
-        buildDOMTree(child, layout, portalTarget, state, true)
+        buildDOMTree(child, layout, portalTarget, state, childrenAreCssManaged)
         // Collect any new direct children of portalTarget added by this child
         for (let i = before; i < portalTarget.childNodes.length; i++) {
           entry.nodes.push(portalTarget.childNodes[i]!)
@@ -561,7 +567,7 @@ function assertValidTagName(tag: string): void {
 
 function applyManagedStyleToElement(
   el: HTMLElement,
-  props: import('./style.js').SafeStyleProps
+  props: import('../features/style.js').SafeStyleProps
 ): void {
   applyStyleToElement(el, props)
   ;(el as unknown as Record<string, unknown>)[MANAGED_STYLE_KEYS_PROP] = Object.keys(props)

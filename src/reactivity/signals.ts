@@ -1,4 +1,4 @@
-import type { Signal, SignalOptions, SignalKind, ComputedSignal } from './types.js'
+import type { Signal, SignalOptions, SignalKind, ComputedSignal } from '../core/types.js'
 
 // ============================================================
 // Internal data structures

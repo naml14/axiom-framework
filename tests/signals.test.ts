@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test'
-import { signal, effect, computed } from '../src/signals.js'
+import { signal, effect, computed } from '../src/reactivity/signals.js'
 
 describe('signal', () => {
   test('creates a signal with initial value', () => {

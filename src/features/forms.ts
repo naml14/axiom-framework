@@ -4,8 +4,8 @@
 // Zero modifications to core pipeline files.
 // ============================================================
 
-import { signal, effect } from './signals.js'
-import type { Signal } from './types.js'
+import { signal, effect } from '../reactivity/signals.js'
+import type { Signal } from '../core/types.js'
 
 // ============================================================
 // Types

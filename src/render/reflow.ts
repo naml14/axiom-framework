@@ -2,7 +2,7 @@ import type {
   PreparedComponent,
   LayoutResult,
   LayoutConstraints,
-} from './types.js'
+} from '../core/types.js'
 
 import {
   countNodes,
@@ -14,12 +14,13 @@ import {
   getLayoutProps,
   getTextHandle,
   getTextContent,
+  getPortalCssManaged,
 } from './prepare.js'
 
-import { measureSimple } from './fast-path.js'
-import { measureFlex } from './flex.js'
-import { measureGrid } from './grid.js'
-import { resolveResponsiveLayout } from './responsive.js'
+import { measureSimple } from './engines/fast-path.js'
+import { measureFlex } from './engines/flex.js'
+import { measureGrid } from './engines/grid.js'
+import { resolveResponsiveLayout } from './strategy/responsive.js'
 
 // ============================================================
 // Public API
@@ -46,8 +47,37 @@ export function reflow(
   options?: ReflowOptions
 ): LayoutResult {
   const result = createLayoutResult(prepared)
-  layoutNode(prepared, constraints, result, options?.lineHeight ?? 20)
+  const lineHeight = options?.lineHeight ?? 20
+  layoutNode(prepared, constraints, result, lineHeight)
+  // Second pass: portals with cssManaged:false are skipped by measureSimple/measureFlex.
+  // We must lay out their children separately so the result arrays are populated.
+  reflowPortalChildren(prepared, constraints, result, lineHeight)
   return result
+}
+
+/**
+ * Recursively finds all cssManaged:false portals in the tree and calls
+ * layoutNode on each of their children, populating x/y/width/height in result.
+ */
+function reflowPortalChildren(
+  node: PreparedComponent,
+  constraints: LayoutConstraints,
+  result: LayoutResult,
+  lineHeight: number
+): void {
+  const nodeType = getNodeType(node)
+  if (nodeType === 'portal') {
+    if (!getPortalCssManaged(node)) {
+      for (const child of getPreparedChildren(node)) {
+        layoutNode(child, constraints, result, lineHeight)
+      }
+    }
+    // Don't recurse deeper — layoutNode above will handle subtrees of each child
+    return
+  }
+  for (const child of getPreparedChildren(node)) {
+    reflowPortalChildren(child, constraints, result, lineHeight)
+  }
 }
 
 // ============================================================
@@ -66,11 +96,19 @@ function layoutNode(
   const children = getPreparedChildren(prepared)
 
   // Portal nodes: assign 0×0 to the slot (transparent to parent layout).
-  // Portal children are CSS-managed — the framework inserts them into the DOM
+  // Portal children are CSS-managed by default — the framework inserts them into the DOM
   // but does NOT apply inline position/size styles. CSS owns their layout entirely.
+  // When cssManaged:false, the framework lays out children so it can apply inline styles.
   if (nodeType === 'portal') {
     result.width[idx] = 0
     result.height[idx] = 0
+    if (!getPortalCssManaged(prepared)) {
+      // cssManaged:false: lay out each portal child through the full pipeline.
+      // Calling layoutNode directly respects each child's own layout props (width, height, flex…).
+      for (const child of children) {
+        layoutNode(child, constraints, result, lineHeight)
+      }
+    }
     return
   }
 

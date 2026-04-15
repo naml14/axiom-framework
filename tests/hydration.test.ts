@@ -9,7 +9,7 @@ import {
   commitHydrate,
 } from '../src/index.js'
 import type { ComponentNode } from '../src/index.js'
-import { forEachNode, getNodeIndex, getNodeType } from '../src/prepare.js'
+import { forEachNode, getNodeIndex, getNodeType } from '../src/render/prepare.js'
 
 const fakeTextEngine = {
   prepare: (text: string, _font: string) => ({ text }),

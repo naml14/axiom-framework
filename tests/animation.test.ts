@@ -20,12 +20,12 @@ import {
   applyImmediately,
   getTransitionProgress,
   isTransitioning,
-} from '../src/animation.js'
+} from '../src/features/animation.js'
 import type {
   TransitionDefinition,
   AnimationState,
   TransitionProperty,
-} from '../src/animation.js'
+} from '../src/features/animation.js'
 
 // Setup happy-dom for DOM tests
 beforeAll(() => {

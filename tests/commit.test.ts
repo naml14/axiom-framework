@@ -1,9 +1,9 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
 import { Window } from 'happy-dom'
-import { applyOps, commitFull, type DOMOperation } from '../src/commit.js'
-import { defineComponent } from '../src/component.js'
-import { prepare, resetIndexCounter } from '../src/prepare.js'
-import { reflow, createLayoutResult } from '../src/reflow.js'
+import { applyOps, commitFull, type DOMOperation } from '../src/render/commit.js'
+import { defineComponent } from '../src/render/component.js'
+import { prepare } from '../src/render/prepare.js'
+import { reflow } from '../src/render/reflow.js'
 
 // Setup happy-dom
 beforeAll(() => {

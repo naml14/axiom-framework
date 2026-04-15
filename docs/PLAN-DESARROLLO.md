@@ -3,6 +3,8 @@
 > **Filosofía central:** Separar el trabajo costoso (que solo depende de los datos) del trabajo barato (que solo depende del layout actual).
 >
 > Inspirado en `@chenglou/pretext` — ver `SPEC-TEXT-LAYOUT-ENGINE.md` para el análisis técnico profundo.
+>
+> **Nota de actualización (2026-04-15):** este documento conserva contexto histórico de fases, pero las referencias operativas de código se alinean al árbol híbrido actual de `src/`.
 
 ---
 
@@ -43,16 +45,16 @@ Viene de la mentalidad de sistemas embebidos donde cada byte y cada ciclo de CPU
          ┌──────────────────┼──────────────────┐
          ▼                  ▼                  ▼
 ┌─────────────────┐ ┌──────────────┐ ┌─────────────────┐
-│   signals.ts     │ │ component.ts  │ │  renderer.ts     │
-│ Signal primitives│ │ Component def │ │  Render loop     │
-│ Dependency graph │ │ Prepare logic │ │  Scheduler       │
+│ reactivity/      │ │ render/       │ │ app.ts +         │
+│ signals.ts       │ │ component.ts  │ │ scheduler.ts     │
+│ Dependency graph │ │ Prepare logic │ │ Render loop      │
 └────────┬─────────┘ └──────┬───────┘ └────────┬────────┘
          │                  │                  │
          ▼                  ▼                  ▼
 ┌─────────────────┐ ┌──────────────┐ ┌─────────────────┐
-│   prepare.ts     │ │  reflow.ts    │ │   commit.ts      │
-│ Análisis de comp │ │ Layout aritm. │ │  DOM batch write │
-│ Cache de métricas│ │ Fast paths    │ │  No interleaving │
+│render/prepare.ts │ │render/reflow.ts│ │render/commit.ts │
+│ Análisis de comp │ │ Layout aritm.  │ │ DOM batch write │
+│ Cache de métricas│ │ Fast paths     │ │ No interleaving │
 └─────────────────┘ └──────────────┘ └─────────────────┘
 ```
 
@@ -166,14 +168,24 @@ Todos los nombres de la API siguen una convención intuitiva que se mantiene a l
 
 ```Text
 src/
-  signals.ts        — Signal primitives con dependency tracking
-  component.ts      — defineComponent(), PreparedComponent type
-  prepare.ts        — Análisis de componentes, cache de métricas
-  reflow.ts         — Layout arithmetic, fast paths
-  commit.ts         — DOM batch writes, diff application
-  renderer.ts       — Render loop, scheduler, batching
-  text.ts           — Integración con pretext para medición de texto
-  index.ts          — Public API
+  core/types.ts                    — Contratos base (cero dependencias internas)
+  reactivity/signals.ts            — Signal primitives con dependency tracking
+  render/component.ts              — defineComponent(), PreparedComponent type
+  render/prepare.ts                — Análisis de componentes, cache de métricas
+  render/reflow.ts                 — Layout arithmetic, fast paths
+  render/engines/fast-path.ts      — Motor simple top-to-bottom
+  render/engines/flex.ts           — Motor flex
+  render/engines/grid.ts           — Motor grid
+  render/strategy/responsive.ts    — Estrategia responsive
+  render/diff.ts                   — Diffing del árbol renderizado
+  render/commit.ts                 — DOM batch writes, diff application
+  features/{animation,context,forms,plugin,portal,style}.ts — Features opcionales
+  app.ts                           — Render loop y createApp
+  router.ts                        — Router SPA
+  scheduler.ts                     — Scheduler + batching
+  ssr.ts                           — SSR e hidratación
+  testing.ts                       — Utilidades de testing
+  index.ts                         — Public API
 
 demo/
   index.html        — Demo page
@@ -211,7 +223,7 @@ demo/
   - Computed caching
   - Prepare idempotencia
 
-**Entregable:** `signals.ts` + `component.ts` + `prepare.ts` con tests
+**Entregable:** `src/reactivity/signals.ts` + `src/render/component.ts` + `src/render/prepare.ts` con tests
 
 ---
 
@@ -247,7 +259,7 @@ demo/
   - Fast path vs rich path correctness
   - Edge cases (empty children, overflow)
 
-**Entregable:** `reflow.ts` + `text.ts` con tests
+**Entregable:** `src/render/reflow.ts` + `src/render/engines/{fast-path,flex,grid}.ts` con tests
 
 ---
 
@@ -284,7 +296,7 @@ demo/
   - Sin lecturas intercaladas
   - Batch de múltiples signals
 
-**Entregable:** `commit.ts` + `renderer.ts` con tests
+**Entregable:** `src/render/commit.ts` + `src/app.ts` + `src/scheduler.ts` con tests
 
 ---
 

@@ -19,8 +19,8 @@
  * ```
  */
 
-import type { ComponentDefinition } from './types.js'
-import type { TextLayoutEngine } from './prepare.js'
+import type { ComponentDefinition } from './core/types.js'
+import type { TextLayoutEngine } from './render/prepare.js'
 import { createApp } from './app.js'
 import type { App } from './app.js'
 
