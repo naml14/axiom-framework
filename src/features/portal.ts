@@ -1,4 +1,4 @@
-import type { ComponentNode, PortalNode } from './types.js'
+import type { ComponentNode, PortalNode } from '../core/types.js'
 
 // ============================================================
 // Portal factory — creates a PortalNode for rendering children

@@ -11,8 +11,8 @@ import {
   createTheme,
   applyStyleToElement,
   SAFE_STYLE_KEYS,
-} from '../src/style.js'
-import type { SafeStyleProps, ThemeTokens, Theme } from '../src/style.js'
+} from '../src/features/style.js'
+import type { SafeStyleProps, ThemeTokens, Theme } from '../src/features/style.js'
 
 // Setup happy-dom for DOM tests
 beforeAll(() => {
@@ -239,7 +239,7 @@ describe('applyStyleToElement', () => {
 describe('Style integration — ElementNode to commit', () => {
   it('style: {} on type check — ElementNode accepts SafeStyleProps', () => {
     // This is a type-level check that also validates runtime shape
-    const node: import('../src/types.js').ElementNode = {
+    const node: import('../src/core/types.js').ElementNode = {
       type: 'element',
       tag: 'div',
       style: {

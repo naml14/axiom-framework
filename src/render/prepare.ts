@@ -7,7 +7,7 @@ import type {
   ElementNode,
   FragmentNode,
   PortalNode,
-} from './types.js'
+} from '../core/types.js'
 import { getNodeDebugMeta, invokeComponent, resolveComponentDisplayName } from './component.js'
 
 // ============================================================
@@ -37,8 +37,8 @@ interface PreparedInternal {
   classes?: string[]
   attrs?: Record<string, string>
   on?: Record<string, EventListener>
-  layout?: import('./types.js').LayoutProps
-  style?: import('./style.js').SafeStyleProps
+  layout?: import('../core/types.js').LayoutProps
+  style?: import('../features/style.js').SafeStyleProps
   textContent?: string
   textHandle?: unknown
   portalTarget?: HTMLElement
@@ -308,7 +308,7 @@ export function forEachNode(prepared: PreparedComponent, fn: (node: PreparedComp
   }
 }
 
-export function getLayoutProps(prepared: PreparedComponent): import('./types.js').LayoutProps | undefined {
+export function getLayoutProps(prepared: PreparedComponent): import('../core/types.js').LayoutProps | undefined {
   return unbrandPrepared(prepared).layout
 }
 
@@ -336,7 +336,7 @@ export function getOn(prepared: PreparedComponent): Record<string, EventListener
   return unbrandPrepared(prepared).on
 }
 
-export function getStyle(prepared: PreparedComponent): import('./style.js').SafeStyleProps | undefined {
+export function getStyle(prepared: PreparedComponent): import('../features/style.js').SafeStyleProps | undefined {
   return unbrandPrepared(prepared).style
 }
 

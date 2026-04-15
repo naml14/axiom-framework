@@ -7,6 +7,8 @@ A continuación, un plan dividido en **dos horizontes**:
 
 Todo manteniendo **Bun** como runtime, **cero dependencias externas** (salvo las que ya usan, como Happy DOM para tests) y respetando la arquitectura actual (prepare/reflow/commit, señales push/pull).
 
+> **Nota de actualización (2026-04-15):** este plan mantiene contexto temporal de sprints, pero las rutas operativas referenciadas se ajustaron al árbol híbrido actual de `src/`.
+
 ---
 
 ## Cómo funciona el versionado (release-please)
@@ -21,7 +23,7 @@ Este proyecto usa [release-please](https://github.com/googleapis/release-please)
 Mientras la versión sea `< 1.0.0`, las reglas son:
 
 | Tipo de commit | Bump generado | Ejemplo |
-|---|---|---|
+| --- | --- | --- |
 | `fix:` | **patch** | `0.2.3 → 0.2.4` |
 | `feat:` | **patch** (reducido de minor) | `0.2.3 → 0.2.4` |
 | `feat!:` o `BREAKING CHANGE:` | **minor** (reducido de major) | `0.2.3 → 0.3.0` |
@@ -32,7 +34,7 @@ Mientras la versión sea `< 1.0.0`, las reglas son:
 
 ## Plan de Desarrollo (v0.2.3 → v1.0.0)
 
-Basado en el código existente (`signals.ts`, `component.ts`, `app.ts`, `prepare.ts`, `reflow.ts`, `commit.ts`, `diff.ts`, `flex.ts`, `fast-path.ts`, `scheduler.ts`, `types.ts`).
+Basado en el código existente (`src/reactivity/signals.ts`, `src/render/component.ts`, `src/app.ts`, `src/render/prepare.ts`, `src/render/reflow.ts`, `src/render/commit.ts`, `src/render/diff.ts`, `src/render/engines/flex.ts`, `src/render/engines/fast-path.ts`, `src/scheduler.ts`, `src/core/types.ts`).
 
 Estado actual: **v0.2.3** — signals, layout engine, forms, context/store.
 
@@ -47,9 +49,10 @@ Estado actual: **v0.2.3** — signals, layout engine, forms, context/store.
 **Commits:** `feat(forms):` + `feat(context):` → patch bump `0.2.2 → 0.2.3`
 
 **Qué se implementó:**
+
 - `bind(signal, inputElement)` → two-way binding para `input`, `textarea`, `select`.
 - `validate(signal, rules)` → señal derivada con debounce + generación para reglas async.
-- Built-ins: `required`, `minLength`, `maxLength`, `pattern` en `forms.ts`.
+- Built-ins: `required`, `minLength`, `maxLength`, `pattern` en `src/features/forms.ts`.
 
 ---
 
@@ -58,9 +61,10 @@ Estado actual: **v0.2.3** — signals, layout engine, forms, context/store.
 **Commits:** `feat(context):` → incluido en el mismo patch bump `0.2.2 → 0.2.3`
 
 **Qué se implementó:**
+
 - `createContext<T>`, `withContext`, `useContext` → scoping por call-stack (como React/Solid).
 - `createStore`, `provideStore`, `injectStore` → DI basado en el mismo mecanismo de contexto.
-- Todo en `context.ts` (~120 líneas, cero dependencias externas).
+- Todo en `src/features/context.ts` (~120 líneas, cero dependencias externas).
 
 ---
 
@@ -75,7 +79,7 @@ Estado actual: **v0.2.3** — signals, layout engine, forms, context/store.
 - Durante `prepare` y `reflow`, el portal se comporta como un nodo vacío (no ocupa layout).
 - Manejar la limpieza del portal en `unmount`.
 
-**Impacto:** Modificar `commit.ts` (fase de inserción) y `prepare.ts` (marcar tipo `'portal'`).  
+**Impacto:** Modificar `src/render/commit.ts` (fase de inserción) y `src/render/prepare.ts` (marcar tipo `'portal'`).  
 **Pruebas:** Portal que se mueve entre padres, eliminación del DOM.
 
 ---
@@ -119,7 +123,7 @@ Estado actual: **v0.2.3** — signals, layout engine, forms, context/store.
 **Impacto:**
 
 - Nuevo `ssr.ts` (usa `prepare`, `reflow` sin `commit`).  
-- Modificar `commit.ts` para permitir hidratación (comparar nodos existentes en lugar de crearlos).
+- Modificar `src/render/commit.ts` para permitir hidratación (comparar nodos existentes en lugar de crearlos).
 
 **Pruebas:** Comparar salida HTML con renderizado en cliente.
 
@@ -139,7 +143,7 @@ Estado actual: **v0.2.3** — signals, layout engine, forms, context/store.
 
 **Impacto:**
 
-- Modificar `component.ts` para guardar `displayName`.  
+- Modificar `src/render/component.ts` para guardar `displayName`.  
 - Extender `app.ts` con opciones de desarrollo.  
 - Nuevo `devtools.ts` (opcional, condicional).
 

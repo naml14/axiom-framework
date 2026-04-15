@@ -1,11 +1,11 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
 import { Window } from 'happy-dom'
-import { defineComponent } from '../src/component.js'
-import { prepare } from '../src/prepare.js'
-import { reflow } from '../src/reflow.js'
-import { commitFull, commitHydrate } from '../src/commit.js'
+import { defineComponent } from '../src/render/component.js'
+import { prepare } from '../src/render/prepare.js'
+import { reflow } from '../src/render/reflow.js'
+import { commitFull, commitHydrate } from '../src/render/commit.js'
 import { renderToString } from '../src/ssr.js'
-import type { DOMState } from '../src/commit.js'
+import type { DOMState } from '../src/render/commit.js'
 
 // ============================================================
 // Setup happy-dom

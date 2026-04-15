@@ -2,7 +2,7 @@ import type {
   PreparedComponent,
   LayoutResult,
   LayoutConstraints,
-} from './types.js'
+} from '../core/types.js'
 
 import {
   countNodes,
@@ -17,10 +17,10 @@ import {
   getPortalCssManaged,
 } from './prepare.js'
 
-import { measureSimple } from './fast-path.js'
-import { measureFlex } from './flex.js'
-import { measureGrid } from './grid.js'
-import { resolveResponsiveLayout } from './responsive.js'
+import { measureSimple } from './engines/fast-path.js'
+import { measureFlex } from './engines/flex.js'
+import { measureGrid } from './engines/grid.js'
+import { resolveResponsiveLayout } from './strategy/responsive.js'
 
 // ============================================================
 // Public API

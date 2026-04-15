@@ -17,8 +17,8 @@ import {
   getRegisteredPlugins,
   clearPlugins,
   applyPluginHook,
-} from '../src/plugin.js'
-import type { AxiomPlugin, PluginContext } from '../src/plugin.js'
+} from '../src/features/plugin.js'
+import type { AxiomPlugin, PluginContext } from '../src/features/plugin.js'
 
 // ---------------------------------------------------------------------------
 // 1. Plugin creation contract

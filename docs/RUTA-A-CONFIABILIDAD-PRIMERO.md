@@ -6,6 +6,8 @@
 **Horizonte recomendado:** 12 semanas (hasta `v1.0.0`)  
 **Estrategia:** priorizar estabilidad, verificabilidad y contratos operativos antes de expandir superficie de features.
 
+> **Nota de actualización (2026-04-15):** se mantiene el contexto histórico de la ruta, pero las rutas operativas se actualizaron al árbol híbrido actual de `src/`.
+
 ---
 
 ## 1) Propósito de esta ruta
@@ -41,17 +43,17 @@ Estas reglas NO se negocian en Ruta A:
 
 ### 3.1 Capacidades disponibles
 
-- Reactividad: `src/signals.ts`
-- Composición/Componentes: `src/component.ts`
+- Reactividad: `src/reactivity/signals.ts`
+- Composición/Componentes: `src/render/component.ts`
 - Orquestación app y DX base: `src/app.ts`
-- Pipeline render: `src/prepare.ts`, `src/reflow.ts`, `src/commit.ts`
-- Diffing: `src/diff.ts`
-- Layout flex/fast path: `src/flex.ts`, `src/fast-path.ts`
+- Pipeline render: `src/render/prepare.ts`, `src/render/reflow.ts`, `src/render/commit.ts`
+- Diffing: `src/render/diff.ts`
+- Layout flex/fast path: `src/render/engines/flex.ts`, `src/render/engines/fast-path.ts`
 - Router SPA: `src/router.ts`
-- SSR/Hydration base: `src/ssr.ts`, integración en `src/app.ts`/`src/commit.ts`
-- Forms y validación: `src/forms.ts`
-- Context/store: `src/context.ts`
-- Portales: `src/portal.ts`
+- SSR/Hydration base: `src/ssr.ts`, integración en `src/app.ts`/`src/render/commit.ts`
+- Forms y validación: `src/features/forms.ts`
+- Context/store: `src/features/context.ts`
+- Portales: `src/features/portal.ts`
 - Scheduler: `src/scheduler.ts`
 
 ### 3.2 Evidencia de calidad operativa
@@ -110,8 +112,8 @@ Estas reglas NO se negocian en Ruta A:
 
 | Prioridad | Ítem | Impacto | Riesgo | Módulos |
 | --- | --- | ---: | ---: | --- |
-| P0 | Hardening de hidratación + tests | Muy alto | Medio | `src/commit.ts`, `src/app.ts`, `src/ssr.ts`, `tests/ssr.test.ts`, `tests/integration.test.ts` |
-| P0 | Errores de runtime con contexto | Alto | Bajo/Medio | `src/app.ts`, `src/component.ts`, `tests/app.test.ts` |
+| P0 | Hardening de hidratación + tests | Muy alto | Medio | `src/render/commit.ts`, `src/app.ts`, `src/ssr.ts`, `tests/ssr.test.ts`, `tests/integration.test.ts` |
+| P0 | Errores de runtime con contexto | Alto | Bajo/Medio | `src/app.ts`, `src/render/component.ts`, `tests/app.test.ts` |
 | P0 | Baseline de perf + regresión | Alto | Bajo | `tests/benchmark.test.ts`, scripts/perf |
 | P1 | Documentación de soporte y troubleshooting | Alto | Bajo | `README.md`, `docs/*` |
 | P1 | Utilidades de testing públicas mínimas | Medio/Alto | Bajo | `src/index.ts`, nuevo `src/testing.ts`, `tests/*` |
@@ -237,15 +239,15 @@ Cerrar `v1.0.0` con calidad de operación.
 
 ### 8.2 Casos obligatorios por módulo
 
-- `src/signals.ts`: invalidación, dependency graph, cleanup.
-- `src/prepare.ts`: estabilidad estructural ante cambios shape/value.
-- `src/reflow.ts`: determinismo geométrico y fast path coherente.
-- `src/commit.ts`: orden de operaciones y listeners lifecycle.
+- `src/reactivity/signals.ts`: invalidación, dependency graph, cleanup.
+- `src/render/prepare.ts`: estabilidad estructural ante cambios shape/value.
+- `src/render/reflow.ts`: determinismo geométrico y fast path coherente.
+- `src/render/commit.ts`: orden de operaciones y listeners lifecycle.
 - `src/router.ts`: parse robusto + hardening URL.
 - `src/ssr.ts`: contrato HTML estable.
-- `src/forms.ts`: validaciones sync/async/debounce.
-- `src/context.ts`: scoping y aislamiento.
-- `src/portal.ts`: montaje/limpieza/aislamiento.
+- `src/features/forms.ts`: validaciones sync/async/debounce.
+- `src/features/context.ts`: scoping y aislamiento.
+- `src/features/portal.ts`: montaje/limpieza/aislamiento.
 - `src/scheduler.ts`: batching, cancelación y generación.
 
 ### 8.3 Definición de cobertura útil

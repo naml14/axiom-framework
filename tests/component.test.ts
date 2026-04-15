@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test'
-import { defineComponent } from '../src/component.js'
-import type { ElementNode, TextNode, FragmentNode } from '../src/types.js'
+import { defineComponent } from '../src/render/component.js'
+import type { ElementNode, TextNode, FragmentNode } from '../src/core/types.js'
 
 describe('defineComponent', () => {
   test('wraps a function and returns ComponentDefinition with unique _id', () => {

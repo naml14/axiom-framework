@@ -1,5 +1,5 @@
-import type { Signal, ComponentDefinition } from './types.js'
-import { signal } from './signals.js'
+import type { Signal, ComponentDefinition } from './core/types.js'
+import { signal } from './reactivity/signals.js'
 
 // ============================================================
 // Public Router Types

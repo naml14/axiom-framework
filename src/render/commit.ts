@@ -3,7 +3,7 @@ import type {
   LayoutResult,
   HydrationOptions,
   HydrationResult,
-} from './types.js'
+} from '../core/types.js'
 
 import type { DOMOperation } from './diff.js'
 
@@ -26,7 +26,10 @@ import {
   getPortalCssManaged,
 } from './prepare.js'
 
-import { applyStyleToElement } from './style.js'
+// ARCHITECTURAL EXCEPTION: render/ → features/style allowed
+// Reason: commit phase applies managed CSS. Decoupling requires
+// functional refactoring (strategy pattern or callback injection).
+import { applyStyleToElement } from '../features/style.js'
 
 // ============================================================
 // Public API
@@ -564,7 +567,7 @@ function assertValidTagName(tag: string): void {
 
 function applyManagedStyleToElement(
   el: HTMLElement,
-  props: import('./style.js').SafeStyleProps
+  props: import('../features/style.js').SafeStyleProps
 ): void {
   applyStyleToElement(el, props)
   ;(el as unknown as Record<string, unknown>)[MANAGED_STYLE_KEYS_PROP] = Object.keys(props)

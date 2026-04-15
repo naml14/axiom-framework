@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test'
-import { createContext, withContext, useContext, createStore, provideStore, injectStore } from '../src/context.js'
-import { signal } from '../src/signals.js'
+import { createContext, withContext, useContext, createStore, provideStore, injectStore } from '../src/features/context.js'
+import { signal } from '../src/reactivity/signals.js'
 
 describe('createContext', () => {
   test('returns default value when no Provider present', () => {

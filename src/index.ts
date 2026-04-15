@@ -11,13 +11,13 @@
 // ============================================================
 
 // --- Reactivity ---
-export { signal, computed, effect } from './signals.js'
+export { signal, computed, effect } from './reactivity/signals.js'
 
 // --- Components ---
-export { defineComponent } from './component.js'
+export { defineComponent } from './render/component.js'
 
 // --- Portals ---
-export { createPortal } from './portal.js'
+export { createPortal } from './features/portal.js'
 
 // --- App ---
 export { createApp } from './app.js'
@@ -25,22 +25,22 @@ export type { App, AppOptions, AppErrorContext, AppErrorPhase, RenderMetrics } f
 
 // --- SSR / Hydration ---
 export { renderToString } from './ssr.js'
-export { commitHydrate } from './commit.js'
+export { commitHydrate } from './render/commit.js'
 export type { SSRMetadata, SSRRenderOptions } from './ssr.js'
-export type { HydrationOptions, HydrationResult } from './types.js'
+export type { HydrationOptions, HydrationResult } from './core/types.js'
 
 // --- Router ---
 export { createRouter, defineAsyncComponent } from './router.js'
 export type { Route, RouteState, Router } from './router.js'
 
 // --- Layout (advanced — for custom rendering pipelines) ---
-export { prepare } from './prepare.js'
-export { reflow } from './reflow.js'
+export { prepare } from './render/prepare.js'
+export { reflow } from './render/reflow.js'
 
 // --- Responsive + Grid (Ruta B, Fase 1-2) ---
-export { resolveResponsiveLayout, resolveLayoutDimension, matchesBreakpoint } from './responsive.js'
-export type { ResolvedLayoutProps } from './responsive.js'
-export { measureGrid } from './grid.js'
+export { resolveResponsiveLayout, resolveLayoutDimension, matchesBreakpoint } from './render/strategy/responsive.js'
+export type { ResolvedLayoutProps } from './render/strategy/responsive.js'
+export { measureGrid } from './render/engines/grid.js'
 
 // --- Style API + Tokens (Ruta B, Fase 3) ---
 export {
@@ -49,8 +49,8 @@ export {
   resolveStyleTokens,
   createTheme,
   applyStyleToElement,
-} from './style.js'
-export type { SafeStyleKey, SafeStyleProps, ThemeTokens, Theme } from './style.js'
+} from './features/style.js'
+export type { SafeStyleKey, SafeStyleProps, ThemeTokens, Theme } from './features/style.js'
 
 // --- Motion / Animation (Ruta B, Fase 4) ---
 export {
@@ -61,12 +61,12 @@ export {
   applyImmediately,
   getTransitionProgress,
   isTransitioning,
-} from './animation.js'
-export type { TransitionDefinition, AnimationState, TransitionProperty } from './animation.js'
+} from './features/animation.js'
+export type { TransitionDefinition, AnimationState, TransitionProperty } from './features/animation.js'
 
 // --- Plugin / Adapter hooks (Ruta B, Fase 5) ---
-export { createPlugin, registerPlugin, getRegisteredPlugins, clearPlugins, applyPluginHook } from './plugin.js'
-export type { AxiomPlugin, PluginContext, PluginHook } from './plugin.js'
+export { createPlugin, registerPlugin, getRegisteredPlugins, clearPlugins, applyPluginHook } from './features/plugin.js'
+export type { AxiomPlugin, PluginContext, PluginHook } from './features/plugin.js'
 
 // --- Context ---
 export {
@@ -76,18 +76,18 @@ export {
   createStore,
   provideStore,
   injectStore,
-} from './context.js'
-export type { Context, StoreInstance } from './context.js'
+} from './features/context.js'
+export type { Context, StoreInstance } from './features/context.js'
 
 // --- Forms ---
-export { bind, validate, required, minLength, maxLength, pattern } from './forms.js'
+export { bind, validate, required, minLength, maxLength, pattern } from './features/forms.js'
 export type {
   ValidationRule,
   ValidationResult,
   ValidateOptions,
   SyncRule,
   AsyncRule,
-} from './forms.js'
+} from './features/forms.js'
 
 // --- Types ---
 export type {
@@ -111,4 +111,4 @@ export type {
   LayoutProps,
   ProfileEvent,
   ProfileSubscriber,
-} from './types.js'
+} from './core/types.js'

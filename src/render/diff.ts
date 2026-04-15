@@ -1,7 +1,7 @@
 import type {
   PreparedComponent,
   LayoutResult,
-} from './types.js'
+} from '../core/types.js'
 
 import {
   getNodeIndex,
@@ -34,7 +34,7 @@ export interface DOMOperation {
   classes?: string[]
   attrs?: Record<string, string>
   on?: Record<string, EventListener>
-  style?: import('./style.js').SafeStyleProps
+  style?: import('../features/style.js').SafeStyleProps
   key?: string
   /** When set, this insert targets a portal container instead of the app root */
   portalTarget?: HTMLElement
@@ -47,7 +47,7 @@ export interface DOMOperation {
   height?: number
   newTextContent?: string
   newOn?: Record<string, EventListener>
-  newStyle?: import('./style.js').SafeStyleProps
+  newStyle?: import('../features/style.js').SafeStyleProps
 }
 
 // ============================================================
@@ -320,7 +320,7 @@ function fullTreeDiff(
       let onChanged = false
       let newOn: Record<string, EventListener> | undefined
       let styleChanged = false
-      let newStyle: import('./style.js').SafeStyleProps | undefined
+      let newStyle: import('../features/style.js').SafeStyleProps | undefined
 
       if (nodeType === 'text') {
         const oldNode = findNodeByIndex(prevPrepared, idx)

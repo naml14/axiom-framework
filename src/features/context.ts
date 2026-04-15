@@ -3,8 +3,8 @@
 // Built on top of signal() from signals.ts. Zero pipeline changes.
 // ============================================================
 
-import { signal } from './signals.js'
-import type { Signal } from './types.js'
+import { signal } from '../reactivity/signals.js'
+import type { Signal } from '../core/types.js'
 
 // ============================================================
 // Types

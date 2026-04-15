@@ -35,7 +35,7 @@ export interface ElementNode {
   attrs?: Record<string, string>
   on?: Record<string, EventListener>
   layout?: LayoutProps
-  style?: import('./style.js').SafeStyleProps
+  style?: import('../features/style.js').SafeStyleProps
   children?: ComponentNode[]
 }
 

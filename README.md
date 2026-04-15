@@ -83,6 +83,10 @@ When `count.value` changes, Axiom automatically re-runs `prepare → reflow → 
 
 ## Architecture
 
+> Updated `src/` hybrid structure (core/reactivity/render/features):
+> see [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for boundaries, dependency rules,
+> and the documented `render/commit.ts -> features/style.ts` exception.
+
 ```Text
 ┌─────────────────────────────────────────────────────────────┐
 │                     PUBLIC API                               │
@@ -91,15 +95,15 @@ When `count.value` changes, Axiom automatically re-runs `prepare → reflow → 
                             │
          ┌──────────────────┼──────────────────┐
          ▼                  ▼                  ▼
-   signals.ts         component.ts        app.ts
-   Reactive core      Component def       Mount + update loop
-   Push + pull        Callable defs       Scheduler integration
+         reactivity/signals.ts  render/component.ts  app.ts
+         Reactive core          Component def         Mount + update loop
+         Push + pull            Callable defs         Scheduler integration
          │                  │                  │
          ▼                  ▼                  ▼
-   prepare.ts         reflow.ts          commit.ts
-   Tree analysis      Layout arithmetic  DOM batch writes
-   Metrics cache      Fast paths         Diff + apply
-                      Flex engine
+         render/prepare.ts  render/reflow.ts   render/commit.ts
+         Tree analysis      Layout arithmetic   DOM batch writes
+         Metrics cache      Fast paths          Diff + apply
+                Flex engine + grid
 ```
 
 ### The Update Cycle

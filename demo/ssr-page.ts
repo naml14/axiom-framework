@@ -22,7 +22,7 @@ type SSRModule = typeof import('../src/index.ts')
 // They are intentionally not part of the public framework API.
 // ---------------------------------------------------------------------------
 
-import type { ElementNode, TextNode, ComponentNode } from '../src/types.js'
+import type { ElementNode, TextNode, ComponentNode } from '../src/core/types.js'
 
 type ElementOptions = Omit<ElementNode, 'type' | 'tag' | 'children'>
 
