@@ -1,7 +1,7 @@
 import { signal, defineComponent, createApp } from '../src/index.ts'
 import type { ComponentNode } from '../src/index.ts'
 import { TEXTS, TAGS, COLORS } from './data.ts'
-import { computeColumns, getTagWidth, distributeToColumns } from './layout.ts'
+import { computeColumns, distributeToColumns } from './layout.ts'
 import { TagBubble, Card, HeroCard } from './components.ts'
 import { initControls } from './controls.ts'
 import { initPortalDemo } from './portal-demo.ts'
