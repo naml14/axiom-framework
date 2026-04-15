@@ -6,7 +6,7 @@ Axiom uses a hybrid structure that balances architectural clarity with pragmatic
 
 ```Text
 src/
-├── core/           — Pure foundations (types, contracts). Zero internal dependencies.
+├── core/           — Pure foundations (types, contracts). Zero internal runtime dependencies.
 ├── reactivity/     — Reactive runtime (signals). Depends only on core/.
 ├── render/         — Two-phase rendering pipeline: prepare → reflow → diff → commit.
 │   ├── engines/    — Layout engines (flexbox, grid, fast-path).
@@ -22,13 +22,24 @@ src/
 
 ## Dependency Rules
 
+These rules apply to **runtime imports**. Type-only imports may cross boundaries when needed
+to avoid type duplication during the current refactor stage.
+
 | Layer | May import from |
 | ------- | ----------------- |
-| `core/` | (nothing — pure foundation) |
+| `core/` | (nothing — pure foundation, runtime) |
 | `reactivity/` | `core/` |
 | `render/` | `core/`, `reactivity/` |
 | `features/` | `core/`, `reactivity/`, `render/` (public contracts only) |
 | Root files | anywhere as needed |
+
+### Type-only boundary notes
+
+- `src/core/types.ts` currently references `SafeStyleProps` as a type-only import from
+	`src/features/style.ts`.
+- `src/render/{prepare,diff}.ts` also use type-only references to `SafeStyleProps`.
+- This does **not** imply runtime coupling. A future cleanup may relocate shared style types
+	into `core/` if we decide to eliminate these type-only bridges.
 
 ## Architectural Exception
 
