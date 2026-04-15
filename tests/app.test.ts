@@ -432,8 +432,8 @@ describe('createApp', () => {
     rootContainer.innerHTML = html
     document.body.appendChild(rootContainer)
 
-    const root = rootContainer
-    // mutar DOM para provocar mismatch strict
+    const root = rootContainer.getElementsByTagName('div')[0] as HTMLElement
+    // mutar el primer nodo hijo real del root SSR para provocar mismatch strict
     root.firstElementChild!.textContent = 'TAMPERED'
 
     const app = createApp(App, root, {

@@ -96,11 +96,14 @@ export function render(
   document.body.appendChild(container)
 
   // Mount the app
-  const app = createApp(component, container, {
+  const baseOptions = {
     lineHeight: options?.lineHeight ?? 20,
     font: options?.font ?? '16px sans-serif',
     textEngine: options?.textEngine,
-  })
+  }
+
+  let currentComponent = component
+  let app = createApp(currentComponent, container, baseOptions)
 
   // Actually mount the component to the container
   app.mount()
@@ -110,14 +113,15 @@ export function render(
     container,
 
     rerender: async (nextComponent: ComponentDefinition<void>) => {
-      // rerender is not yet implemented. Full rerender support requires component state injection,
-      // which is planned for testing utilities enhancement.
-      // For now, use the manual approach:
-      throw new Error(
-        'testing.rerender() is not implemented yet in v0.2.7. ' +
-        'Call unmount() and then render() with the new component instead.'
-      )
-      void nextComponent // eslint-disable-line @typescript-eslint/no-unused-vars
+      if (isMounted) {
+        app.unmount()
+        isMounted = false
+      }
+
+      currentComponent = nextComponent
+      app = createApp(currentComponent, container, baseOptions)
+      app.mount()
+      isMounted = true
     },
 
     unmount: () => {
@@ -180,9 +184,10 @@ export function fireEvent(
     ...options,
   }
 
-  // Dispatch as a generic Event
-  // (happy-dom handles most event types via Event constructor)
-  const event = new Event(eventType, defaults)
+  // Construct event from the same realm as the element when possible.
+  // This avoids cross-window constructor mismatches in DOM test environments.
+  const EventCtor = element.ownerDocument?.defaultView?.Event ?? globalThis.Event
+  const event = new EventCtor(eventType, defaults)
   element.dispatchEvent(event)
 }
 

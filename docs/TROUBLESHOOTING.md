@@ -21,9 +21,9 @@ A symptom-first reference. Jump to the section that matches what you're seeing.
 
 ### Symptoms of Hydration mismatches
 
-- `console.warn` messages like `[axiom:hydrate] mismatch: expected button, found div`
 - `result.mismatchCount > 0` after `commitHydrate`
-- With `strictHydration: true`: `AppError` thrown with `phase: 'hydrate'`
+- With `strictHydration: true`: plain `Error` thrown by hydration mismatch
+- `onError(err, context)` receives `context.phase === 'hydrate'`
 
 ### Causes & Fixes for Hydration mismatches
 
@@ -78,10 +78,10 @@ HTML before the client boots:
 
 ```ts
 // SPA — no SSR, just mount
-createApp(root, MyComponent)
+createApp(MyComponent, root)
 
 // With SSR — hydrate into existing HTML
-createApp(root, MyComponent, { hydrate: true })
+createApp(MyComponent, root, { hydrate: true })
 ```
 
 **Wrong `rootId`**
@@ -97,7 +97,7 @@ renderToString(MyComponent, { rootId: 'main' })
 
 // client
 const root = document.getElementById('main')!
-createApp(root, MyComponent, { hydrate: true })
+createApp(MyComponent, root, { hydrate: true })
 ```
 
 **Component returns `null` or throws during prepare**
@@ -111,7 +111,7 @@ const app = createApp(MyComponent, root, {
     console.error(`Failed during ${context.phase}:`, err)
   },
 })
-await app.mount()
+app.mount()
 ```
 
 ---
@@ -121,8 +121,8 @@ await app.mount()
 ### Symptoms of Portal not rendering / missing
 
 - Portal content not visible
-- `console.warn` about missing portal marker
-- With `skipMissingPortals: false` (default): throws `AppError`
+- `HydrationResult.warnings` includes a missing portal message
+- With `skipMissingPortals: false`: strict mode can throw plain `Error`
 
 ### Causes & Fixes for Portal not rendering / missing
 
@@ -134,7 +134,7 @@ Fix: If the portal is new, either re-render server HTML or use `skipMissingPorta
 to degrade gracefully on first deploy:
 
 ```ts
-createApp(root, MyComponent, {
+createApp(MyComponent, root, {
   hydrate: true,
   // not yet supported in v0.2.7 createApp options — use commitHydrate directly:
 })
@@ -186,13 +186,13 @@ const Counter = () => ({
 
 **`app.mount()` not called**
 
-The scheduler does not start until `mount()` resolves.
+The scheduler does not start until `mount()` is called.
 
 ***Signal updated from outside the scheduler cycle**
 
 Fix: Trigger updates via event handlers registered through the component tree, or
-call `app.invalidate()` after external signal changes (if that API is available in
-your version).
+ensure your signal is read inside the component render function so reactive updates
+schedule automatically. `App` has no public `invalidate()` API in v0.2.7.
 
 ---
 
@@ -308,18 +308,20 @@ If you create a `new Window()` per test and then call `commitHydrate` on nodes f
 a different window, `instanceof` checks fail because each window has its own `HTMLElement`
 class.
 
-Fix: Reuse the global `document` provided by Happy DOM's `GlobalRegistrator` rather than
-creating a new `Window` per test. Set up once in `beforeAll` and reset content in
-`beforeEach`:
+Fix: Use one consistent DOM realm per test file. For example, create one `Window`
+in `beforeAll` and reset content in `beforeEach`:
 
 ```ts
-import { GlobalRegistrator } from '@happy-dom/global-registrator'
-GlobalRegistrator.register()
+import { Window } from 'happy-dom'
 
-let document: Document
+let win: Window
 
 beforeAll(() => {
-  document = globalThis.document
+  win = new Window()
+  globalThis.window = win as unknown as typeof globalThis.window
+  globalThis.document = win.document as unknown as Document
+  globalThis.HTMLElement = win.HTMLElement as unknown as typeof HTMLElement
+  globalThis.Text = win.Text as unknown as typeof Text
 })
 
 beforeEach(() => {
@@ -338,7 +340,7 @@ Pin to `>= 12.0.0` in your package.json.
 
 ### Symptoms
 
-- Catching `AppError` and checking `context.phase`
+- `onError(err, context)` reports `context.phase`
 - Expected `'hydrate'` but got `'commit'`
 
 ### Cause
@@ -352,15 +354,21 @@ Update to **v0.2.7 or later**. The hydrate path now has its own try/catch that
 reports `phase: 'hydrate'` correctly. Example:
 
 ```ts
+const app = createApp(Component, root, {
+  hydrate: true,
+  strictHydration: true,
+  onError(err, context) {
+    if (context.phase === 'hydrate') {
+      // hydration mismatch in strict mode
+      console.error('Hydration error:', err)
+    }
+  },
+})
+
 try {
-  await app.mount()
+  app.mount()
 } catch (err) {
-  const ctx = (err as AppError).context
-  if (ctx.phase === 'hydrate') {
-    // hydration mismatch in strict mode
-  }
-  if (ctx.phase === 'commit') {
-    // DOM commit error (not a hydration issue)
-  }
+  // strict hydration throws plain Error
+  console.error(err)
 }
 ```

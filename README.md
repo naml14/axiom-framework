@@ -320,12 +320,12 @@ const html = renderToString(MyComponent, {
 import { createApp } from 'axiom-framework'
 
 const root = document.getElementById('app')!
-const app = createApp(root, MyComponent, {
+const app = createApp(MyComponent, root, {
   hydrate: true,          // reuse server-rendered DOM (no teardown)
   strictHydration: false, // warn on mismatch; set true to throw
   hydrationDebug: false,  // set true to log per-node hydration details
 })
-await app.mount()
+app.mount()
 ```
 
 `renderToString` stamps every element with a `data-axiom-id` marker.

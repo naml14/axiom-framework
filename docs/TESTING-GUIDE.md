@@ -20,11 +20,15 @@ How to write unit tests for components using the public `render()` and `fireEven
 
 ## 1. Basic Setup
 
-Install test dependencies (already included in `package.json`):
+Install test dependency:
 
 ```bash
 bun install --save-dev @happy-dom/global-registrator
 ```
+
+> Nota: este repositorio usa `happy-dom` directamente en tests internos. Si prefieres
+> registrar globals automáticamente en tus tests de consumidor, agrega
+> `@happy-dom/global-registrator` como dependencia de desarrollo.
 
 Create a test file:
 
@@ -104,14 +108,12 @@ test('displays signal value', () => {
   expect(getByText(/count: 0/i)).toBeDefined()
 })
 
-test('signal changes are reflected', async () => {
-  const { getByText, _app } = render(Counter)
+test('signal changes are reflected', () => {
+  const { getByText } = render(Counter)
 
-  count.set(1)
-  // _app.invalidate() triggers re-render
-  await _app.mount() // or call invalidate if available
+  count.value = 1
 
-  // After re-render, the text should change
+  // After scheduler flush, the text should change
   expect(getByText(/count: 1/i)).toBeDefined()
 })
 ```
@@ -135,7 +137,7 @@ const ClickButton = defineComponent(() => ({
 }))
 
 test('button click updates state', () => {
-  const { getByText, _app } = render(ClickButton)
+  const { getByText } = render(ClickButton)
 
   const btn = getByText(/click me/i)
   fireEvent(btn, 'click')
@@ -299,9 +301,9 @@ test('portal renders content', () => {
 ```ts
 import { render } from 'axiom-framework/testing'
 
-test('component mounts', async () => {
+test('component mounts', () => {
   const { _app } = render(MyComponent)
-  await _app.mount()
+  _app.mount()
   // Component is mounted and ready
 })
 
@@ -322,7 +324,7 @@ test('unmount completes', () => {
 const items = signal(['apple', 'banana', 'cherry'])
 const ShoppingList = defineComponent(() => ({
   tag: 'ul',
-  children: items.get().map(item => ({
+  children: items.value.map(item => ({
     tag: 'li',
     text: item,
     attrs: { 'data-testid': `item-${item}` },
@@ -341,7 +343,7 @@ test('lists all items', () => {
 ```ts
 const isVisible = signal(true)
 const Toggle = defineComponent(() =>
-  isVisible.get()
+  isVisible.value
     ? { tag: 'div', text: 'Visible' }
     : { tag: 'div', text: 'Hidden' }
 )
@@ -352,7 +354,7 @@ test('shows when signal is true', () => {
 })
 
 test('hides when signal is false', () => {
-  isVisible.set(false)
+  isVisible.value = false
   const { getByText } = render(Toggle)
   expect(() => getByText(/visible/i)).toThrow()
 })
@@ -365,7 +367,7 @@ import { signal, computed, defineComponent } from 'axiom-framework'
 
 const firstName = signal('John')
 const lastName = signal('Doe')
-const fullName = computed(() => `${firstName.get()} ${lastName.get()}`)
+const fullName = computed(() => `${firstName.value} ${lastName.value}`)
 
 const GreetingCard = defineComponent(() => ({
   tag: 'div',
