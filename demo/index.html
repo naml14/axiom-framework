@@ -82,6 +82,101 @@
         <div id="portal-demo-root"></div>
       </section>
 
+      <!-- ============================================================
+           RUTA B — Grid MVP (feat/ruta-b-sdd)
+           ============================================================ -->
+      <section class="sidebar-section ruta-b-section" aria-label="Grid MVP">
+        <h2 class="sidebar-section-title">📐 Ruta B — Grid MVP</h2>
+        <p class="ruta-b-desc">
+          <code>display:'grid'</code> + <code>gridRowSpan</code> + <code>height:'100%'</code>
+          — segundo pase localizado (feat/ruta-b-sdd).
+        </p>
+        <div id="ruta-b-grid-root" class="ruta-b-grid-container"></div>
+        <div class="ruta-b-actions">
+          <button id="ruta-b-grid-remove" class="btn-toggle">− Celda</button>
+          <button id="ruta-b-grid-add" class="btn-toggle">+ Celda</button>
+        </div>
+        <p id="ruta-b-grid-status" class="ruta-b-status">Cargando…</p>
+      </section>
+
+      <!-- ============================================================
+           RUTA B — Responsive / Breakpoints
+           ============================================================ -->
+      <section class="sidebar-section ruta-b-section" aria-label="Responsive Breakpoints">
+        <h2 class="sidebar-section-title">📱 Responsive — Breakpoints</h2>
+        <p class="ruta-b-desc">
+          <code>matchesBreakpoint</code> + <code>resolveLayoutDimension</code>
+          reactivos al <em>containerWidth</em>.
+        </p>
+        <div class="ruta-b-bp-bar-track">
+          <div id="ruta-b-responsive-bar" class="ruta-b-bp-bar"></div>
+        </div>
+        <p id="ruta-b-responsive-info" class="ruta-b-status">—</p>
+      </section>
+
+      <!-- ============================================================
+           RUTA B — Style API (Ruta B, Fase 3)
+           ============================================================ -->
+      <section class="sidebar-section ruta-b-section" aria-label="Style API">
+        <h2 class="sidebar-section-title">🎨 Style API — Tokens</h2>
+        <p class="ruta-b-desc">
+          <code>createTheme</code> · <code>resolveStyleTokens</code> · <code>applyStyleToElement</code>
+        </p>
+        <div class="ruta-b-style-row">
+          <span id="ruta-b-style-sample" class="ruta-b-style-sample">Elemento de muestra</span>
+          <button id="ruta-b-style-apply" class="btn-toggle">Aplicar tema</button>
+          <button id="ruta-b-style-reset" class="btn-toggle">Reset</button>
+        </div>
+        <pre id="ruta-b-style-output" class="ruta-b-pre">Cargando…</pre>
+      </section>
+
+      <!-- ============================================================
+           RUTA B — Animation / Motion (Ruta B, Fase 4)
+           ============================================================ -->
+      <section class="sidebar-section ruta-b-section" aria-label="Animation">
+        <h2 class="sidebar-section-title">✨ Motion — Transitions</h2>
+        <p class="ruta-b-desc">
+          <code>createTransition</code> · <code>scheduleTransition</code> · sin rAF propio
+        </p>
+        <div class="ruta-b-actions">
+          <button id="ruta-b-anim-run" class="btn-toggle active">▶ Run</button>
+          <button id="ruta-b-anim-cancel" class="btn-toggle">✕ Cancel</button>
+        </div>
+        <div class="ruta-b-progress-track">
+          <div id="ruta-b-anim-progress" class="ruta-b-progress-bar"></div>
+        </div>
+        <p id="ruta-b-anim-status" class="ruta-b-status">—</p>
+      </section>
+
+      <!-- ============================================================
+           RUTA B — Plugin System (Ruta B, Fase 5)
+           ============================================================ -->
+      <section class="sidebar-section ruta-b-section" aria-label="Plugin System">
+        <h2 class="sidebar-section-title">🔌 Plugin — Lifecycle Hooks</h2>
+        <p class="ruta-b-desc">
+          <code>createPlugin</code> · <code>registerPlugin</code> · <code>applyPluginHook</code>
+        </p>
+        <div class="ruta-b-actions">
+          <button id="ruta-b-plugin-mount"   class="btn-toggle">onMount</button>
+          <button id="ruta-b-plugin-update"  class="btn-toggle">onUpdate</button>
+          <button id="ruta-b-plugin-unmount" class="btn-toggle">onUnmount</button>
+          <button id="ruta-b-plugin-clear"   class="btn-toggle">Limpiar</button>
+        </div>
+        <pre id="ruta-b-plugin-log" class="ruta-b-pre">Esperando eventos…</pre>
+      </section>
+
+      <!-- ============================================================
+           v0.2.8 — Error Envelope (P0-B)
+           ============================================================ -->
+      <section class="sidebar-section ruta-b-section ruta-b-error-section" aria-label="Error Envelope v0.2.8">
+        <h2 class="sidebar-section-title">💥 v0.2.8 — Error Envelope</h2>
+        <p class="ruta-b-desc">
+          <code>AppErrorContext</code>: phase · displayName · route · cycle · nodeKey
+        </p>
+        <button id="ruta-b-error-run" class="btn-toggle">Disparar error controlado</button>
+        <pre id="ruta-b-error-output" class="ruta-b-pre">Sin datos aún.</pre>
+      </section>
+
     </aside>
 
     <!-- ========================================================

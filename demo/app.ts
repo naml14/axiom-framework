@@ -6,6 +6,10 @@ import { TagBubble, Card, HeroCard } from './components.js'
 import { initControls } from './controls.js'
 import { initPortalDemo } from './portal-demo.js'
 import { initDxShowcase } from './dx-showcase.js'
+import { initRutaBShowcase } from './ruta-b-showcase.js'
+
+// Activar modo desarrollo para que __AXIOM__ dev hook esté disponible en el demo
+;(globalThis as { __AXIOM_DEV__?: boolean }).__AXIOM_DEV__ = true
 
 // ============================================================
 // Signals
@@ -115,3 +119,9 @@ initDxShowcase({ app })
 // ============================================================
 
 initPortalDemo()
+
+// ============================================================
+// Ruta B Showcase — Grid, Responsive, Style, Animation, Plugin
+// ============================================================
+
+initRutaBShowcase({ containerWidth })

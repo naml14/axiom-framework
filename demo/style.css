@@ -586,3 +586,175 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   padding: 32px;
 }
+
+/* ============================================================
+    Ruta B Showcase Sections
+   ============================================================ */
+
+.ruta-b-section {
+  background: linear-gradient(160deg, rgba(13,148,136,0.04), transparent 80%);
+}
+
+.ruta-b-desc {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.55;
+  margin-bottom: 10px;
+}
+
+.ruta-b-desc code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent-teal);
+  background: rgba(13,148,136,0.08);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.ruta-b-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.45;
+}
+
+.ruta-b-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.ruta-b-pre {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  max-height: 140px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+
+/* ---- Grid Demo ---- */
+
+.ruta-b-grid-container {
+  position: relative;
+  width: 100%;
+  min-height: 170px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+/* Grid cells — Axiom positions them via absolute+translate.
+   We add visual styling via classes. */
+.grid-cell {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  white-space: pre-line;
+  line-height: 1.3;
+  overflow: hidden;
+}
+
+.grid-cell-label {
+  pointer-events: none;
+}
+
+.grid-cell-span-row {
+  background: linear-gradient(160deg, rgba(124,58,237,0.18), rgba(124,58,237,0.06));
+  border-color: rgba(124,58,237,0.35);
+  color: var(--accent-violet);
+}
+
+.grid-cell-span-col {
+  background: linear-gradient(160deg, rgba(225,29,72,0.15), rgba(225,29,72,0.04));
+  border-color: rgba(225,29,72,0.3);
+  color: var(--accent-rose);
+}
+
+/* ---- Responsive breakpoint bar ---- */
+
+.ruta-b-bp-bar-track {
+  width: 100%;
+  height: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.ruta-b-bp-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  transition: width 0.1s linear, background 0.2s ease;
+}
+
+/* ---- Style API sample element ---- */
+
+.ruta-b-style-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.ruta-b-style-sample {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: all 0.25s ease;
+}
+
+/* ---- Animation progress bar ---- */
+
+.ruta-b-progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.ruta-b-progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent-violet), var(--accent-teal));
+  transition: width 0.016s linear;
+}
+
+/* ---- v0.2.8 error envelope section ---- */
+
+.ruta-b-error-section {
+  background: linear-gradient(160deg, rgba(225,29,72,0.04), transparent 80%);
+}
+
+.ruta-b-error-section .sidebar-section-title {
+  color: var(--accent-rose);
+}
