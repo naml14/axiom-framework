@@ -12,6 +12,7 @@ import {
   getClasses,
   getAttrs,
   getOn,
+  getStyle,
   forEachNode,
   countNodes,
   getPreparedChildren,
@@ -32,6 +33,7 @@ export interface DOMOperation {
   classes?: string[]
   attrs?: Record<string, string>
   on?: Record<string, EventListener>
+  style?: import('./style.js').SafeStyleProps
   key?: string
   /** When set, this insert targets a portal container instead of the app root */
   portalTarget?: HTMLElement
@@ -42,6 +44,7 @@ export interface DOMOperation {
   height?: number
   newTextContent?: string
   newOn?: Record<string, EventListener>
+  newStyle?: import('./style.js').SafeStyleProps
 }
 
 // ============================================================
@@ -117,6 +120,7 @@ export function fullDiff(
         op.classes = getClasses(node)
         op.attrs = getAttrs(node)
         op.on = getOn(node)
+        op.style = getStyle(node)
         op.key = getKey(node)
       } else if (nodeType === 'text') {
         op.textContent = getTextContent(node)
@@ -265,6 +269,7 @@ function fullTreeDiff(
         op.classes = getClasses(node)
         op.attrs = getAttrs(node)
         op.on = getOn(node)
+        op.style = getStyle(node)
         op.key = getKey(node)
       } else if (nodeType === 'text') {
         op.textContent = getTextContent(node)
@@ -287,6 +292,8 @@ function fullTreeDiff(
       let newTextContent: string | undefined
       let onChanged = false
       let newOn: Record<string, EventListener> | undefined
+      let styleChanged = false
+      let newStyle: import('./style.js').SafeStyleProps | undefined
 
       if (nodeType === 'text') {
         const oldNode = findNodeByIndex(prevPrepared, idx)
@@ -304,9 +311,15 @@ function fullTreeDiff(
           onChanged = true
           newOn = currentOn
         }
+        const oldStyle = oldNode ? getStyle(oldNode) : undefined
+        const currentStyle = getStyle(node)
+        if (currentStyle !== oldStyle) {
+          styleChanged = true
+          newStyle = currentStyle
+        }
       }
 
-      if (layoutChanged || textChanged || onChanged) {
+      if (layoutChanged || textChanged || onChanged || styleChanged) {
         const op: DOMOperation = {
           type: 'update',
           index: idx,
@@ -322,6 +335,9 @@ function fullTreeDiff(
         }
         if (onChanged) {
           op.newOn = newOn
+        }
+        if (styleChanged) {
+          op.newStyle = newStyle
         }
         ops.push(op)
       }

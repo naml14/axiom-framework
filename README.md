@@ -207,9 +207,16 @@ interface LayoutProps {
   gap?: number                        // gap between children (px)
   justifyContent?: 'start' | 'center' | 'end' | 'space-between'
   alignItems?: 'start' | 'center' | 'end' | 'stretch'
-  width?: number                      // explicit width (px)
-  height?: number                     // explicit height (px)
+  width?: number | `${number}px` | `${number}%` | `${number}vw` | `${number}vh`
+  height?: number | `${number}px` | `${number}%` | `${number}vw` | `${number}vh`
   padding?: number                    // uniform padding (px)
+  breakpoints?: Array<{
+    minWidth?: number
+    maxWidth?: number
+    minHeight?: number
+    maxHeight?: number
+    layout: Omit<LayoutProps, 'breakpoints'>
+  }>
 }
 ```
 

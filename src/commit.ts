@@ -19,10 +19,13 @@ import {
   getClasses,
   getAttrs,
   getOn,
+  getStyle,
   forEachNode,
   getPreparedChildren,
   getPortalTarget,
 } from './prepare.js'
+
+import { applyStyleToElement } from './style.js'
 
 // ============================================================
 // Public API
@@ -316,6 +319,10 @@ export function applyOps(
         }
         ;(el as any)._listeners = op.newOn
       }
+
+      if (op.newStyle !== undefined && el instanceof HTMLElement) {
+        applyStyleToElement(el, op.newStyle)
+      }
     }
 
     if (op.type === 'move') {
@@ -483,6 +490,12 @@ function buildDOMTree(
     (el as any)._listeners = on
   }
 
+  // Apply style props (write-only, after layout)
+  const style = getStyle(prepared)
+  if (style !== undefined) {
+    applyStyleToElement(el, style)
+  }
+
   state.domNodes[idx] = el
   parent.appendChild(el)
 
@@ -524,6 +537,11 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
       el.addEventListener(evt, listener)
     }
     (el as any)._listeners = op.on
+  }
+
+  // Apply style props (write-only)
+  if (op.style !== undefined) {
+    applyStyleToElement(el, op.style)
   }
 
   return el

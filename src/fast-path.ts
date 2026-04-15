@@ -11,6 +11,7 @@ import {
 } from './prepare.js'
 
 import { measureFlex } from './flex.js'
+import { measureGrid } from './grid.js'
 
 // ============================================================
 // Fast Path — simple top-to-bottom block layout
@@ -82,12 +83,15 @@ function layoutChild(
   if (children.length > 0) {
     const metrics = getMetrics(prepared)
     const childLayout = getLayoutProps(prepared)
+    const isGrid = childLayout?.display === 'grid'
     const hasFlexProps = childLayout?.flexDirection !== undefined
       || childLayout?.gap !== undefined
       || childLayout?.justifyContent !== undefined
       || childLayout?.alignItems !== undefined
 
-    if (hasFlexProps) {
+    if (isGrid) {
+      measureGrid(prepared, availableWidth, 0, result, lineHeight, childLayout)
+    } else if (hasFlexProps) {
       measureFlex(prepared, availableWidth, 0, result, lineHeight, childLayout)
     } else if (metrics.simpleLayout) {
       measureSimple(prepared, availableWidth, result, lineHeight)

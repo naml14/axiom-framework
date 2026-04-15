@@ -214,9 +214,14 @@ export function createApp(
    * 3. The result is passed as a plain value into the pure arithmetic pipeline
    */
   function getConstraints(): LayoutConstraints {
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : undefined
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : undefined
+
     return {
       maxWidth: root.clientWidth || 800,
       maxHeight: root.clientHeight || 600,
+      viewportWidth,
+      viewportHeight,
     }
   }
 

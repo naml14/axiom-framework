@@ -18,6 +18,8 @@ import {
 
 import { measureSimple } from './fast-path.js'
 import { measureFlex } from './flex.js'
+import { measureGrid } from './grid.js'
+import { resolveResponsiveLayout } from './responsive.js'
 
 // ============================================================
 // Public API
@@ -59,7 +61,7 @@ function layoutNode(
   lineHeight: number
 ): void {
   const idx = getNodeIndex(prepared)
-  const layout = getLayoutProps(prepared)
+  const layout = resolveResponsiveLayout(getLayoutProps(prepared), constraints)
   const nodeType = getNodeType(prepared)
   const children = getPreparedChildren(prepared)
 
@@ -92,14 +94,42 @@ function layoutNode(
   const childMaxWidth = ownWidth
   const childMaxHeight = ownHeight > 0 ? ownHeight : constraints.maxHeight
 
-  // Route to fast path or flex
+  // Route to fast path, flex o grid MVP
   const metrics = getMetrics(prepared)
   const hasLayoutProps = layout !== undefined
 
-  if (!hasLayoutProps && metrics.simpleLayout) {
+  if (layout?.display === 'grid') {
+    measureGrid(
+      prepared,
+      childMaxWidth,
+      childMaxHeight,
+      result,
+      lineHeight,
+      layout,
+      {
+        maxWidth: childMaxWidth,
+        maxHeight: childMaxHeight,
+        viewportWidth: constraints.viewportWidth,
+        viewportHeight: constraints.viewportHeight,
+      }
+    )
+  } else if (!hasLayoutProps && metrics.simpleLayout) {
     measureSimple(prepared, childMaxWidth, result, lineHeight)
   } else {
-    measureFlex(prepared, childMaxWidth, childMaxHeight, result, lineHeight, layout)
+    measureFlex(
+      prepared,
+      childMaxWidth,
+      childMaxHeight,
+      result,
+      lineHeight,
+      layout,
+      {
+        maxWidth: childMaxWidth,
+        maxHeight: childMaxHeight,
+        viewportWidth: constraints.viewportWidth,
+        viewportHeight: constraints.viewportHeight,
+      }
+    )
   }
 
   // Bottom-up: parent height = sum of children heights (column) or max (row)

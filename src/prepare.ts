@@ -38,6 +38,7 @@ interface PreparedInternal {
   attrs?: Record<string, string>
   on?: Record<string, EventListener>
   layout?: import('./types.js').LayoutProps
+  style?: import('./style.js').SafeStyleProps
   textContent?: string
   textHandle?: unknown
   portalTarget?: HTMLElement
@@ -169,6 +170,7 @@ function prepareElementNode(
     attrs: node.attrs,
     on: node.on,
     layout: node.layout,
+    style: node.style,
     debugDisplayName: debug?.displayName,
     debugRoute: debug?.route,
     children,
@@ -325,6 +327,10 @@ export function getAttrs(prepared: PreparedComponent): Record<string, string> | 
 
 export function getOn(prepared: PreparedComponent): Record<string, EventListener> | undefined {
   return unbrandPrepared(prepared).on
+}
+
+export function getStyle(prepared: PreparedComponent): import('./style.js').SafeStyleProps | undefined {
+  return unbrandPrepared(prepared).style
 }
 
 export function getTextContent(prepared: PreparedComponent): string | undefined {

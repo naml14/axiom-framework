@@ -37,6 +37,37 @@ export type { Route, RouteState, Router } from './router.js'
 export { prepare } from './prepare.js'
 export { reflow } from './reflow.js'
 
+// --- Responsive + Grid (Ruta B, Fase 1-2) ---
+export { resolveResponsiveLayout, resolveLayoutDimension, matchesBreakpoint } from './responsive.js'
+export type { ResolvedLayoutProps } from './responsive.js'
+export { measureGrid } from './grid.js'
+
+// --- Style API + Tokens (Ruta B, Fase 3) ---
+export {
+  SAFE_STYLE_KEYS,
+  validateStyleProps,
+  resolveStyleTokens,
+  createTheme,
+  applyStyleToElement,
+} from './style.js'
+export type { SafeStyleKey, SafeStyleProps, ThemeTokens, Theme } from './style.js'
+
+// --- Motion / Animation (Ruta B, Fase 4) ---
+export {
+  createTransition,
+  createAnimationState,
+  scheduleTransition,
+  cancelTransition,
+  applyImmediately,
+  getTransitionProgress,
+  isTransitioning,
+} from './animation.js'
+export type { TransitionDefinition, AnimationState, TransitionProperty } from './animation.js'
+
+// --- Plugin / Adapter hooks (Ruta B, Fase 5) ---
+export { createPlugin, registerPlugin, getRegisteredPlugins, clearPlugins, applyPluginHook } from './plugin.js'
+export type { AxiomPlugin, PluginContext, PluginHook } from './plugin.js'
+
 // --- Context ---
 export {
   createContext,
