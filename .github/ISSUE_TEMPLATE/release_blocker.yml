@@ -1,0 +1,85 @@
+name: Release 1.0.0 Blocker
+description: Reporta o registra un blocker que impide liberar Axiom v1.0.0
+labels: ["bug", "priority:high", "status:approved"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Usa esta plantilla para blockers de release 1.0.0.
+        Reglas:
+        - Debe incluir criterio de aceptación verificable.
+        - Debe enlazar evidencia (tests, coverage, docs, PR).
+
+  - type: input
+    id: scope
+    attributes:
+      label: Bloque / alcance
+      description: Ej. Plugin lifecycle, Router SSR-safe, Security threat model
+      placeholder: Plugin lifecycle runtime
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área técnica
+      options:
+        - API Stability / SemVer
+        - SSR / Hydration
+        - Security
+        - Performance
+        - CI / Release Engineering
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema
+      description: Describe claramente qué está roto o incompleto.
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impacto en release 1.0.0
+      description: ¿Por qué bloquea la salida en excelentes condiciones?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterio de aceptación (Go/No-Go)
+      description: Condiciones objetivas para cerrar el blocker.
+      placeholder: |
+        - [ ] Tests nuevos o actualizados en verde
+        - [ ] CI verde
+        - [ ] Evidencia documentada en docs/V1-0-0-EVIDENCE-LOG.md
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidencia actual
+      description: Archivos, líneas, logs o links que prueban el problema.
+      placeholder: |
+        - src/app.ts
+        - src/router.ts
+        - SECURITY.md
+
+  - type: checkboxes
+    id: quality-gates
+    attributes:
+      label: Quality gates
+      options:
+        - label: Incluye estrategia de prueba
+          required: true
+        - label: Incluye actualización de documentación
+          required: true
+        - label: Incluye criterio de rollback o fallback seguro
+          required: false
