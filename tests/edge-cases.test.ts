@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
 import { Window } from 'happy-dom'
 import { defineComponent } from '../src/render/component.js'
-import { prepare, resetIndexCounter, countNodes } from '../src/render/prepare.js'
+import { prepare, countNodes } from '../src/render/prepare.js'
 import { reflow } from '../src/render/reflow.js'
 import { commitFull } from '../src/render/commit.js'
 import type { DOMState } from '../src/render/commit.js'

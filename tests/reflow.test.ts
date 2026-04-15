@@ -1,6 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from 'bun:test'
 import { defineComponent } from '../src/render/component.js'
-import { prepare, resetIndexCounter } from '../src/render/prepare.js'
+import { prepare } from '../src/render/prepare.js'
 import { reflow, createLayoutResult } from '../src/render/reflow.js'
 import type { PreparedComponent } from '../src/core/types.js'
 

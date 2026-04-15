@@ -193,7 +193,7 @@ Todas las posiciones (`x`, `y`) son **relativas al padre directo**, no absolutas
 - **Columna:** height = suma de heights de hijos + gaps
 - **Fila:** height = máximo de heights de hijos
 - **Padre sin height explícito:** se calcula automáticamente desde los hijos
-- **`measureFlex`** calcula el height del padre al final — `render/reflow.ts` NO debe sobreescribirlo
+- **`measureFlex`** calcula el height del padre al final — `render/reflow.ts` NO debe sobrescribirlo
 
 ### Fast path vs Flex path
 

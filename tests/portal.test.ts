@@ -918,10 +918,12 @@ describe('prepare — getPortalCssManaged helper (issue #9)', () => {
 
 describe('reflow — cssManaged:false portal children participate in layout (issue #9)', () => {
   let target: HTMLElement
+  let nestedTarget: HTMLElement
 
   beforeEach(() => {
     resetIndexCounter()
     target = { tagName: 'DIV' } as unknown as HTMLElement
+    nestedTarget = { tagName: 'DIV' } as unknown as HTMLElement
   })
 
   test('cssManaged:false portal slot is still 0x0 in parent', () => {
@@ -986,6 +988,95 @@ describe('reflow — cssManaged:false portal children participate in layout (iss
     const childIdx = getNodeIndex(portalChildren[0]!)
     expect(result.width[childIdx]).toBe(0)
     expect(result.height[childIdx]).toBe(0)
+  })
+
+  test('nested cssManaged:false inside cssManaged:true remains CSS-managed by outer portal', () => {
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [
+            {
+              type: 'element' as const,
+              tag: 'div',
+              children: [
+                createPortal(
+                  [{ type: 'element' as const, tag: 'span', layout: { width: 123, height: 45 }, children: [] }],
+                  nestedTarget,
+                  { cssManaged: false }
+                ),
+              ],
+            },
+          ],
+          target
+        ),
+      ],
+    }))
+
+    const prepared = prepare(component, undefined)
+    const result = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+
+    const outerPortal = getPreparedChildren(prepared)[0]!
+    expect(getPortalCssManaged(outerPortal)).toBe(true)
+
+    const outerPortalHost = getPreparedChildren(outerPortal)[0]!
+    const innerPortal = getPreparedChildren(outerPortalHost)[0]!
+    expect(getPortalCssManaged(innerPortal)).toBe(false)
+
+    const innerPortalChild = getPreparedChildren(innerPortal)[0]!
+    const innerChildIdx = getNodeIndex(innerPortalChild)
+
+    // Outer cssManaged:true makes subtree CSS-managed, so inner child remains 0x0.
+    expect(result.width[innerChildIdx]).toBe(0)
+    expect(result.height[innerChildIdx]).toBe(0)
+  })
+
+  test('nested cssManaged:true inside cssManaged:false keeps inner portal children CSS-managed', () => {
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [
+            {
+              type: 'element' as const,
+              tag: 'div',
+              layout: { width: 220, height: 120 },
+              children: [
+                createPortal(
+                  [{ type: 'element' as const, tag: 'span', layout: { width: 111, height: 44 }, children: [] }],
+                  nestedTarget
+                ),
+              ],
+            },
+          ],
+          target,
+          { cssManaged: false }
+        ),
+      ],
+    }))
+
+    const prepared = prepare(component, undefined)
+    const result = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+
+    const outerPortal = getPreparedChildren(prepared)[0]!
+    expect(getPortalCssManaged(outerPortal)).toBe(false)
+
+    const outerPortalHost = getPreparedChildren(outerPortal)[0]!
+    const outerPortalHostIdx = getNodeIndex(outerPortalHost)
+    // Outer cssManaged:false participates in framework layout.
+    expect(result.width[outerPortalHostIdx]).toBe(220)
+    expect(result.height[outerPortalHostIdx]).toBe(120)
+
+    const innerPortal = getPreparedChildren(outerPortalHost)[0]!
+    expect(getPortalCssManaged(innerPortal)).toBe(true)
+
+    const innerPortalChild = getPreparedChildren(innerPortal)[0]!
+    const innerChildIdx = getNodeIndex(innerPortalChild)
+    // Inner cssManaged:true still isolates its own subtree from framework layout.
+    expect(result.width[innerChildIdx]).toBe(0)
+    expect(result.height[innerChildIdx]).toBe(0)
   })
 })
 
