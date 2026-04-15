@@ -65,8 +65,8 @@ export interface RenderResult {
 /**
  * Render a component into a temporary DOM environment suitable for unit testing.
  *
- * Automatically sets up happy-dom, creates a root container, mounts the component,
- * and provides query helpers.
+ * Requires the caller to provide a DOM environment (e.g. happy-dom or jsdom).
+ * Creates a root container, mounts the component, and provides query helpers.
  *
  * @param component — The component to render
  * @param options — Optional layout constraints and text engine
@@ -102,18 +102,21 @@ export function render(
     textEngine: options?.textEngine,
   })
 
-  let isMounted = false
+  // Actually mount the component to the container
+  app.mount()
+  let isMounted = true
 
   return {
     container,
 
     rerender: async (nextComponent: ComponentDefinition<void>) => {
-      // For now, rerender is a no-op in v0.2.7 testing context.
-      // Full rerender support requires component state injection,
+      // rerender is not yet implemented. Full rerender support requires component state injection,
       // which is planned for testing utilities enhancement.
-      // Unmount and re-render manually if needed:
-      //   unmount()
-      //   return render(nextComponent, options)
+      // For now, use the manual approach:
+      throw new Error(
+        'testing.rerender() is not implemented yet in v0.2.7. ' +
+        'Call unmount() and then render() with the new component instead.'
+      )
       void nextComponent // eslint-disable-line @typescript-eslint/no-unused-vars
     },
 
@@ -188,19 +191,25 @@ export function fireEvent(
  * @internal
  */
 function queryByText(root: HTMLElement, regex: RegExp): HTMLElement {
-  for (const el of Array.from(root.querySelectorAll('*') as NodeListOf<HTMLElement>)) {
-    // Check if this element only has a text node child
-    if (el.childNodes.length === 1 && el.childNodes[0]?.nodeType === 3) {
-      // Text node — leaf element
-      const text = el.textContent ?? ''
-      if (regex.test(text)) {
-        return el
-      }
-    } else if (regex.test(el.textContent ?? '')) {
-      // Will find first ancestor that matches
+  // Ensure regex doesn't have global flag that could mutate lastIndex
+  if (regex.flags.includes('g')) {
+    regex = new RegExp(regex.source, regex.flags.replace('g', ''))
+  }
+
+  // Collect all candidates including root itself
+  const elements = [root, ...Array.from(root.querySelectorAll('*') as NodeListOf<HTMLElement>)]
+  
+  // Search from deepest to shallowest (reverse order) to find most specific element first
+  for (let i = elements.length - 1; i >= 0; i--) {
+    const el = elements[i]
+    if (!el) continue
+    
+    const text = el.textContent ?? ''
+    if (regex.test(text)) {
       return el
     }
   }
+  
   throw new Error(`Unable to find element with text: ${regex}`)
 }
 
@@ -238,12 +247,4 @@ function queryByTestId(root: HTMLElement, id: string): HTMLElement {
  */
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-/**
- * Capitalize first letter.
- * @internal
- */
-function capitalize(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1)
 }

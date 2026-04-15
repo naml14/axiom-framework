@@ -24,7 +24,7 @@ It is the authoritative reference for server-side rendering and client hydration
 
 axiom-framework supports a **one-shot SSR + rehydration** model:
 
-```
+```Text
 Server:  renderToString(component, options?) → HTML string
 Client:  createApp(root, component, { hydrate: true }) → App
 ```
@@ -34,9 +34,9 @@ element. The client reads these markers to match virtual nodes to existing DOM
 elements instead of creating new ones, preserving server-rendered content and
 avoiding a full teardown/rebuild.
 
-**Supported pipeline phases during hydration**
+***Supported pipeline phases during hydration**
 
-```
+```Text
 prepare → reflow → commitHydrate
                         │
                         ├─ marker scan (getElementsByTagName)
@@ -53,7 +53,7 @@ prepare → reflow → commitHydrate
 ### Server (SSR)
 
 | Runtime | Status | Notes |
-|---------|--------|-------|
+| --------- | -------- | ------- |
 | Bun ≥ 1.0 | ✅ Supported | Primary CI target |
 | Node.js ≥ 18 | ✅ Supported | Tested via Bun interop |
 | Deno | ⚠️ Untested | May work; no CI coverage |
@@ -65,7 +65,7 @@ prepare → reflow → commitHydrate
 ### Client (Hydration)
 
 | Browser | Status | Notes |
-|---------|--------|-------|
+| --------- | -------- | ------- |
 | Chrome/Chromium ≥ 95 | ✅ Supported | Primary target |
 | Firefox ≥ 90 | ✅ Supported | CI-verified |
 | Safari ≥ 15 | ✅ Supported | CI-verified |
@@ -76,7 +76,7 @@ prepare → reflow → commitHydrate
 ### Test Environment
 
 | Tool | Version | Notes |
-|------|---------|-------|
+| ------ | --------- | ------- |
 | Bun test runner | ≥ 1.0 | Built-in, no Jest needed |
 | Happy DOM | ≥ 12.0 | DOM simulation for unit tests |
 
@@ -96,7 +96,7 @@ function renderToString(
 ### `SSRRenderOptions`
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| -------- | ------ | --------- | ------------- |
 | `width` | `number` | `800` | Layout canvas width in virtual pixels |
 | `height` | `number` | `600` | Layout canvas height in virtual pixels |
 | `lineHeight` | `number` | `20` | Base line height for text nodes |
@@ -109,7 +109,7 @@ function renderToString(
 ### `SSRMetadata`
 
 | Option | Type | Description |
-|--------|------|-------------|
+| -------- | ------ | ------------- |
 | `title` | `string` | Sets `<title>` |
 | `description` | `string` | Sets `<meta name="description">` |
 | `og` | `Record<string, string>` | Sets `<meta property="og:*">` tags |
@@ -192,16 +192,14 @@ function commitHydrate(
 
 ```ts
 const root = document.getElementById('app')!
-const app = createApp(root, MyComponent, { hydrate: true })
+const app = createApp(MyComponent, root, { hydrate: true })
 await app.mount()
 ```
 
 **Advanced / testing use via `commitHydrate` directly:**
 
 ```ts
-import { prepare } from 'axiom-framework'
-import { reflow } from 'axiom-framework/reflow'
-import { commitHydrate } from 'axiom-framework'
+import { prepare, reflow, commitHydrate } from 'axiom-framework'
 
 const p = prepare(MyComponent, undefined, { font: '16px sans-serif' })
 const layout = reflow(p, { maxWidth: 800, maxHeight: 600 }, { lineHeight: 20 })
@@ -211,12 +209,13 @@ const result = commitHydrate(layout, p, root, state, { strictMismatch: false })
 ### `HydrationOptions`
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| -------- | ------ | --------- | ------------- |
 | `strictMismatch` | `boolean` | `false` | Throw on first mismatch instead of warning |
 | `skipMissingPortals` | `boolean` | `false` | Warn instead of throw for missing portal markers |
 | `debug` | `boolean` | `false` | Emit per-node debug to `console.debug` |
 
 Maps to `createApp` options:
+
 - `hydrate: true` → triggers `commitHydrate` instead of `commitFull`
 - `strictHydration: true` → sets `strictMismatch: true`
 - `hydrationDebug: true` → sets `debug: true`
@@ -224,7 +223,7 @@ Maps to `createApp` options:
 ### `HydrationResult`
 
 | Field | Type | Description |
-|-------|------|-------------|
+| ------- | ------ | ------------- |
 | `mismatchCount` | `number` | Total nodes where virtual != DOM diverged |
 | `hydratedNodeCount` | `number` | Total nodes successfully matched |
 | `portalCount` | `number` | Portal boundaries resolved |
@@ -253,9 +252,20 @@ Use soft mode in development or when migrating from non-axiom HTML.
 
 `strictHydration: true` / `strictMismatch: true`
 
-- Any mismatch → **throw `AppError`** with `phase: 'hydrate'`
-- The `nodeKey` field in the error context carries the node identifier (currently `undefined`; will be a descriptive key in a future version)
+- Any mismatch → **throws a plain `Error`**; `createApp` routes it through the `onError(err, context)` callback with `context.phase === 'hydrate'` before re-throwing
+- The error `message` describes the mismatch (tag, text, or marker)
 - Portals: `skipMissingPortals` still applies even in strict mode
+
+```ts
+createApp(MyComponent, root, {
+  hydrate: true,
+  strictHydration: true,
+  onError(err, context) {
+    // context.phase === 'hydrate'
+    console.error('Hydration failed:', context.phase, err)
+  },
+})
+```
 
 Use strict mode in production to catch stale HTML caches, CDN mismatch, or
 component drift between server and client builds.
@@ -264,11 +274,18 @@ component drift between server and client builds.
 
 `hydrationDebug: true` / `debug: true`
 
-Emits a `console.debug` line for every node processed:
+After hydration completes, writes a summary object to `globalThis.__AXIOM_HYDRATION_DEBUG__`:
 
-```
-[axiom:hydrate] node 42 matched, tag=div, reused=true
-[axiom:hydrate] node 43 mismatch: expected span, found div
+```ts
+// After app.mount() completes:
+console.log(globalThis.__AXIOM_HYDRATION_DEBUG__)
+// {
+//   mismatchCount: 0,
+//   hydratedNodeCount: 42,
+//   portalCount: 1,
+//   warnings: [],
+//   timestamp: 1713000000000
+// }
 ```
 
 Can be combined with either soft or strict mode.
@@ -281,7 +298,7 @@ A **mismatch** occurs when the virtual node shape does not match the DOM element
 found at the expected marker position. Categories:
 
 | Category | Soft behavior | Strict behavior |
-|----------|--------------|-----------------|
+| ---------- | -------------- | ----------------- |
 | Tag name mismatch (`div` vs `span`) | warn + patch | throw |
 | Text content mismatch | warn + patch | throw |
 | Children count mismatch | warn + patch first N | throw |
@@ -301,6 +318,7 @@ with `data-axiom-portal` attribute in the regular document flow (not appended to
 `document.body` like in some frameworks).
 
 During hydration:
+
 1. `commitHydrate` scans for `[data-axiom-portal]` elements.
 2. If found, resolves the portal's children against the marker content.
 3. If not found:
@@ -349,7 +367,7 @@ try {
 ## 10. Known Limitations
 
 | Limitation | Status | Workaround |
-|-----------|--------|-----------|
+| ----------- | -------- | ----------- |
 | Router is not SSR-safe | v0.2.7 | Pass `url` to `renderToString`; routing resolved client-side |
 | `nodeKey` not yet populated in error context | v0.2.7 | Use `mismatchCount` + `warnings` array to diagnose |
 | Portals not relocated to `document.body` on client | v0.2.7 | Manual post-hydration relocation |

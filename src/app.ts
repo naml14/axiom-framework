@@ -425,7 +425,8 @@ export function createApp(
           commitFull(layout, prepared, root, state.domState)
         }
       } catch (err) {
-        if (!((err instanceof Error) && (options?.hydrate === true))) {
+        // Only report if this is NOT a hydration error that was already reported
+        if (options?.hydrate !== true) {
           reportError(err, resolveContextFromPrepared('commit', cycle, prepared))
         }
         throw err

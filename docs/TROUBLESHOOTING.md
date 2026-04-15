@@ -19,13 +19,13 @@ A symptom-first reference. Jump to the section that matches what you're seeing.
 
 ## 1. Hydration mismatches
 
-### Symptoms
+### Symptoms of Hydration mismatches
 
 - `console.warn` messages like `[axiom:hydrate] mismatch: expected button, found div`
 - `result.mismatchCount > 0` after `commitHydrate`
 - With `strictHydration: true`: `AppError` thrown with `phase: 'hydrate'`
 
-### Causes & Fixes
+### Causes & Fixes for Hydration mismatches
 
 **Stale CDN cache**
 The server rendered HTML with an older build; the client bundle is newer (or vice versa).
@@ -60,12 +60,12 @@ Fix: Render timestamps as a separately mounted island (not hydrated, re-rendered
 
 ## 2. Empty root after hydration
 
-### Symptoms
+### Symptoms of Empty root after hydration
 
 - `root.textContent` is `''` after `app.mount()`
 - No errors thrown, but the page is blank
 
-### Causes & Fixes
+### Causes & Fixes for Empty root after hydration
 
 **`hydrate: true` called on an empty root**
 
@@ -102,21 +102,31 @@ createApp(root, MyComponent, { hydrate: true })
 
 **Component returns `null` or throws during prepare**
 
-Fix: Wrap `app.mount()` in try/catch and check `err.context.phase` to isolate the failure.
+Fix: Pass an `onError` callback to `createApp` to capture the phase and error details:
+
+```ts
+const app = createApp(MyComponent, root, {
+  onError(err, context) {
+    // context.phase is 'prepare' | 'reflow' | 'commit' | 'hydrate'
+    console.error(`Failed during ${context.phase}:`, err)
+  },
+})
+await app.mount()
+```
 
 ---
 
 ## 3. Portal not rendering / missing
 
-### Symptoms
+### Symptoms of Portal not rendering / missing
 
 - Portal content not visible
 - `console.warn` about missing portal marker
 - With `skipMissingPortals: false` (default): throws `AppError`
 
-### Causes & Fixes
+### Causes & Fixes for Portal not rendering / missing
 
-**Portal was added after initial SSR**
+***Portal was added after initial SSR**
 
 The server HTML predates the portal. The client finds no `data-axiom-portal` marker.
 
@@ -133,7 +143,7 @@ createApp(root, MyComponent, {
 const result = commitHydrate(layout, p, root, state, { skipMissingPortals: true })
 ```
 
-**Portal renders but in wrong position**
+***Portal renders but in wrong position**
 
 Portals in axiom-framework are rendered **inline** during SSR (not appended to `body`).
 They stay in their virtual tree position in the DOM.
@@ -145,14 +155,14 @@ Fix: This is by design in v0.2.7. For portals that need to escape the DOM hierar
 
 ## 4. Signals not updating the UI
 
-### Symptoms
+### Symptoms of Signals not updating the UI
 
 - `signal.set(newValue)` called but the component does not re-render
 - State changes visible in signals but not in DOM
 
-### Causes & Fixes
+### Causes & Fixes for Signals not updating the UI
 
-**Signal not read inside the component's render function**
+***Signal not read inside the component's render function**
 
 axiom signals use pull-based dependency tracking. A signal is only tracked if it is
 read during the `prepare` phase.
@@ -178,7 +188,7 @@ const Counter = () => ({
 
 The scheduler does not start until `mount()` resolves.
 
-**Signal updated from outside the scheduler cycle**
+***Signal updated from outside the scheduler cycle**
 
 Fix: Trigger updates via event handlers registered through the component tree, or
 call `app.invalidate()` after external signal changes (if that API is available in
@@ -188,15 +198,15 @@ your version).
 
 ## 5. Performance regression
 
-### Symptoms
+### Symptoms of Performance regression
 
 - Frame drops / janky animations
 - `benchmark.test.ts` thresholds failing
 - `prepare` > 200ms, `reflow` > 100ms, `commit` > 300ms for ~1000 nodes
 
-### Causes & Fixes
+### Causes & Fixes for Performance regression
 
-**DOM reads introduced in hot path**
+***DOM reads introduced in hot path**
 
 The commit phase must contain zero DOM reads. Any call to `getBoundingClientRect`,
 `offsetHeight`, `clientWidth`, `getComputedStyle`, or similar APIs inside a signal
@@ -205,19 +215,19 @@ a forced layout reflow.
 
 Fix: Move measurements to a `requestAnimationFrame` callback after commit.
 
-**Text engine running on every cycle**
+***Text engine running on every cycle**
 
 `prepare()` re-runs the text layout engine on every invalidation. If your component
 has many text nodes, ensure that text content is stable (not re-created as new strings).
 
-**Tree too deep (> 5000 nodes)**
+***Tree too deep (> 5000 nodes)**
 
 axiom is optimized for trees of ~1000 nodes. Very deep trees may exceed the
 `prepare < 200ms` threshold.
 
 Fix: Split large trees into independently-mounted sub-apps or use virtualization.
 
-**CI threshold tuning**
+***CI threshold tuning**
 
 If thresholds fail in slow CI environments, adjust `benchmark.test.ts` multipliers
 (do not loosen the algorithm; scale the time budget):
@@ -230,15 +240,15 @@ expect(elapsed).toBeLessThan(200 * CI_FACTOR) // where CI_FACTOR = 3 on slow run
 
 ## 6. TypeScript errors on import
 
-### Symptoms
+### Symptoms of TypeScript errors on import
 
 - `Module '"axiom-framework"' has no exported member 'commitHydrate'`
 - `Cannot find type 'HydrationResult'`
 - `Property 'hydrate' does not exist on type 'AppOptions'`
 
-### Causes & Fixes
+### Causes & Fixes for TypeScript errors on import
 
-**Old version installed**
+***Old version installed**
 
 `commitHydrate`, `HydrationOptions`, `HydrationResult`, `hydrate`, `strictHydration`,
 and `hydrationDebug` were all introduced in **v0.2.7**.
@@ -253,7 +263,7 @@ ignores the exports map.
 Fix: Set `"moduleResolution": "bundler"` (Bun/Vite) or `"node16"` (Node ESM) in
 your `tsconfig.json`.
 
-**Importing from the wrong sub-path**
+***Importing from the wrong sub-path**
 
 `commitHydrate` is an advanced API re-exported from the main entry point:
 
@@ -269,13 +279,13 @@ import { commitHydrate } from 'axiom-framework/src/commit'
 
 ## 7. Tests fail with Happy DOM
 
-### Symptoms
+### Symptoms of Tests fail with Happy DOM
 
 - `SyntaxError` when calling `document.querySelector` after `document.write`
 - `expect(el).toBeInstanceOf(HTMLElement)` fails even though `el` is clearly a DOM node
 - 400+ mismatches in hydration tests that should produce 0
 
-### Causes & Fixes
+### Causes & Fixes for Tests fail with Happy DOM
 
 **`querySelector` after `document.write` in Happy DOM**
 
@@ -317,7 +327,7 @@ beforeEach(() => {
 })
 ```
 
-**Happy DOM version mismatch**
+***Happy DOM version mismatch**
 
 Different versions of `happy-dom` have different `document.write` semantics.
 Pin to `>= 12.0.0` in your package.json.

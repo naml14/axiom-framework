@@ -231,10 +231,13 @@ describe('benchmark: hydration (200-item SSR + commitHydrate)', () => {
 
   test('commitHydrate() completes under 500ms for 1000-node SSR tree (CI threshold)', () => {
     const html = renderToString(HydrateComp, { textEngine: fakeTextEngine })
-    // write to the global document already configured in beforeAll
+    // safely inject rendered HTML into test DOM
     // to ensure HTMLElement instanceof checks use the same class
-    document.write(html)
-    const root = document.getElementById('app') as HTMLElement
+    const rootContainer = document.createElement('div')
+    rootContainer.id = 'app'
+    rootContainer.innerHTML = html
+    document.body.appendChild(rootContainer)
+    const root = rootContainer
 
     const p = prepare(HydrateComp, undefined, { textEngine: fakeTextEngine })
     const layout = reflow(p, CONSTRAINTS, { lineHeight: 20 })

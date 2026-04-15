@@ -50,10 +50,11 @@ import { defineComponent } from 'axiom-framework'
 import { render } from 'axiom-framework/testing'
 
 const Greeting = defineComponent(() => ({
+  type: 'element',
   tag: 'div',
   children: [
-    { tag: 'h1', text: 'Hello' },
-    { tag: 'p', text: 'Welcome to axiom' },
+    { type: 'element', tag: 'h1', children: [{ type: 'text', content: 'Hello' }] },
+    { type: 'element', tag: 'p', children: [{ type: 'text', content: 'Welcome to axiom' }] },
   ],
 }))
 
@@ -90,10 +91,11 @@ import { render } from 'axiom-framework/testing'
 
 const count = signal(0)
 const Counter = defineComponent(() => ({
+  type: 'element',
   tag: 'div',
   children: [
-    { tag: 'span', text: `Count: ${count.get()}` },
-    { tag: 'button', text: 'Increment' },
+    { type: 'element', tag: 'span', children: [{ type: 'text', content: `Count: ${count.value}` }] },
+    { type: 'element', tag: 'button', children: [{ type: 'text', content: 'Increment' }] },
   ],
 }))
 
@@ -126,9 +128,10 @@ import { render, fireEvent } from 'axiom-framework/testing'
 
 const clicked = signal(false)
 const ClickButton = defineComponent(() => ({
+  type: 'element',
   tag: 'button',
-  text: clicked.get() ? 'Clicked!' : 'Click me',
-  onClick: () => clicked.set(true),
+  on: { click: () => { clicked.value = true } },
+  children: [{ type: 'text', content: clicked.value ? 'Clicked!' : 'Click me' }],
 }))
 
 test('button click updates state', () => {
@@ -147,19 +150,24 @@ test('button click updates state', () => {
 ```ts
 const inputValue = signal('')
 const Form = defineComponent(() => ({
+  type: 'element',
   tag: 'form',
   children: [
     {
+      type: 'element',
       tag: 'input',
-      attrs: { type: 'text', value: inputValue.get() },
-      onInput: (e: Event) => {
-        const target = e.target as HTMLInputElement
-        inputValue.set(target.value)
+      attrs: { type: 'text', value: inputValue.value, 'data-testid': 'form-input' },
+      on: {
+        input: (e: Event) => {
+          const target = e.target as HTMLInputElement
+          inputValue.value = target.value
+        },
       },
     },
     {
+      type: 'element',
       tag: 'p',
-      text: `You typed: ${inputValue.get()}`,
+      children: [{ type: 'text', content: `You typed: ${inputValue.value}` }],
     },
   ],
 }))

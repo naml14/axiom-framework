@@ -426,10 +426,13 @@ describe('createApp', () => {
     }))
 
     const html = renderToString(App, { textEngine: fakeTextEngine })
-    // reusar el document global del test suite (beforeAll lo inicializa)
-    document.write(html)
+    // safely inject rendered HTML into test DOM
+    const rootContainer = document.createElement('div')
+    rootContainer.id = 'app'
+    rootContainer.innerHTML = html
+    document.body.appendChild(rootContainer)
 
-    const root = document.getElementById('app') as HTMLElement
+    const root = rootContainer
     // mutar DOM para provocar mismatch strict
     root.firstElementChild!.textContent = 'TAMPERED'
 
