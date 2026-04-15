@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.2.10](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.9...axiom-framework-v0.2.10) (2026-04-15)
+
+
+### Features
+
+* **portal:** add cssManaged flag for portal children layout management ([3a3f5b3](https://github.com/naml14/axiom-framework/commit/3a3f5b3505b854003793d0466bcd4a73db87e1b3))
+
+
+### Bug Fixes
+
+* address valid bot review findings ([17b8ca6](https://github.com/naml14/axiom-framework/commit/17b8ca6c392bfce024b06c3830891b5341e052b1))
+
 ## [0.2.9](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.8...axiom-framework-v0.2.9) (2026-04-15)
 
 
