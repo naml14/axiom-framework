@@ -19,10 +19,13 @@ import {
   getClasses,
   getAttrs,
   getOn,
+  getStyle,
   forEachNode,
   getPreparedChildren,
   getPortalTarget,
 } from './prepare.js'
+
+import { applyStyleToElement } from './style.js'
 
 // ============================================================
 // Public API
@@ -37,6 +40,8 @@ export interface DOMState {
   domNodes: Array<HTMLElement | Text | null>
   portalRoots: Map<number, PortalEntry>  // _index → { target, nodes[] }
 }
+
+const MANAGED_STYLE_KEYS_PROP = '__axiomManagedStyleKeys'
 
 export function commitFull(
   layout: LayoutResult,
@@ -316,6 +321,14 @@ export function applyOps(
         }
         ;(el as any)._listeners = op.newOn
       }
+
+      if ('newStyle' in op && el instanceof HTMLElement) {
+        if (op.newStyle === undefined) {
+          clearManagedStyleFromElement(el)
+        } else {
+          applyManagedStyleToElement(el, op.newStyle)
+        }
+      }
     }
 
     if (op.type === 'move') {
@@ -483,6 +496,12 @@ function buildDOMTree(
     (el as any)._listeners = on
   }
 
+  // Apply style props (write-only, after layout)
+  const style = getStyle(prepared)
+  if (style !== undefined) {
+    applyManagedStyleToElement(el, style)
+  }
+
   state.domNodes[idx] = el
   parent.appendChild(el)
 
@@ -526,6 +545,11 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
     (el as any)._listeners = op.on
   }
 
+  // Apply style props (write-only)
+  if (op.style !== undefined) {
+    applyManagedStyleToElement(el, op.style)
+  }
+
   return el
 }
 
@@ -533,4 +557,25 @@ function assertValidTagName(tag: string): void {
   if (/\s/.test(tag)) {
     throw new Error(`Invalid tag name: "${tag}"`)
   }
+}
+
+function applyManagedStyleToElement(
+  el: HTMLElement,
+  props: import('./style.js').SafeStyleProps
+): void {
+  applyStyleToElement(el, props)
+  ;(el as unknown as Record<string, unknown>)[MANAGED_STYLE_KEYS_PROP] = Object.keys(props)
+}
+
+function clearManagedStyleFromElement(el: HTMLElement): void {
+  const keys = (el as unknown as Record<string, unknown>)[MANAGED_STYLE_KEYS_PROP]
+  if (!Array.isArray(keys)) return
+
+  for (const key of keys) {
+    if (typeof key === 'string') {
+      ;(el.style as unknown as Record<string, string>)[key] = ''
+    }
+  }
+
+  ;(el as unknown as Record<string, unknown>)[MANAGED_STYLE_KEYS_PROP] = []
 }

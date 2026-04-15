@@ -1,4 +1,12 @@
-import type { PreparedComponent, LayoutResult, LayoutProps, FlexDirection, FlexWrap, JustifyContent, AlignItems } from './types.js'
+import type {
+  PreparedComponent,
+  LayoutResult,
+  LayoutProps,
+  FlexDirection,
+  JustifyContent,
+  AlignItems,
+  LayoutConstraints,
+} from './types.js'
 
 import {
   getNodeIndex,
@@ -11,6 +19,8 @@ import {
 } from './prepare.js'
 
 import { measureSimple } from './fast-path.js'
+import { resolveResponsiveLayout } from './responsive.js'
+import { measureGrid } from './grid.js'
 
 // ============================================================
 // FlexAxis Abstraction
@@ -63,17 +73,23 @@ export function measureFlex(
   availableHeight: number,
   result: LayoutResult,
   lineHeight: number,
-  layout?: LayoutProps
+  layout?: LayoutProps,
+  constraints?: LayoutConstraints
 ): void {
+  const resolvedLayout = resolveResponsiveLayout(layout, constraints ?? {
+    maxWidth: availableWidth,
+    maxHeight: availableHeight,
+  })
+
   const children = getPreparedChildren(prepared)
   const parentIdx = getNodeIndex(prepared)
-  const direction = layout?.flexDirection ?? 'column'
-  const wrap = layout?.flexWrap ?? 'nowrap'
+  const direction = resolvedLayout?.flexDirection ?? 'column'
+  const wrap = resolvedLayout?.flexWrap ?? 'nowrap'
   const axis = getAxis(direction)
-  const gap = layout?.gap ?? 0
-  const justifyContent = layout?.justifyContent ?? 'start'
-  const alignItems = layout?.alignItems ?? 'start'
-  const padding = layout?.padding ?? 0
+  const gap = resolvedLayout?.gap ?? 0
+  const justifyContent = resolvedLayout?.justifyContent ?? 'start'
+  const alignItems = resolvedLayout?.alignItems ?? 'start'
+  const padding = resolvedLayout?.padding ?? 0
 
   const parentSize: Size = { width: availableWidth, height: availableHeight }
   const mainAxisSize = axis.mainSize(parentSize) - padding * 2
@@ -92,7 +108,15 @@ export function measureFlex(
       continue
     }
 
-    const childLayout = getLayoutProps(child)
+    const childConstraintWidth = direction === 'column' ? crossAxisSize : availableWidth
+    const childConstraints: LayoutConstraints = {
+      maxWidth: childConstraintWidth,
+      maxHeight: availableHeight,
+      viewportWidth: constraints?.viewportWidth,
+      viewportHeight: constraints?.viewportHeight,
+    }
+
+    const childLayout = resolveResponsiveLayout(getLayoutProps(child), childConstraints)
     
     let childWidth = childLayout?.width
     if (childWidth === undefined) {
@@ -112,10 +136,41 @@ export function measureFlex(
     if (getNodeType(child) === 'element' && getPreparedChildren(child).length > 0) {
       const childMetrics = getMetrics(child)
       const childHasFlex = childLayout?.flexDirection !== undefined
-      if (!childHasFlex && childMetrics.simpleLayout && (childLayout?.padding ?? 0) === 0 && childLayout?.gap === undefined) {
+      const childIsGrid = childLayout?.display === 'grid'
+      if (!childHasFlex && !childIsGrid && childMetrics.simpleLayout && (childLayout?.padding ?? 0) === 0 && childLayout?.gap === undefined) {
         layoutChildFast(child, childWidth, result, lineHeight)
       } else {
-        measureFlex(child, childWidth, childHeight > 0 ? childHeight : availableHeight, result, lineHeight, childLayout)
+        if (childIsGrid) {
+          measureGrid(
+            child,
+            childWidth,
+            childHeight > 0 ? childHeight : availableHeight,
+            result,
+            lineHeight,
+            childLayout,
+            {
+              maxWidth: childWidth,
+              maxHeight: childHeight > 0 ? childHeight : availableHeight,
+              viewportWidth: childConstraints.viewportWidth,
+              viewportHeight: childConstraints.viewportHeight,
+            }
+          )
+        } else {
+          measureFlex(
+            child,
+            childWidth,
+            childHeight > 0 ? childHeight : availableHeight,
+            result,
+            lineHeight,
+            childLayout,
+            {
+              maxWidth: childWidth,
+              maxHeight: childHeight > 0 ? childHeight : availableHeight,
+              viewportWidth: childConstraints.viewportWidth,
+              viewportHeight: childConstraints.viewportHeight,
+            }
+          )
+        }
       }
     }
 
@@ -151,7 +206,7 @@ export function measureFlex(
   let shouldStretchLine = false
   if (lines.length === 1 && crossAxisSize > 0) {
     if (direction === 'row') {
-      shouldStretchLine = layout?.height !== undefined
+      shouldStretchLine = resolvedLayout?.height !== undefined
     } else {
       // For column, we always stretch to the width constraint because block elements fill width.
       shouldStretchLine = true

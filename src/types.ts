@@ -35,6 +35,7 @@ export interface ElementNode {
   attrs?: Record<string, string>
   on?: Record<string, EventListener>
   layout?: LayoutProps
+  style?: import('./style.js').SafeStyleProps
   children?: ComponentNode[]
 }
 
@@ -80,22 +81,55 @@ export type PreparedComponent = {
 export interface LayoutConstraints {
   maxWidth: number
   maxHeight: number
+  viewportWidth?: number
+  viewportHeight?: number
 }
 
 export type JustifyContent = 'start' | 'center' | 'end' | 'space-between'
 export type AlignItems = 'start' | 'center' | 'end' | 'stretch'
 export type FlexDirection = 'row' | 'column'
 export type FlexWrap = 'nowrap' | 'wrap' | 'wrap-reverse'
+export type LayoutDisplay = 'flex' | 'grid'
 
-export interface LayoutProps {
+// Grid MVP subset (Fase 2, slice inicial):
+// - número fijo de columnas (N)
+// - repeat(N, 1fr)
+// - spans mínimos de fila/columna
+// Fuera de alcance: areas, minmax(), fr complejos.
+export type GridTemplateColumns = number | `repeat(${number}, 1fr)`
+
+export type LayoutUnitValue = `${number}px` | `${number}%` | `${number}vw` | `${number}vh`
+export type LayoutDimension = number | LayoutUnitValue
+
+export interface ResponsiveLayoutProps {
+  display?: LayoutDisplay
   flexDirection?: FlexDirection
   flexWrap?: FlexWrap
   gap?: number
+  gridTemplateColumns?: GridTemplateColumns
+  gridColumn?: number
+  gridRow?: number
+  gridColumnSpan?: number
+  gridRowSpan?: number
+  columnGap?: number
+  rowGap?: number
   justifyContent?: JustifyContent
   alignItems?: AlignItems
-  width?: number
-  height?: number
+  width?: LayoutDimension
+  height?: LayoutDimension
   padding?: number
+}
+
+export interface LayoutBreakpoint {
+  minWidth?: number
+  maxWidth?: number
+  minHeight?: number
+  maxHeight?: number
+  layout: ResponsiveLayoutProps
+}
+
+export interface LayoutProps extends ResponsiveLayoutProps {
+  breakpoints?: LayoutBreakpoint[]
 }
 
 export interface LayoutResult {

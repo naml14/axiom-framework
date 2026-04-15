@@ -78,4 +78,6 @@ serve({
   },
 })
 
-console.log('🚀 Axiom Demo → http://localhost:3000')
+console.log('🚀 Axiom Demo Launcher → http://localhost:3000')
+console.log('🧱 Static demo → http://localhost:3000/static.html')
+console.log('🧪 SSR demo → http://localhost:3000/ssr?name=Dev&width=960&root=ssr-root')

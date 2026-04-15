@@ -5,6 +5,12 @@
     // Consumers use Node.js or bundlers — they don't have bun-types installed.
     // The base tsconfig.json keeps bun-types for IDE support in src/ and tests/.
     "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "allowImportingTsExtensions": false,
     "types": []
   },
   "include": ["src/**/*.ts"],

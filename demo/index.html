@@ -3,121 +3,138 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Axiom — Two-Phase Rendering Demo</title>
-  <meta name="description" content="Demostración interactiva del framework Axiom: renderizado en dos fases, cero lecturas DOM, layout masonry reactivo y métricas en tiempo real.">
+  <title>Axiom — Demo Launcher</title>
+  <meta name="description" content="Selector de demos de Axiom: estático puro y SSR.">
   <link rel="stylesheet" href="style.css">
+  <style>
+    .demo-launcher {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--bg);
+    }
+
+    .launcher-card {
+      width: min(860px, 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface-1);
+      padding: 22px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .launcher-title {
+      margin: 0 0 10px;
+      font-size: 20px;
+      color: var(--text);
+      letter-spacing: 0.3px;
+    }
+
+    .launcher-subtitle {
+      margin: 0 0 18px;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .launcher-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .launcher-demo {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface-2);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .launcher-demo h2 {
+      margin: 0;
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .launcher-demo p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .launcher-actions {
+      margin-top: 6px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .launcher-note {
+      margin-top: 14px;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+  </style>
 </head>
 <body>
+  <main class="demo-launcher">
+    <section class="launcher-card" aria-label="Selector de demos Axiom">
+      <h1 class="launcher-title">⚡ Axiom Demo Launcher</h1>
+      <p class="launcher-subtitle">
+        Dos flujos separados para evitar confusión: <strong>estático puro</strong> (abre directo) y <strong>SSR</strong> (requiere servidor).
+      </p>
 
-  <div class="dashboard-layout">
+      <div class="launcher-grid">
+        <article class="launcher-demo">
+          <h2>🧱 Demo Estático Puro</h2>
+          <p>
+            No depende de rutas SSR. Puedes abrirlo como archivo local o servirlo con cualquier servidor estático.
+          </p>
+          <div class="launcher-actions">
+            <a class="btn-toggle active" href="./static.html">Abrir static.html</a>
+          </div>
+        </article>
 
-    <!-- ========================================================
-         SIDEBAR — Controles, DX tools, Portal Demo
-         ======================================================== -->
-    <aside class="dashboard-sidebar">
-
-      <!-- Branding -->
-      <div class="sidebar-brand">
-        <div class="brand">
-          <span class="brand-icon">⚡</span>
-          <h1>AXIOM</h1>
-        </div>
-        <p class="tagline">"El DOM es solo la pantalla de salida"</p>
+        <article class="launcher-demo">
+          <h2>🧪 Demo SSR</h2>
+          <p>
+            Renderizado del lado servidor usando el endpoint <code>/ssr</code>. Solo funciona cuando el demo server está corriendo.
+          </p>
+          <div class="launcher-actions">
+            <a id="launcher-ssr-link" class="btn-toggle" href="/ssr?name=Dev&width=960&root=ssr-root">Abrir /ssr</a>
+          </div>
+        </article>
       </div>
 
-      <!-- Controles del canvas -->
-      <section class="sidebar-section" aria-label="Controles del canvas">
-        <h2 class="sidebar-section-title">Canvas Controls</h2>
-        <div class="controls-stack">
-          <label class="control-row">
-            <span class="control-label">Ancho</span>
-            <div class="control-input-group">
-              <input type="range" id="width-slider" min="320" max="1400" step="8" value="800">
-              <strong id="width-display" class="control-value">800px</strong>
-            </div>
-          </label>
-          <label class="control-row">
-            <span class="control-label">Items</span>
-            <div class="control-input-group">
-              <input type="range" id="items-slider" min="5" max="60" step="5" value="20">
-              <strong id="items-display" class="control-value">20</strong>
-            </div>
-          </label>
-          <div class="control-buttons">
-            <button id="anim-btn" class="btn-toggle active">▶ Animación</button>
-            <button id="metrics-btn" class="btn-toggle active">📊 Métricas</button>
-            <a href="/ssr?name=Dev&width=960&root=ssr-root" class="btn-toggle btn-link">🧪 SSR</a>
-          </div>
-        </div>
-      </section>
+      <p class="launcher-note" id="launcher-note">
+        Tip: para SSR usa <code>bun run demo</code> y abre <code>http://localhost:3000</code>.
+      </p>
+    </section>
+  </main>
 
-      <!-- DX Showcase — Sprint 6 -->
-      <section class="sidebar-section dx-panel" aria-label="DX Showcase">
-        <h2 class="sidebar-section-title">🧪 Sprint 6 DX Showcase</h2>
-        <div class="dx-actions">
-          <button id="dx-profiling-btn" class="btn-toggle active">📈 Profiling: ON</button>
-          <button id="dx-hotreload-btn" class="btn-toggle">♻️ Hot Reload</button>
-          <button id="dx-devhook-refresh" class="btn-toggle">🔍 Dev Hook</button>
-          <button id="dx-error-test" class="btn-toggle">💥 Test Error</button>
-        </div>
-        <div class="dx-grid">
-          <article class="dx-card">
-            <h3>Profiling Events</h3>
-            <p id="dx-profile-order">Esperando eventos…</p>
-          </article>
-          <article class="dx-card">
-            <h3>Dev Hook (__AXIOM__)</h3>
-            <pre id="dx-devhook-output">Sin datos aún.</pre>
-          </article>
-          <article class="dx-card">
-            <h3>Error Context (onError)</h3>
-            <pre id="dx-error-output">Sin errores capturados aún.</pre>
-          </article>
-        </div>
-      </section>
+  <script>
+    (function () {
+      const ssrLink = document.getElementById('launcher-ssr-link');
+      const note = document.getElementById('launcher-note');
+      const isFile = window.location.protocol === 'file:';
 
-      <!-- Portal Demo — montado por portal-demo.ts -->
-      <section class="sidebar-section" aria-label="Portal Demo">
-        <h2 class="sidebar-section-title">🌀 Portal Demo</h2>
-        <div id="portal-demo-root"></div>
-      </section>
+      if (!ssrLink || !isFile) return;
 
-    </aside>
+      ssrLink.classList.add('is-disabled');
+      ssrLink.removeAttribute('href');
+      ssrLink.setAttribute('aria-disabled', 'true');
+      ssrLink.title = 'SSR requiere servidor (http://localhost:3000)';
 
-    <!-- ========================================================
-         MAIN — Framework canvas
-         ======================================================== -->
-    <main class="dashboard-main">
-      <div id="app"></div>
-    </main>
-
-  </div><!-- /.dashboard-layout -->
-
-  <!-- Metrics footer — updated directly, NOT through the framework -->
-  <footer class="metrics-footer" id="metrics-footer">
-    <div class="metric-item">
-      <span class="metric-label">prepare</span>
-      <span class="metric-value" id="m-prepare">—</span>
-    </div>
-    <div class="metric-item highlight">
-      <span class="metric-label">reflow</span>
-      <span class="metric-value" id="m-reflow">—</span>
-    </div>
-    <div class="metric-item">
-      <span class="metric-label">commit</span>
-      <span class="metric-value" id="m-commit">—</span>
-    </div>
-    <div class="metric-item total">
-      <span class="metric-label">TOTAL</span>
-      <span class="metric-value" id="m-total">—</span>
-    </div>
-    <div class="metric-item fps">
-      <span class="metric-label">FPS</span>
-      <span class="metric-value" id="m-fps">—</span>
-    </div>
-    <span class="metric-badge">0 DOM reads en hot path</span>
-  </footer>
-
-  <script type="module" src="./app.js"></script>
+      if (note) {
+        note.textContent = 'Modo archivo detectado: static.html funciona; SSR requiere bun run demo (http://localhost:3000).';
+      }
+    })();
+  </script>
 </body>
 </html>
