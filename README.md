@@ -353,19 +353,24 @@ If something goes wrong, see [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md
 
 ## Limitations
 
-The following features are **not yet supported** in v0.2.7:
+The following features are **not yet supported** in v0.9.0:
 
-| Area | Status |
-| ------ | -------- |
-| SSR-safe router (URL → route matching on server) | Planned v0.3.x |
-| Streaming SSR (`renderToReadableStream`) | Planned v0.3.x |
-| Portal relocation to `document.body` at runtime | Planned |
-| CSS Grid layout algorithm | Not planned (use flex + masonry) |
-| CSS-in-JS / styled components | Out of scope |
-| Animation primitives | Out of scope for core |
-| Accessibility helpers (ARIA wiring, focus management) | Community contribution welcome |
-| i18n / RTL support | Community contribution welcome |
-| Plugin / middleware pipeline | Under evaluation |
+| Area | Status | Notes |
+| ------ | -------- | ----- |
+| Streaming SSR (`renderToReadableStream`) | Under evaluation | Single-shot `renderToString` is fully supported |
+| Portal relocation to `document.body` at runtime | Under evaluation | CSS-managed portals are supported via `cssManaged` |
+| CSS-in-JS / styled components | Out of scope | Use `style` with the built-in token resolver |
+| Accessibility helpers (ARIA wiring, focus management) | Community contribution welcome | Framework primitives are available for external libs |
+| i18n / RTL support | Community contribution welcome | Layout engine remains deterministic across directions |
+
+### Now fully supported in v0.9.0
+
+- **Responsive design**: breakpoints (`minWidth`/`maxWidth`), viewport units (`vw`/`vh`), percentages
+- **CSS Grid layout (MVP)**: fixed columns, `repeat(...)`, auto-placement, `gridRowSpan`/`gridColumnSpan`
+- **Transitions & animations**: per-property transitions coordinated by scheduler
+- **SSR-safe router**: static + dynamic route matching with SSR-safe URL parsing
+- **Plugin system**: lifecycle hooks (`onMount`, `onUnmount`, `onUpdate`)
+- **SSR + hydration**: server rendering and client-side reuse with mismatch handling
 
 axiom-framework is a **low-level layout + rendering engine**. Features that belong
 in application-level layers will not be added to the core package.
