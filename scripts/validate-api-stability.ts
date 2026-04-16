@@ -21,7 +21,7 @@
  */
 
 import { Project, Node, type ExportDeclaration } from 'ts-morph'
-import { resolve, normalize, relative, basename } from 'node:path'
+import { resolve, normalize, basename } from 'node:path'
 import { writeFileSync } from 'node:fs'
 
 // ============================================================
