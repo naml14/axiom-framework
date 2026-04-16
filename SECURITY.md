@@ -37,10 +37,10 @@ If you discover a security vulnerability, report it privately using one of these
 
 Axiom runs in **two environments** as of v1.0.0:
 
-| Environment | Runtime          | Since  |
-|-------------|------------------|--------|
+| Environment | Runtime | Since |
+| ----------- | ---------------- | ------ |
 | CSR (Client-Side Rendering) | Browser | v0.1.0 |
-| SSR (Server-Side Rendering) | Node.js, Bun     | v1.0.0 |
+| SSR (Server-Side Rendering) | Node.js, Bun | v1.0.0 |
 
 Each environment has distinct attack surfaces documented below:
 
@@ -58,30 +58,39 @@ Each environment has distinct attack surfaces documented below:
 
 ### XSS via Attributes
 
-**Framework protection**: `escapeHtml()` escapes attribute values, and `VALID_ATTR_RE` validates attribute names. Tag names are validated by `sanitizeTagName()` + `VALID_TAG_RE`.
+**Framework protection**: Multiple layers of defense implemented in `src/core/attrs.ts`:
 
-**Consumer responsibility**: The framework does not validate the **semantic meaning** of URLs. Validate `href`, `src`, and `action` values yourself before passing them as props:
+1. **Attribute name validation**: `VALID_ATTR_NAME_RE` validates all attribute names match `/^[A-Za-z_][\w:.-]*$/`. Invalid names are silently dropped.
+2. **Event attribute blocking**: Inline event handlers (`onclick`, `onerror`, `onload`, etc.) in the `attrs` object are automatically removed. Use `on: { click: fn }` instead.
+3. **Dangerous URL scheme blocking**: For URL-sensitive attributes (`href`, `src`, `action`, `formaction`, `poster`, `data`, `cite`, `background`), dangerous schemes (`javascript:`, `data:`, `vbscript:`, `file:`) are neutralized to `#blocked`.
+4. **Value escaping**: In SSR, `escapeHtml()` escapes all attribute values.
+
+**Consumer responsibility**: While the framework blocks known dangerous patterns, always sanitize user input before using it in attributes:
 
 ```ts
-// ❌ Vulnerable — untrusted URL passed directly
-createApp({ tag: 'a', attrs: { href: userInput } });
+// ✅ Framework automatically blocks these:
+createApp({ tag: 'a', attrs: { href: 'javascript:alert(1)' } }); // → href="#blocked"
+createApp({ tag: 'button', attrs: { onclick: 'evil()' } });      // → onclick removed
 
-// ✅ Safe — validate protocol first
-const safe = /^https?:\/\//.test(userInput) ? userInput : '#';
-createApp({ tag: 'a', attrs: { href: safe } });
+// ⚠️ Still validate semantic URLs for your application logic:
+const userUrl = getUserInput();
+const isAllowedDomain = /^https:\/\/(example\.com|trusted\.org)/.test(userUrl);
 ```
 
 ### Event Handler Misuse
 
-**Framework protection**: None — Axiom does not restrict event handler content.
+**Framework protection**:
 
-**Consumer responsibility**: Never pass `eval`, `Function()`, or dynamic code execution inside event handlers:
+- **Inline event attributes blocked**: Attributes like `onclick="..."`, `onerror="..."` in the `attrs` object are automatically removed (see XSS via Attributes above).
+- **Event listeners via `on` are safe**: The `on: { click: fn }` API accepts only function references, not strings, so code injection via `eval` is not possible at the framework level.
+
+**Consumer responsibility**: Never pass `eval`, `Function()`, or dynamic code execution inside your event handler functions:
 
 ```ts
-// ❌ Vulnerable
+// ❌ Vulnerable — dynamic code execution in handler body
 createApp({ tag: 'button', on: { click: () => eval(userCode) } });
 
-// ✅ Safe
+// ✅ Safe — handler is a static function reference
 createApp({ tag: 'button', on: { click: () => handleClick() } });
 ```
 
@@ -177,9 +186,9 @@ The following are **not covered** by this security policy:
 
 The security review coverage of a given API depends on its stability tier:
 
-| API Type     | Security Posture                                              |
-|--------------|---------------------------------------------------------------|
-| **Stable**   | Fully reviewed; breaking changes require a major version bump |
+| API Type | Security Posture |
+| -------------- | --------------------------------------------------------------- |
+| **Stable** | Fully reviewed; breaking changes require a major version bump |
 | **Experimental** | May have undiscovered security gaps; not recommended for production security-sensitive code |
 
 **Recommendation**: Use only stable APIs (`createApp`, `renderToString`, `createPlugin`, `createRouter`) in production environments where security is a concern. Experimental APIs may be promoted or removed between minor versions.

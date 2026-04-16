@@ -1,0 +1,533 @@
+bun test v1.3.11 (af24e281)
+
+tests\animation.test.ts:
+(pass) createTransition > creates a transition definition with required fields
+(pass) createTransition > defaults easing to "ease" when not specified
+(pass) createTransition > defaults delay to 0
+(pass) createTransition > accepts delay override
+(pass) createTransition > rejects duration <= 0
+(pass) createTransition > only accepts valid TransitionProperty values
+(pass) createAnimationState > creates initial idle state
+(pass) createAnimationState > returns an isolated state object (not shared)
+(pass) scheduleTransition > transitions to in-flight state immediately
+(pass) scheduleTransition > calls the scheduler exactly once per transition
+(pass) scheduleTransition > cancels in-flight transition when new one starts (cancellation rule)
+(pass) scheduleTransition > advances progress when tick callback is invoked
+(pass) scheduleTransition > marks as complete when duration has elapsed
+(pass) cancelTransition > cancels an in-flight transition
+(pass) cancelTransition > is a no-op if not transitioning
+(pass) applyImmediately > applies final style value directly to element
+(pass) applyImmediately > applies color value directly
+(pass) applyImmediately > overrides existing style value
+(pass) Motion integration — scheduler coordination > does not call requestAnimationFrame directly
+(pass) Motion integration — scheduler coordination > transitions apply final value when progress reaches 1
+
+tests\app.test.ts:
+(pass) createApp > returns App interface
+(pass) createApp > mount() creates DOM synchronously [16.00ms]
+(pass) createApp > unmount() cleans up DOM
+(pass) createApp > getMetrics() returns timing data
+(pass) createApp > reactive updates via signals
+(pass) createApp > enableProfiling() emits prepare/reflow/commit/total in order per cycle
+(pass) createApp > expone window.__AXIOM__ solo en desarrollo
+(pass) createApp > no expone window.__AXIOM__ fuera de desarrollo
+(pass) createApp > dev hook es readonly y frozen
+(pass) createApp > cleanup del dev hook ocurre en unmount()
+(pass) createApp > error en prepare incluye contexto correcto
+(pass) createApp > error en reflow incluye contexto correcto
+(pass) createApp > error en commit incluye contexto correcto
+(pass) createApp > fallback razonable cuando no hay displayName explícito
+(pass) createApp > error en hydrate incluye phase:hydrate (no commit) [15.00ms]
+(pass) createApp > AppErrorContext incluye campo nodeKey (opcional)
+(pass) createApp > hot reload recovery parcial preserva nodo cuando topología es compatible
+(pass) createApp > hot reload recovery hace fallback determinista cuando la topología es incompatible
+(pass) createApp > hot reload recovery convive con profiling y dev hook
+(pass) createApp > hydrate + hot reload: en root vacío no rompe y permite fallback posterior
+(pass) Plugin Lifecycle Integration > 1.2 — onMount fires with appId after successful mount
+(pass) Plugin Lifecycle Integration > 1.3 — onMount does NOT fire when mount() throws during pipeline
+(pass) Plugin Lifecycle Integration > 1.4 — onUpdate fires after reactive update; NOT on initial mount
+(pass) Plugin Lifecycle Integration > 1.5 — onUnmount fires after app.unmount()
+(pass) Plugin Lifecycle Integration > 1.6 — onUnmount does NOT fire if app was never mounted
+(pass) Plugin Lifecycle Integration > 1.7 — custom appId from AppOptions is passed to all hooks
+(pass) Plugin Lifecycle Integration > 1.8 — auto-generated appId is a stable non-empty string for the same instance
+(pass) Plugin Lifecycle Integration > 1.9 — plugin throwing in onMount does not abort mount pipeline
+(pass) Plugin Lifecycle Integration > 1.10 — hydration path also fires onMount
+
+tests\benchmark.test.ts:
+[benchmark] prepare(1001 nodes): 1.13ms
+(pass) benchmark: 1000-node tree > prepare() completes and returns correct node count
+[benchmark] reflow(1001 nodes): 2.55ms
+(pass) benchmark: 1000-node tree > reflow() completes and produces valid layout values
+[benchmark] commit(1001 nodes): 39.02ms
+(pass) benchmark: 1000-node tree > commit() completes and builds correct DOM structure [47.00ms]
+[benchmark] full cycle: 26.63ms
+(pass) benchmark: 1000-node tree > full cycle prepare→reflow→commit completes under 500ms in test env [15.00ms]
+[benchmark:threshold] prepare: 0.36ms
+(pass) benchmark: 1000-node tree > prepare() stays under 200ms for 1000 nodes (CI threshold)
+[benchmark:threshold] reflow: 9.38ms
+(pass) benchmark: 1000-node tree > reflow() stays under 100ms for 1000 nodes (CI threshold) [16.00ms]
+[benchmark:threshold] commit: 22.95ms
+(pass) benchmark: 1000-node tree > commit() stays under 300ms for 1000 nodes (CI threshold) [31.00ms]
+[benchmark:small] full cycle: 2.69ms
+(pass) benchmark: small tree (fast path) > full cycle for 51 nodes completes under 50ms (CI threshold)
+[benchmark:hydration] renderToString: 3.58ms
+(pass) benchmark: hydration (200-item SSR + commitHydrate) > renderToString() completes under 500ms (CI threshold)
+[benchmark:hydration] commitHydrate(1001 nodes): 8.01ms, mismatches: 0
+(pass) benchmark: hydration (200-item SSR + commitHydrate) > commitHydrate() completes under 500ms for 1000-node SSR tree (CI threshold) [31.00ms]
+
+tests\commit.test.ts:
+(pass) applyOps > inserts create DOM nodes
+(pass) applyOps > removes delete DOM nodes
+(pass) applyOps > updates modify existing nodes
+(pass) applyOps > updates text content
+(pass) applyOps > clears managed style keys when style is removed
+(pass) applyOps > operations are applied in order: removes → updates → inserts
+(pass) applyOps > uses DocumentFragment for batch inserts
+(pass) commitFull > creates DOM tree from prepared component
+(pass) commitFull > applies layout positions via transform
+(pass) commitFull > sets up root container with position relative [16.00ms]
+
+tests\component.test.ts:
+(pass) defineComponent > wraps a function and returns ComponentDefinition with unique _id
+(pass) defineComponent > each component definition has a unique _id
+(pass) defineComponent > component with typed props
+(pass) defineComponent > component with no props
+(pass) defineComponent > component returning fragment
+(pass) defineComponent > component returning element with children
+(pass) defineComponent > acepta displayName explícito sin romper _fn
+(pass) defineComponent > genera fallback displayName cuando la función es anónima
+
+tests\context.test.ts:
+(pass) createContext > returns default value when no Provider present
+(pass) createContext > Provider injects value to useContext
+(pass) createContext > nested Provider: innermost wins
+(pass) createContext > reactive update: when provider signal changes, useContext signal updates
+(pass) createContext > default value is returned as a signal
+(pass) createStore > returns { state, setState } as signals
+(pass) createStore > setState with value updates state
+(pass) createStore > setState with updater function updates state
+(pass) createStore > provideStore / injectStore share the same instance
+(pass) createStore > injectStore without provideStore returns the original store
+
+tests\diff.test.ts:
+(pass) fastDiff > returns empty array when no changes
+(pass) fastDiff > detects position changes
+(pass) fastDiff > detects size changes
+(pass) fastDiff > detects multiple changes
+(pass) fullDiff > first render generates all inserts
+(pass) fullDiff > value change generates updates only
+(pass) fullDiff > shape change generates removes and inserts
+(pass) fullDiff > operations are ordered: removes → updates → inserts
+(pass) fullDiff > key-based reconciliation reuses DOM nodes
+(pass) fullDiff > same-shape fast path incluye cambios de style en update ops
+(pass) fullDiff > same-shape fast path marca eliminación de style (newStyle undefined)
+
+tests\edge-cases.test.ts:
+(pass) edge case: empty tree > element with no children prepares correctly
+(pass) edge case: empty tree > empty element reflows to zero height
+(pass) edge case: empty tree > empty element with explicit height respects it
+(pass) edge case: empty tree > empty element commits without errors
+(pass) edge case: single text node > text node wraps into element for prepare
+(pass) edge case: single text node > single text node gets height from line calculation
+(pass) edge case: single text node > empty text node does not crash
+(pass) edge case: single text node > very long single text node wraps to multiple lines
+(pass) edge case: fragment at root > fragment children are flattened into parent
+(pass) edge case: fragment at root > nested fragments flatten completely
+(pass) edge case: deeply nested tree > 10-level deep tree prepares without stack overflow
+(pass) edge case: deeply nested tree > 10-level deep tree reflows correctly
+(pass) edge case: deeply nested tree > 10-level deep tree has correct node count (n + 1 text node)
+(pass) edge case: deeply nested tree > 50-level deep tree does not crash
+(pass) edge case: key reconciliation > elements with keys prepare correctly
+(pass) edge case: unmount clears DOM references > domNodes array is emptied after unmount
+(pass) security: attribute sanitization module > isDangerousEventAttr > detects common event handlers
+(pass) security: attribute sanitization module > isDangerousEventAttr > is case-insensitive
+(pass) security: attribute sanitization module > isDangerousEventAttr > does not flag safe attributes
+(pass) security: attribute sanitization module > hasDangerousUrlScheme > detects javascript: scheme
+(pass) security: attribute sanitization module > hasDangerousUrlScheme > detects data: scheme
+(pass) security: attribute sanitization module > hasDangerousUrlScheme > detects vbscript: scheme
+(pass) security: attribute sanitization module > hasDangerousUrlScheme > detects file: scheme
+(pass) security: attribute sanitization module > hasDangerousUrlScheme > allows safe schemes
+(pass) security: attribute sanitization module > hasDangerousUrlScheme > allows relative URLs
+(pass) security: attribute sanitization module > isValidAttrName > allows valid attribute names
+(pass) security: attribute sanitization module > isValidAttrName > rejects invalid attribute names
+(pass) security: attribute sanitization module > sanitizeAttrValue > removes event handler attributes
+(pass) security: attribute sanitization module > sanitizeAttrValue > neutralizes dangerous URL schemes in href
+(pass) security: attribute sanitization module > sanitizeAttrValue > neutralizes dangerous URL schemes in src
+(pass) security: attribute sanitization module > sanitizeAttrValue > neutralizes dangerous URL schemes in action
+(pass) security: attribute sanitization module > sanitizeAttrValue > passes through safe attributes unchanged
+(pass) security: attribute sanitization module > sanitizeAttrs > returns undefined for undefined input
+(pass) security: attribute sanitization module > sanitizeAttrs > returns original object if no changes needed
+(pass) security: attribute sanitization module > sanitizeAttrs > removes event handler attributes
+(pass) security: attribute sanitization module > sanitizeAttrs > neutralizes dangerous URLs
+(pass) security: attribute sanitization module > sanitizeAttrs > removes invalid attribute names
+(pass) security: attribute sanitization module > sanitizeAttrs > handles combined security issues
+(pass) security: CSR attribute hardening > event attrs are not applied to DOM
+(pass) security: CSR attribute hardening > dangerous URL schemes are neutralized in href
+(pass) security: CSR attribute hardening > safe URLs are preserved
+(pass) security: SSR attribute hardening > event attrs are not included in SSR output
+(pass) security: SSR attribute hardening > dangerous URL schemes are neutralized in SSR
+(pass) security: SSR attribute hardening > safe URLs are preserved in SSR
+
+tests\forms.test.ts:
+(pass) bind > binds textarea bidirectionally and disposes correctly
+(pass) bind > binds select bidirectionally and disposes correctly [15.00ms]
+(pass) bind > sets initial input value from signal
+(pass) bind > signal change updates DOM input
+(pass) bind > user input updates signal
+(pass) bind > dispose stops signal→DOM sync
+(pass) bind > dispose stops DOM→signal sync
+(pass) bind > non-input element throws
+(pass) validate > empty rules always returns valid
+(pass) validate > required rule fails on empty string
+(pass) validate > required rule passes on non-empty string
+(pass) validate > minLength rule fails when too short
+(pass) validate > minLength rule passes when long enough
+(pass) validate > maxLength rule fails when too long
+(pass) validate > maxLength rule passes when within limit
+(pass) validate > pattern rule fails when not matching
+(pass) validate > pattern rule passes when matching
+(pass) validate > fail-fast: stops at first failure
+(pass) validate > async rule resolves validation [63.00ms]
+(pass) validate > async rule fails when value triggers error [62.00ms]
+(pass) validate > async debounce: only latest wins [203.00ms]
+(pass) validate > async debounce: result corresponds to LAST value (not a stale earlier one) [172.00ms]
+(pass) validate > validate dispose: cleans up effect and pending timer [125.00ms]
+(pass) validate > validate result is reactive to signal changes
+(pass) validate > sync rule failure prevents async rule from running [16.00ms]
+(pass) bind — textarea and select > bind works with textarea: signal→DOM
+(pass) bind — textarea and select > bind works with textarea: DOM→signal
+(skip) bind — textarea and select > bind works with select: signal→DOM (skipped: happy-dom select.value limitation)
+(skip) bind — textarea and select > bind works with select: DOM→signal (skipped: happy-dom select.value limitation)
+
+tests\hydration.test.ts:
+(pass) hydration: markers and happy path > SSR incluye data-axiom-id para todos los nodos de elemento/portal en orden de recorrido
+(pass) hydration: markers and happy path > commitHydrate reusa nodos y no reporta mismatch en happy path
+(pass) hydration: mismatch classes and modes > detecta mismatch de tag en modo soft
+(pass) hydration: mismatch classes and modes > detecta mismatch de texto en modo soft
+(pass) hydration: mismatch classes and modes > detecta mismatch de cantidad de hijos en modo soft
+(pass) hydration: mismatch classes and modes > modo strict lanza en el primer mismatch
+(pass) hydration: portals, debug and deep tree > portal missing: warning con skipMissingPortals=true y throw con false [16.00ms]
+(pass) hydration: portals, debug and deep tree > debug=true exporta payload de depuración global
+(pass) hydration: portals, debug and deep tree > árbol profundo 50+ nodos hidrata sin mismatches
+
+tests\integration.test.ts:
+(pass) integration: signal triggers prepare > effect re-executes prepare when signal changes
+(pass) integration: signal triggers prepare > signal-derived text content updates in prepare [15.00ms]
+(pass) integration: signal triggers prepare > signal-derived children list updates in prepare
+(pass) integration: signal triggers prepare > computed signal in component props
+(pass) integration: signal triggers prepare > full reactive cycle: signal → computed → effect → prepare
+(pass) integration: SSR -> hydrate -> interaction > hidrata HTML SSR, reusa nodo y mantiene interacción reactiva
+
+tests\plugin.test.ts:
+(pass) createPlugin > creates a plugin with name and empty hooks
+(pass) createPlugin > creates a plugin with all optional hooks
+(pass) createPlugin > plugin name must be a non-empty string
+(pass) createPlugin > creates a plugin with only onMount hook
+(pass) registerPlugin > registers a plugin and makes it retrievable
+(pass) registerPlugin > registers multiple plugins in order
+(pass) registerPlugin > does not register the same plugin name twice
+(pass) registerPlugin > clearPlugins empties the registry
+(pass) applyPluginHook > calls onMount on all plugins that define it
+(pass) applyPluginHook > calls onUnmount on all plugins that define it
+(pass) applyPluginHook > calls onUpdate on all plugins that define it
+(pass) applyPluginHook > calls hooks in registration order
+(pass) applyPluginHook > does not throw if no plugins are registered
+(pass) applyPluginHook > continues calling remaining plugins if one throws
+
+tests\portal.test.ts:
+(pass) createPortal factory > returns a node with type "portal"
+(pass) createPortal factory > stores the target element reference
+(pass) createPortal factory > stores the children array
+(pass) createPortal factory > different targets produce independent portals
+(pass) createPortal factory > empty children array is accepted
+(pass) createPortal factory > returned object satisfies PortalNode shape
+(pass) prepare — portal node > portal node gets an _index allocated by prepare
+(pass) prepare — portal node > portal nodeType is "portal" after prepare
+(pass) prepare — portal node > portal children are recursed and also get indices
+(pass) reflow — portal layout > portal node gets 0×0 layout dimensions
+(pass) reflow — portal layout > sibling nodes after a portal maintain correct positions
+(pass) reflow — portal layout > sibling before AND after portal both get correct layout
+(pass) Bug B — portal in flex row does not displace siblings > flex row with two normal children and a portal: normal children have y=0 and correct x
+(pass) Bug B — portal in flex row does not displace siblings > justifyContent:center with a portal child: non-portal siblings are centered correctly
+(pass) commitFull — portal children appended to targetElement > portal children are appended to targetElement, not the parent container
+(pass) commitFull — portal children appended to targetElement > two portals to two different targets each receive their own children
+(pass) commitFull — portal children appended to targetElement > portal with empty children adds nothing to targetElement
+(pass) commitFull — portal children appended to targetElement > two portals targeting the same element both append their children in render order
+(pass) commitFull — portal children appended to targetElement > portalRoots map is populated with portal index → targetElement
+(pass) app unmount — portal DOM cleanup > unmounting the app removes portal children from targetElement
+(pass) app unmount — portal DOM cleanup > unmounting removes portal DOM and does not affect root
+(pass) app shape change — portal DOM cleanup before re-render > shape change clears old portal DOM in targetElement before writing new content
+(pass) Bug A1 — portal cleanup does not nuke external DOM > unmounting with body-like target does not remove unrelated children from that target
+(pass) Bug A2 — portal direct children are CSS-managed (no Axiom layout positions) > portal direct children have 0×0 layout — CSS owns their positioning
+(pass) Bug A2 — portal direct children are CSS-managed (no Axiom layout positions) > portal direct children are appended to the target DOM without inline position styles
+(pass) Bug A3 — fullDiff insert ops for portal descendants carry portalTarget > fullDiff first-render path: insert ops for portal element children have portalTarget set
+(pass) portal reactivity — signal update inside portal > updating a signal inside a portal updates the DOM inside targetElement
+(pass) portal reactivity — signal update inside portal > signal update in portal does not affect root container content
+(pass) createPortal — cssManaged flag (issue #9) > createPortal without options has cssManaged undefined (default: CSS-managed)
+(pass) createPortal — cssManaged flag (issue #9) > createPortal with cssManaged:true stores the flag
+(pass) createPortal — cssManaged flag (issue #9) > createPortal with cssManaged:false stores the flag
+(pass) createPortal — cssManaged flag (issue #9) > existing API createPortal(children, target) still works (backward compat)
+(pass) prepare — getPortalCssManaged helper (issue #9) > default portal (no options) returns true from getPortalCssManaged
+(pass) prepare — getPortalCssManaged helper (issue #9) > cssManaged:true portal returns true from getPortalCssManaged
+(pass) prepare — getPortalCssManaged helper (issue #9) > cssManaged:false portal returns false from getPortalCssManaged
+(pass) reflow — cssManaged:false portal children participate in layout (issue #9) > cssManaged:false portal slot is still 0x0 in parent
+(pass) reflow — cssManaged:false portal children participate in layout (issue #9) > cssManaged:false portal children get computed layout dimensions
+(pass) reflow — cssManaged:false portal children participate in layout (issue #9) > default portal children keep 0x0 layout — CSS-managed unchanged
+(pass) reflow — cssManaged:false portal children participate in layout (issue #9) > nested cssManaged:false inside cssManaged:true remains CSS-managed by outer portal
+(pass) reflow — cssManaged:false portal children participate in layout (issue #9) > nested cssManaged:true inside cssManaged:false keeps inner portal children CSS-managed
+(pass) commitFull — cssManaged:false portal children get inline layout styles (issue #9) > cssManaged:false portal children have position:absolute and transform applied
+(pass) commitFull — cssManaged:false portal children get inline layout styles (issue #9) > default portal children (cssManaged:true) still have NO inline position styles
+
+tests\prepare.test.ts:
+(pass) prepare > prepares a text node
+(pass) prepare > prepares an element node preserving tag, classes, attrs
+(pass) prepare > prepares element with children recursively
+(pass) prepare > flattens fragment nodes
+(pass) prepare > calculates hasText metric for text nodes
+(pass) prepare > calculates hasText metric for element with text children
+(pass) prepare > calculates isInline metric
+(pass) prepare > calculates simpleLayout metric
+(pass) prepare > handles empty children
+(pass) prepare > handles component with no props
+(pass) prepare > handles deeply nested tree
+(pass) prepare > keeps index allocation isolated per prepare invocation (SSR-safe conceptual)
+
+tests\reflow.test.ts:
+(pass) createLayoutResult > allocates Float32Arrays of correct size
+(pass) createLayoutResult > allocates for deeply nested tree
+(pass) reflow — fast path > positions text child at origin
+(pass) reflow — fast path > calculates text height based on content
+(pass) reflow — fast path > wraps text when maxWidth is small
+(pass) reflow — fast path > stacks multiple children vertically
+(pass) reflow — fast path > parent height equals sum of children heights
+(pass) reflow — fast path > handles empty children
+(pass) reflow — flex layout > row layout positions children horizontally
+(pass) reflow — flex layout > row layout with gap
+(pass) reflow — flex layout > justifyContent: center in column
+(pass) reflow — flex layout > justifyContent: space-between
+(pass) reflow — flex layout > alignItems: center in row
+(pass) reflow — flex layout > padding reduces available space for children
+(pass) reflow — edge cases > empty tree returns zero dimensions
+(pass) reflow — edge cases > zero constraint bounds children to zero
+(pass) reflow — edge cases > no NaN values in result
+(pass) reflow — grid layout MVP > explicit placement básico ubica child en celda objetivo (1-based)
+(pass) reflow — grid layout MVP > mixed explicit + auto-placement respeta celdas ocupadas
+(pass) reflow — grid layout MVP > conflicto explícito es determinista: gana primero, resto va a auto-placement
+(pass) reflow — grid layout MVP > row-only placement busca primera columna libre en esa fila
+(pass) reflow — grid layout MVP > column-only placement busca primera fila libre en esa columna
+(pass) reflow — grid layout MVP > partial explicit coexiste con explícitos completos y auto-placement
+(pass) reflow — grid layout MVP > valores parciales inválidos hacen fallback a auto-placement normal
+(pass) reflow — grid layout MVP > auto-placement row-major en múltiples columnas
+(pass) reflow — grid layout MVP > aplica columnGap y rowGap
+(pass) reflow — grid layout MVP > usa gap como shorthand cuando rowGap/columnGap no están definidos
+(pass) reflow — grid layout MVP > explicit span across 2 columns reserva rectángulo y expande ancho efectivo
+(pass) reflow — grid layout MVP > span across 2 columns incluye columnGap cruzado en el ancho efectivo
+(pass) reflow — grid layout MVP > texto dentro de item spanned se mide usando el ancho spanned efectivo
+(pass) reflow — grid layout MVP > item spanned con width 100% propaga el ancho efectivo a un flex row anidado con gap
+(pass) reflow — grid layout MVP > padding de item spanned reduce el inner width desde el ancho spanned efectivo
+(pass) reflow — grid layout MVP > nested grid child dentro de item spanned mide sus columnas contra el ancho spanned efectivo
+(pass) reflow — grid layout MVP > siblings posteriores respetan celdas ocupadas y altura medida de item spanned anidado
+(pass) reflow — grid layout MVP > auto-placement con span ocupa múltiples columnas y busca siguiente rectángulo libre
+(pass) reflow — grid layout MVP > row-span reserva filas futuras y desplaza items posteriores
+(pass) reflow — grid layout MVP > span combinado reserva rectángulo completo para placements posteriores
+(pass) reflow — grid layout MVP > spans inválidos hacen fallback determinista a span=1 y auto-placement normal
+(pass) reflow — grid layout MVP > row-only + gridColumnSpan busca primer rectángulo que sí cabe dentro de la fila pedida
+(pass) reflow — grid layout MVP > gridColumn only + gridRowSpan busca primera fila donde el rectángulo completo cabe en esa columna
+(pass) reflow — grid layout MVP > partial fallback a auto-placement global conserva orden fuente frente a autos posteriores
+(pass) reflow — grid layout MVP > colisiones entre explícito completo, parcial y auto-placement mantienen regla determinista
+(pass) reflow — grid layout MVP > gridRowSpan + height 100% usa alto vertical efectivo del span cuando ya es determinable
+(pass) reflow — grid layout MVP > contenido anidado dentro de item row-spanned respeta altura vertical resuelta
+(pass) reflow — grid layout MVP > items posteriores a filas ocupadas por rowSpan mantienen y-offset consistente
+(pass) reflow — grid layout MVP > fallback determinista: si alto vertical efectivo del span no es determinable, 100% usa maxHeight disponible
+(pass) reflow — grid layout MVP > coexiste con nodos no-grid (flex/simple sigue funcionando)
+(pass) reflow — grid layout MVP > auto-placed row-spanned con height 100% normaliza altura en segundo pase cuando filas ya son determinables
+(pass) reflow — grid layout MVP > items posteriores preservan y-offset estable tras segundo pase de rowSpan auto-placed
+(pass) reflow — grid layout MVP > row-spanned explícito mantiene semántica previa (usa alto vertical efectivo determinable)
+(pass) reflow — grid layout MVP > no regresión: grid sin rowSpan conserva offsets y alturas previas
+(pass) reflow — grid layout MVP > auto-placed row-spanned con height 100% re-mide contenido anidado tras normalización vertical de segundo pase
+(pass) reflow — grid layout MVP > nested flex/grid dentro de auto-placed row-span se re-mide localmente sin alterar y-offset de sibling no afectado [16.00ms]
+(pass) reflow — grid layout MVP > comportamiento evidencia remeasure localizado único: no hay segundo reflow global ni deriva en items no afectados
+(pass) reflow — grid layout MVP > paridad: explicit gridRow + gridRowSpan + height 100% re-mide nested grid/flex con la misma altura final que auto-placed equivalente
+(pass) reflow — grid layout MVP > breakpoints dentro de nested row-spanned 100% no mueven siblings no afectados (explícito y auto)
+(pass) reflow — grid layout MVP > row-spanned normalizado que excede alturas provisionales reconcilia filas cubiertas para evitar contradicción interna
+(pass) reflow — grid layout MVP > reconciliación local conserva y-offset de siblings no afectados en casos canónicos
+(pass) reflow — grid layout MVP > items sin rowSpan mantienen su altura medida sin cambios bajo reconciliación local
+(pass) reflow — grid layout MVP > fallback determinista: si reconciliar implica churn amplio en filas posteriores, se omite reconciliación
+(pass) reflow — grid layout MVP > no-regresión: items sin rowSpan conservan comportamiento previo
+(pass) grid row-height reconciliation — rowGap y rowSpan sobre 3+ filas > rowSpan=3 con rowGap: effectiveSpanHeight incluye rowGap * (rowSpan - 1)
+(pass) grid row-height reconciliation — rowGap y rowSpan sobre 3+ filas > reconciliación aplica cuando placements posteriores están solo dentro de filas cubiertas (no debajo)
+(pass) grid row-height reconciliation — rowGap y rowSpan sobre 3+ filas > reconciliación omite cuando hay sibling estrictamente por debajo de filas cubiertas (rowSpan=3 con rowGap)
+(pass) grid row-height reconciliation — rowGap y rowSpan sobre 3+ filas > no-regresión: grid con rowGap sin rowSpan mantiene y-offsets correctos
+(pass) grid row-height reconciliation — múltiples spans normalizados sobre misma fila cubierta > dos items row-spanned auto-placed sobre mismas filas: déficit reconcilia, contenedor refleja el máximo
+(pass) grid row-height reconciliation — múltiples spans normalizados sobre misma fila cubierta > resultado determinista: el máximo gana independientemente del orden de fuente
+(pass) grid row-height reconciliation — múltiples spans normalizados sobre misma fila cubierta > hermano estrictamente debajo preserva y-offset estable cuando guardia anti-churn bloquea reconciliación
+(pass) grid row-height reconciliation — múltiples spans normalizados sobre misma fila cubierta > no regresión: items sin rowSpan no son afectados por la nueva lógica de reconciliación múltiple
+
+tests\responsive.test.ts:
+(pass) responsive resolver > resuelve width en porcentaje usando maxWidth del contenedor
+(pass) responsive resolver > resuelve unidades vw y vh usando viewport del constraints
+(pass) responsive resolver > aplica breakpoints en orden y usa el último match
+(pass) responsive resolver > incluye límites exactos en minWidth/maxWidth
+(pass) responsive resolver > aplica breakpoints por alto usando minHeight y maxHeight
+(pass) responsive resolver > resuelve dimensiones decimales y rechaza unidades inválidas
+(pass) reflow + responsive > reflow usa width responsive del nodo root
+(pass) reflow + responsive > reflow aplica breakpoint para sobrescribir width
+(pass) reflow + responsive > reflow aplica breakpoint por altura en el límite exacto
+
+tests\router.test.ts:
+(pass) router: scaffolding and core behavior (RED) > createRouter returns router shape with signal-like $route
+(pass) router: scaffolding and core behavior (RED) > matches static route /about and root /
+(pass) router: scaffolding and core behavior (RED) > extracts dynamic params for one and multiple segments
+(pass) router: scaffolding and core behavior (RED) > decodes URL-encoded dynamic params
+(pass) router: scaffolding and core behavior (RED) > malformed encoded path segment does not throw
+(pass) router: scaffolding and core behavior (RED) > prefers static route over dynamic when both match
+(pass) router: scaffolding and core behavior (RED) > parses query params and returns empty query when missing
+(pass) router: scaffolding and core behavior (RED) > tolerates malformed query encoding and keeps router alive
+(pass) router: scaffolding and core behavior (RED) > supports flag-like query params without equals sign
+(pass) router: scaffolding and core behavior (RED) > parses hash and uses empty hash fallback
+(pass) router: scaffolding and core behavior (RED) > supports wildcard catch-all and only uses it as last resort
+(pass) router: scaffolding and core behavior (RED) > RouteState has consistent shape and initializes from location
+(pass) router: navigation + signals (RED) > push updates signal and calls history.pushState
+(pass) router: navigation + signals (RED) > push is signal-first: effect sees new route before pushState side-effect ordering [16.00ms]
+(pass) router: navigation + signals (RED) > replace updates signal, calls replaceState, and not pushState
+(pass) router: navigation + signals (RED) > go(n) delegates to history.go and go(0) is no-op
+(pass) router: navigation + signals (RED) > popstate sync updates route and supports back sequence simulation
+(pass) router: navigation + signals (RED) > signal integration: read outside effect is safe, inside effect reacts
+(pass) router: app + async integration (RED) > createApp works without router and accepts router option
+(pass) router: app + async integration (RED) > defineAsyncComponent returns ComponentDefinition and renders empty while pending
+(pass) router: app + async integration (RED) > async resolve renders real component after microtask and loader called once [15.00ms]
+(pass) router: app + async integration (RED) > async loader rejection is silent fail (no throw, still empty)
+(pass) router: app + async integration (RED) > async route component renders through router+app after loader resolves [16.00ms]
+(pass) router: edge cases (RED) > createRouter([]) does not throw and unmatched path sets matched null
+(pass) router: edge cases (RED) > trailing slash normalization: /about/ resolves to /about
+(pass) router: edge cases (RED) > SSR-safe: createRouter no depende de window en servidor
+
+tests\scheduler.test.ts:
+(pass) scheduler > executes callback via injectable scheduler
+(pass) scheduler > batches multiple calls into one execution
+(pass) scheduler > cancelScheduled clears pending render
+(pass) scheduler > last write wins for batched callbacks
+
+tests\signals.test.ts:
+(pass) signal > creates a signal with initial value
+(pass) signal > creates a signal with string value
+(pass) signal > stores kind metadata
+(pass) signal > setter updates value
+(pass) signal > same value set does not notify subscribers
+(pass) signal > NaN set does not notify subscribers (Object.is semantics)
+(pass) effect > executes immediately on creation
+(pass) effect > re-executes when dependency changes
+(pass) effect > tracks multiple dependencies
+(pass) effect > returns cleanup function
+(pass) effect > nested effects track independently
+(pass) effect > protects against infinite loops
+(pass) computed > evaluates on first read
+(pass) computed > caches result when deps unchanged
+(pass) computed > invalidates when dependency changes
+(pass) computed > nested computeds invalidate in chain
+(pass) computed > computed with no deps caches permanently
+
+tests\ssr.test.ts:
+(pass) SSR: renderToString > genera HTML base válido
+(pass) SSR: renderToString > serializa texto y atributos con escape seguro
+(pass) SSR: renderToString > preserva estructura, attrs y classes, e incluye estilos de layout inline
+(pass) SSR: renderToString > portal y fragment se serializan inline en v0.2.6
+(pass) SSR: renderToString > inyecta metadata en head
+(pass) SSR: renderToString > policy router/url: acepta options.url sin tocar window en SSR
+(pass) SSR: export público > renderToString está expuesto desde entrypoint público
+
+tests\style.test.ts:
+(pass) validateStyleProps > accepts safe style keys
+(pass) validateStyleProps > rejects unknown CSS properties that bypass whitelist [16.00ms]
+(pass) validateStyleProps > allows all SAFE_STYLE_KEYS without throwing
+(pass) validateStyleProps > rejects empty string values
+(pass) validateStyleProps > allows numeric values coerced to string for compatible props
+(pass) createTheme > creates a theme from tokens
+(pass) createTheme > resolves token reference $color.primary
+(pass) createTheme > resolves nested token reference $typography.size.md
+(pass) createTheme > returns unknown tokens unchanged (passthrough)
+(pass) createTheme > throws when token reference path not found
+(pass) resolveStyleTokens > resolves token refs in style props
+(pass) resolveStyleTokens > passes through non-token literal values
+(pass) resolveStyleTokens > returns a new object, does not mutate input
+(pass) applyStyleToElement > applies safe style props to an element
+(pass) applyStyleToElement > overwrites previous inline styles for the same key
+(pass) applyStyleToElement > does NOT remove existing styles for keys not in the new props
+(pass) applyStyleToElement > handles empty SafeStyleProps gracefully
+(pass) applyStyleToElement > applies resolved token values correctly
+(pass) Style integration — ElementNode to commit > style: {} on type check — ElementNode accepts SafeStyleProps
+
+pretext-main\src\layout.test.ts:
+(pass) prepare invariants > whitespace-only input stays empty
+(pass) prepare invariants > collapses ordinary whitespace runs and trims the edges [15.00ms]
+(pass) prepare invariants > pre-wrap mode keeps ordinary spaces instead of collapsing them
+(pass) prepare invariants > pre-wrap mode keeps hard breaks as explicit segments
+(pass) prepare invariants > pre-wrap mode normalizes CRLF into a single hard break
+(pass) prepare invariants > pre-wrap mode keeps tabs as explicit segments
+(pass) prepare invariants > keeps non-breaking spaces as glue instead of collapsing them away
+(pass) prepare invariants > keeps standalone non-breaking spaces as visible glue content
+(pass) prepare invariants > pre-wrap mode keeps whitespace-only input visible
+(pass) prepare invariants > keeps narrow no-break spaces as glue content
+(pass) prepare invariants > keeps word joiners as glue content
+(pass) prepare invariants > treats zero-width spaces as explicit break opportunities
+(pass) prepare invariants > treats soft hyphens as discretionary break points
+(pass) prepare invariants > keeps closing punctuation attached to the preceding word
+(pass) prepare invariants > keeps arabic punctuation attached to the preceding word
+(pass) prepare invariants > keeps arabic punctuation-plus-mark clusters attached to the preceding word
+(pass) prepare invariants > keeps arabic no-space punctuation clusters together
+(pass) prepare invariants > keeps arabic comma-followed text together without a space
+(pass) prepare invariants > keeps leading arabic combining marks with the following word
+(pass) prepare invariants > keeps devanagari danda punctuation attached to the preceding word
+(pass) prepare invariants > keeps myanmar punctuation attached to the preceding word
+(pass) prepare invariants > keeps myanmar possessive marker attached to the following word
+(pass) prepare invariants > keeps opening quotes attached to the following word
+(pass) prepare invariants > keeps apostrophe-led elisions attached to the following word
+(pass) prepare invariants > keeps stacked opening quotes attached to the following word
+(pass) prepare invariants > treats ascii quotes as opening and closing glue by context
+(pass) prepare invariants > treats escaped ascii quote clusters as opening and closing glue by context
+(pass) prepare invariants > keeps URL-like runs together as one breakable segment
+(pass) prepare invariants > keeps no-space ascii punctuation chains together as one breakable segment
+(pass) prepare invariants > keeps numeric time ranges together
+(pass) prepare invariants > splits hyphenated numeric identifiers at preferred boundaries
+(pass) prepare invariants > keeps unicode-digit numeric expressions together
+(pass) prepare invariants > does not attach opening punctuation to following whitespace
+(pass) prepare invariants > keeps japanese iteration marks attached to the preceding kana
+(pass) prepare invariants > carries trailing cjk opening punctuation forward across segment boundaries
+(pass) prepare invariants > keeps em dashes breakable
+(pass) prepare invariants > coalesces repeated punctuation runs into a single segment
+(pass) prepare invariants > applies CJK and Hangul punctuation attachment rules
+(pass) prepare invariants > adjacent CJK text units stay breakable after visible text, not only after spaces
+(pass) prepare invariants > treats astral CJK ideographs as CJK break units
+(pass) prepare invariants > prepare and prepareWithSegments agree on layout behavior
+(pass) prepare invariants > locale can be reset without disturbing later prepares
+(pass) layout invariants > line count grows monotonically as width shrinks
+(pass) layout invariants > trailing whitespace hangs past the line edge
+(pass) layout invariants > breaks long words at grapheme boundaries and keeps both layout APIs aligned
+(pass) layout invariants > mixed-direction text is a stable smoke test
+(pass) layout invariants > layoutNextLine reproduces layoutWithLines exactly
+(pass) layout invariants > rich line boundary cursors reconstruct normalized source text exactly [16.00ms]
+(pass) layout invariants > soft-hyphen round-trip uses source slices instead of rendered line text
+(pass) layout invariants > pre-wrap mode keeps hanging spaces visible at line end
+(pass) layout invariants > pre-wrap mode treats hard breaks as forced line boundaries
+(pass) layout invariants > pre-wrap mode treats tabs as hanging whitespace aligned to tab stops
+(pass) layout invariants > pre-wrap mode treats consecutive tabs as distinct tab stops
+(pass) layout invariants > pre-wrap mode keeps whitespace-only middle lines visible
+(pass) layout invariants > pre-wrap mode keeps trailing spaces before a hard break on the current line
+(pass) layout invariants > pre-wrap mode keeps trailing tabs before a hard break on the current line
+(pass) layout invariants > pre-wrap mode restarts tab stops after a hard break
+(pass) layout invariants > layoutNextLine stays aligned with layoutWithLines in pre-wrap mode
+(pass) layout invariants > pre-wrap mode keeps empty lines from consecutive hard breaks
+(pass) layout invariants > pre-wrap mode does not invent an extra trailing empty line
+(pass) layout invariants > overlong breakable segments wrap onto a fresh line when the current line already has content
+(pass) layout invariants > walkLineRanges reproduces layoutWithLines geometry without materializing text
+(pass) layout invariants > countPreparedLines stays aligned with the walked line counter
+
+2 tests skipped:
+(skip) bind — textarea and select > bind works with select: signal→DOM (skipped: happy-dom select.value limitation)
+(skip) bind — textarea and select > bind works with select: DOM→signal (skipped: happy-dom select.value limitation)
+
+ 466 pass
+ 2 skip
+ 0 fail
+ 5274 expect() calls
+Ran 468 tests across 22 files. [1311.00ms]

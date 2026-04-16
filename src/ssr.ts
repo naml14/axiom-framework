@@ -12,6 +12,7 @@ import {
   getNodeIndex,
 } from './render/prepare.js'
 import { reflow } from './render/reflow.js'
+import { sanitizeAttrs, isValidAttrName } from './core/attrs.js'
 
 export interface SSRMetadata {
   title?: string
@@ -52,9 +53,6 @@ const VOID_ELEMENTS = new Set([
 
 // Nombre de tag HTML/custom-element válido (e.g. "div", "my-component").
 const VALID_TAG_RE = /^[a-zA-Z][a-zA-Z0-9]*(-[a-zA-Z0-9]+)*$/
-
-// Nombre de atributo HTML válido (e.g. "data-role", "aria-label").
-const VALID_ATTR_RE = /^[A-Za-z_][\w:.-]*$/
 
 function sanitizeTagName(tag: string): string {
   return VALID_TAG_RE.test(tag) ? tag : 'div'
@@ -142,14 +140,15 @@ function renderNode(
     attrPairs.push(['style', attrs.style])
   }
 
-  if (attrs !== undefined) {
-    const keys = Object.keys(attrs).sort()
+  // Sanitize attributes: block event handlers, validate URL schemes, validate names
+  const sanitized = sanitizeAttrs(attrs)
+  if (sanitized !== undefined) {
+    const keys = Object.keys(sanitized).sort()
     for (const key of keys) {
       if (key === 'class' || key === 'style') continue
-      if (key.startsWith('on')) continue
-      // Validar nombre de atributo para prevenir inyección de markup.
-      if (!VALID_ATTR_RE.test(key)) continue
-      attrPairs.push([key, attrs[key]!])
+      // sanitizeAttrs already validates names, but double-check for safety
+      if (!isValidAttrName(key)) continue
+      attrPairs.push([key, sanitized[key]!])
     }
   }
 

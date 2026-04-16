@@ -31,6 +31,9 @@ import {
 // functional refactoring (strategy pattern or callback injection).
 import { applyStyleToElement } from '../features/style.js'
 
+// Security: attribute sanitization for XSS prevention
+import { sanitizeAttrs } from '../core/attrs.js'
+
 // ============================================================
 // Public API
 // ============================================================
@@ -485,8 +488,8 @@ function buildDOMTree(
     el.className = classes.join(' ')
   }
 
-  // Apply attributes
-  const attrs = getAttrs(prepared)
+  // Apply attributes (sanitized for security)
+  const attrs = sanitizeAttrs(getAttrs(prepared))
   if (attrs !== undefined) {
     for (const [key, value] of Object.entries(attrs)) {
       el.setAttribute(key, value)
@@ -538,8 +541,10 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
     el.className = op.classes.join(' ')
   }
 
-  if (op.attrs !== undefined) {
-    for (const [key, value] of Object.entries(op.attrs)) {
+  // Apply attributes (sanitized for security)
+  const attrs = sanitizeAttrs(op.attrs)
+  if (attrs !== undefined) {
+    for (const [key, value] of Object.entries(attrs)) {
       el.setAttribute(key, value)
     }
   }
