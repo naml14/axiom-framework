@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.0](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.10...axiom-framework-v0.9.0) (2026-04-16)
+
+
+### Features
+
+* **api:** add v1 stability contract validation ([332cd89](https://github.com/naml14/axiom-framework/commit/332cd8958589fc4933c91bedb893d7058b55bd65)), closes [#34](https://github.com/naml14/axiom-framework/issues/34)
+* **app:** integrate plugin lifecycle runtime hooks ([e2b067c](https://github.com/naml14/axiom-framework/commit/e2b067c5adccaf373ed536e862b01b189d6d314b)), closes [#32](https://github.com/naml14/axiom-framework/issues/32)
+* **router:** make router SSR-safe ([b466c13](https://github.com/naml14/axiom-framework/commit/b466c13fc183424d86b1790d87009c3ee9da160a)), closes [#33](https://github.com/naml14/axiom-framework/issues/33)
+* **security:** harden attribute validation for CSR/SSR ([a887270](https://github.com/naml14/axiom-framework/commit/a88727006117960acfdcf7c2c3424deed6ef70d1)), closes [#36](https://github.com/naml14/axiom-framework/issues/36)
+
+
+### Bug Fixes
+
+* **codeql:** remove unused path import ([b6ab23f](https://github.com/naml14/axiom-framework/commit/b6ab23fc7e50b4f54ba3ff6d49e4be066fcd93e3)), closes [#41](https://github.com/naml14/axiom-framework/issues/41)
+* **docs:** correct table formatting in API stability contract ([747a08e](https://github.com/naml14/axiom-framework/commit/747a08e03e0b9bed5e5688190affb070e886ee53))
+* **hydration:** harden attrs sanitization and align docs ([00f4a2f](https://github.com/naml14/axiom-framework/commit/00f4a2fb2e5bcb9ed7a4c441c9f20ec8e6e510a4)), closes [#39](https://github.com/naml14/axiom-framework/issues/39)
+* **prepare:** isolate index state per invocation ([cb14cac](https://github.com/naml14/axiom-framework/commit/cb14cac9ca71413dabf040ce0795c5185b42dbca)), closes [#31](https://github.com/naml14/axiom-framework/issues/31)
+* **review:** address codeql and gemini feedback ([df2c04e](https://github.com/naml14/axiom-framework/commit/df2c04ecd25100dab5b88416ce3d9dc46deaddf6)), closes [#41](https://github.com/naml14/axiom-framework/issues/41)
+* **review:** address critical path and API issues in validate-api-stability.ts ([67bddf8](https://github.com/naml14/axiom-framework/commit/67bddf8f132e3a8fc23d29fef4ec8935da3a679b))
+* **review:** address new sourcery-ai round-2 comments ([70033bb](https://github.com/naml14/axiom-framework/commit/70033bb9c20cfa923a0f9a06abdb0b5706169ebb)), closes [#41](https://github.com/naml14/axiom-framework/issues/41)
+* **review:** finalize stability script and security wording ([ea11a23](https://github.com/naml14/axiom-framework/commit/ea11a23602d916ed3f20c951be12dc653abb7ef3)), closes [#41](https://github.com/naml14/axiom-framework/issues/41)
+* **scheduler:** make setScheduler functional with global scheduler state ([5869a39](https://github.com/naml14/axiom-framework/commit/5869a3911426aaf85157fe46038dd78b49c7f547)), closes [#37](https://github.com/naml14/axiom-framework/issues/37)
+* **scripts:** update import paths to use node: prefix ([747a08e](https://github.com/naml14/axiom-framework/commit/747a08e03e0b9bed5e5688190affb070e886ee53))
+* **tsconfig:** include scripts directory in TypeScript compilation ([747a08e](https://github.com/naml14/axiom-framework/commit/747a08e03e0b9bed5e5688190affb070e886ee53))
+
+
+### Performance Improvements
+
+* **diff:** optimize index lookups in fullDiff ([3a3b7fa](https://github.com/naml14/axiom-framework/commit/3a3b7faba5e4b8ba7cbe3b39a2b8dc0dbf6616ea)), closes [#40](https://github.com/naml14/axiom-framework/issues/40)
+
+
+### Miscellaneous Chores
+
+* **release:** prepare 0.9.0 stabilization ([b87ccc2](https://github.com/naml14/axiom-framework/commit/b87ccc25e0558423d0b38577f80e9e4d9c0e4ba8))
+
 ## [0.2.10](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.9...axiom-framework-v0.2.10) (2026-04-15)
 
 
