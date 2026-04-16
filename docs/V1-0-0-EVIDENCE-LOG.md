@@ -36,6 +36,22 @@ Plantilla:
 
 ## Entradas
 
+### 2026-04-15 — Implementación P1: Hydration attrs hardening XSS residual
+
+- Issue: #39
+- PR: TBD (rama local `feat/v1-0-0-kickoff`)
+- Verificación:
+  - [x] `bun test tests/commit.test.ts`
+  - [x] `bun test tests/ssr.test.ts`
+  - [x] Revisión de `SECURITY.md`
+- Evidencia:
+  - tests: `commitHydrate: security hardening` (remove `on*`, neutralize `javascript:` a `#blocked`, preservación de attrs seguros) y `SSR: attrs security policy`
+  - archivos: `src/render/commit.ts`, `tests/commit.test.ts`, `tests/ssr.test.ts`, `SECURITY.md`, `docs/V1-0-0-EVIDENCE-LOG.md`, `docs/V1-0-0-PLAN-TRAZABILIDAD.md`
+  - comportamiento validado: hidratación sanea attrs peligrosos preexistentes del DOM reutilizado y mantiene coherencia de política con SSR.
+- Resultado: PASS
+- Notas/Riesgos:
+  - Endurecimiento deliberado sobre DOM inseguro preexistente; no se introduce reconciliación completa de attrs benignos en hidratación.
+
 ### 2026-04-15 — Implementación P1: Coverage gate en CI
 
 - Issue: #38
