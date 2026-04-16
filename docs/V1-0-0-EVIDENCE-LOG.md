@@ -36,6 +36,23 @@ Plantilla:
 
 ## Entradas
 
+### 2026-04-15 — Implementación P0: API stability contract v1.0.0
+
+- Issue: #34
+- PR: TBD (rama local `feat/v1-0-0-kickoff`)
+- Verificación:
+  - [x] `bun run validate:api`
+  - [x] `bun test tests/app.test.ts`
+  - [x] Documento de contrato API generado y versionado
+- Evidencia:
+  - checks: `validate:api` (95 stable / 0 beta / 0 experimental / 0 untagged)
+  - tests: `app.test.ts` (29 passed / 0 failed)
+  - archivos: `scripts/validate-api-stability.ts`, `docs/STABILITY.md`, `src/index.ts`, `src/testing.ts`, `package.json`, `.gitignore`
+  - comportamiento validado: superficie pública de API con contrato explícito v1.0.0 y validación automatizable.
+- Resultado: PASS
+- Notas/Riesgos:
+  - Política kickoff: export público no etiquetado se considera `stable` en v1.0.0; en fase posterior conviene migrar a tags explícitos por export.
+
 ### 2026-04-15 — Implementación P0: Plugin lifecycle runtime
 
 - Issue: #32
