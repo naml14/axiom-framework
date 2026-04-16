@@ -12,7 +12,7 @@ For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 ## Stable APIs (95)
 
 | Export | Module | Since |
-| -------- | -------- | ------- |
+| ------ | ------ | ----- |
 | signal | ./reactivity/signals | v1.0.0 |
 | computed | ./reactivity/signals | v1.0.0 |
 | effect | ./reactivity/signals | v1.0.0 |
@@ -105,21 +105,21 @@ For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 | LayoutProps | ./core/types | v1.0.0 |
 | ProfileEvent | ./core/types | v1.0.0 |
 | ProfileSubscriber | ./core/types | v1.0.0 |
-| RenderResult | D:\trabajo\Axiom\src\testing.ts | v1.0.0 |
-| render | D:\trabajo\Axiom\src\testing.ts | v1.0.0 |
-| fireEvent | D:\trabajo\Axiom\src\testing.ts | v1.0.0 |
+| RenderResult | ./testing.ts | v1.0.0 |
+| render | ./testing.ts | v1.0.0 |
+| fireEvent | ./testing.ts | v1.0.0 |
 
 ## Beta APIs (0)
 
 | Export | Module | Since |
-|--------|--------|-------|
-| (none) | ------ | ----- |
+| ------ | ------ | ----- |
+| (none) | - | - |
 
 ## Experimental APIs (0)
 
 | Export | Module |
-|--------|--------|
-| (none) | ------ |
+| ------ | ------ |
+| (none) | - |
 
 ## Enforcement
 

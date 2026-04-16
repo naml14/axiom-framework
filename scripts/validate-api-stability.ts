@@ -21,7 +21,7 @@
  */
 
 import { Project, Node, type ExportDeclaration } from 'ts-morph'
-import { resolve } from 'node:path'
+import { resolve, normalize, relative, basename } from 'node:path'
 import { writeFileSync } from 'node:fs'
 
 // ============================================================
@@ -102,7 +102,21 @@ Exit codes:
 // Validation Logic
 // ============================================================
 
-const STABILITY_TAGS: StabilityTier[] = ['stable', 'beta', 'experimental', 'internal', 'deprecated']
+const STABILITY_TAGS: StabilityTier[] = ['stable', 'beta', 'experimental', 'internal']
+
+/**
+ * Helper to detect if a file path is a public entry point (src/index.ts or src/testing.ts).
+ * Cross-platform compatible (works on Windows, Linux, macOS).
+ */
+function isPublicEntry(filePath: string): boolean {
+  // Normalize to forward slashes and check against both basename and relative path
+  const normalized = normalize(filePath).replace(/\\/g, '/')
+  return (
+    normalized.endsWith('src/index.ts') ||
+    normalized.endsWith('src/testing.ts') ||
+    basename(filePath) === 'index.ts' && normalized.includes('/src/')
+  )
+}
 
 function extractStabilityTag(jsDoc: string | undefined): {
   stability?: StabilityTier
@@ -154,7 +168,7 @@ function getExportsFromFile(project: Project, filePath: string): ExportInfo[] {
       let { stability, hasMultiple, since, deprecated, deprecationMessage } = extractStabilityTag(jsDoc)
 
       // v1.0 contract: public surface defaults to stable unless explicitly tagged.
-      if (!stability && (filePath.endsWith('src\\index.ts') || filePath.endsWith('src\\testing.ts'))) {
+      if (!stability && isPublicEntry(filePath)) {
         stability = 'stable'
         since = API_CONTRACT_VERSION
       }
@@ -172,35 +186,34 @@ function getExportsFromFile(project: Project, filePath: string): ExportInfo[] {
       })
     })
 
-    // Handle export * from './module'
-    if (exportDecl.isNamespaceExport()) {
-      const namespaceExport = exportDecl.getNamespaceExport()
-      if (namespaceExport) {
-        const name = namespaceExport.getName()
-        const jsDoc = exportDecl.getLeadingCommentRanges()
-          .map(range => sourceFile.getFullText().substring(range.getPos(), range.getEnd()))
-          .join('\n')
+    // Handle export * as ns from './module'
+    // Only try to get namespace export if it exists
+    const namespaceExport = exportDecl.getNamespaceExport?.()
+    if (namespaceExport) {
+      const name = namespaceExport.getName()
+      const jsDoc = exportDecl.getLeadingCommentRanges()
+        .map(range => sourceFile.getFullText().substring(range.getPos(), range.getEnd()))
+        .join('\n')
 
-        let { stability, hasMultiple, since, deprecated, deprecationMessage } = extractStabilityTag(jsDoc)
+      let { stability, hasMultiple, since, deprecated, deprecationMessage } = extractStabilityTag(jsDoc)
 
-        // v1.0 contract: public surface defaults to stable unless explicitly tagged.
-        if (!stability && (filePath.endsWith('src\\index.ts') || filePath.endsWith('src\\testing.ts'))) {
-          stability = 'stable'
-          since = API_CONTRACT_VERSION
-        }
-
-        exports.push({
-          name,
-          filePath,
-          line: exportDecl.getStartLineNumber(),
-          stability,
-          since,
-          deprecated,
-          deprecationMessage,
-          hasMultipleTags: hasMultiple,
-          sourceFile: moduleSpecifier,
-        })
+      // v1.0 contract: public surface defaults to stable unless explicitly tagged.
+      if (!stability && isPublicEntry(filePath)) {
+        stability = 'stable'
+        since = API_CONTRACT_VERSION
       }
+
+      exports.push({
+        name,
+        filePath,
+        line: exportDecl.getStartLineNumber(),
+        stability,
+        since,
+        deprecated,
+        deprecationMessage,
+        hasMultipleTags: hasMultiple,
+        sourceFile: moduleSpecifier,
+      })
     }
   })
 
@@ -235,7 +248,7 @@ function getExportsFromFile(project: Project, filePath: string): ExportInfo[] {
         let { stability, hasMultiple, since, deprecated, deprecationMessage } = extractStabilityTag(jsDoc)
 
         // v1.0 contract: public surface defaults to stable unless explicitly tagged.
-        if (!stability && (filePath.endsWith('src\\index.ts') || filePath.endsWith('src\\testing.ts'))) {
+        if (!stability && isPublicEntry(filePath)) {
           stability = 'stable'
           since = API_CONTRACT_VERSION
         }
@@ -407,14 +420,42 @@ function generateStabilityDoc(report: ValidationReport) {
   const beta = report.exports.filter(e => e.stability === 'beta')
   const experimental = report.exports.filter(e => e.stability === 'experimental')
 
+  // Helper to normalize sourceFile to repo-relative POSIX paths
+  const normalizePath = (sourcePath: string): string => {
+    let normalized = normalize(sourcePath).replace(/\\/g, '/')
+    // Remove .js extension if present
+    if (normalized.endsWith('.js')) {
+      normalized = normalized.slice(0, -3)
+    }
+    
+    // Extract module specifier from /src/ paths
+    if (normalized.includes('/src/')) {
+      const match = normalized.match(/\/src\/(.*?)$/)
+      if (match) {
+        const module = match[1]
+        return module.startsWith('.') ? module : `./${module}`
+      }
+    }
+    // If already has ./ prefix, keep it
+    if (normalized.startsWith('./')) {
+      return normalized
+    }
+    // Otherwise add ./ if it looks like a relative path (no drive letter or absolute path)
+    if (!normalized.includes(':') && !normalized.startsWith('/')) {
+      return `./${normalized}`
+    }
+    // Fallback
+    return normalized
+  }
+
   const stableRows = stable
-    .map(e => `| ${e.name} | ${e.sourceFile.replace('./src/', '').replace('.js', '')} | v${e.since || API_CONTRACT_VERSION} |`)
+    .map(e => `| ${e.name} | ${normalizePath(e.sourceFile)} | v${e.since || API_CONTRACT_VERSION} |`)
     .join('\n')
   const betaRows = beta
-    .map(e => `| ${e.name} | ${e.sourceFile.replace('./src/', '').replace('.js', '')} | v${e.since || API_CONTRACT_VERSION} |`)
+    .map(e => `| ${e.name} | ${normalizePath(e.sourceFile)} | v${e.since || API_CONTRACT_VERSION} |`)
     .join('\n')
   const experimentalRows = experimental
-    .map(e => `| ${e.name} | ${e.sourceFile.replace('./src/', '').replace('.js', '')} |`)
+    .map(e => `| ${e.name} | ${normalizePath(e.sourceFile)} |`)
     .join('\n')
 
   const content = `# API Stability Contract
