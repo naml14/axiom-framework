@@ -293,6 +293,41 @@ describe('fullDiff', () => {
     }
   })
 
+  test('same-shape fast path no duplica update cuando layout y texto cambian en el mismo índice', () => {
+    const compA = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'A' }],
+    }))
+
+    const compB = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'B' }],
+    }))
+
+    const prevPrepared = prepare(compA, undefined, { textEngine: fakeTextEngine })
+    const newPrepared = prepare(compB, undefined, { textEngine: fakeTextEngine })
+    const prevLayout = createLayoutResult(prevPrepared)
+    const newLayout = createLayoutResult(newPrepared)
+
+    // Mismo índice (1) tiene cambio de layout + texto
+    newLayout.x[1] = 42
+
+    const domNodes: (HTMLElement | Text | null)[] = [
+      document.createElement('div'),
+      document.createTextNode('A'),
+    ]
+
+    const ops = fullDiff(prevPrepared, prevLayout, newPrepared, newLayout, domNodes)
+    const updatesTextNode = ops.filter((op) => op.type === 'update' && op.index === 1)
+
+    expect(updatesTextNode.length).toBe(1)
+    if (updatesTextNode[0]?.type === 'update') {
+      expect(updatesTextNode[0].newTextContent).toBe('B')
+    }
+  })
+
   test('same-shape fast path marca eliminación de style (newStyle undefined)', () => {
     const compA = defineComponent(() => ({
       type: 'element' as const,

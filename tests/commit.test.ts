@@ -1,9 +1,10 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
 import { Window } from 'happy-dom'
-import { applyOps, commitFull, type DOMOperation } from '../src/render/commit.js'
+import { applyOps, commitFull, commitHydrate, type DOMOperation } from '../src/render/commit.js'
 import { defineComponent } from '../src/render/component.js'
 import { prepare } from '../src/render/prepare.js'
 import { reflow } from '../src/render/reflow.js'
+import { renderToString } from '../src/ssr.js'
 
 // Setup happy-dom
 beforeAll(() => {
@@ -232,5 +233,101 @@ describe('commitFull', () => {
     // overflow is NOT set to hidden — the framework measures and sets explicit
     // heights on containers, but the root must let content be visible.
     expect(root.style.overflow).toBe('')
+  })
+})
+
+describe('commitHydrate: security hardening', () => {
+  test('hydration removes pre-existing onclick attr from DOM element', () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'button',
+      attrs: {
+        title: 'safe',
+      },
+      children: [{ type: 'text' as const, content: 'Tap' }],
+    }))
+
+    const html = renderToString(App, { textEngine: fakeTextEngine })
+    const win = new Window()
+    globalThis.window = win as unknown as typeof globalThis.window
+    globalThis.document = win.document as unknown as Document
+    globalThis.HTMLElement = win.HTMLElement as unknown as typeof HTMLElement
+    globalThis.Text = win.Text as unknown as typeof Text
+    win.document.write(html)
+
+    const root = document.getElementById('app') as HTMLElement
+    const button = root.firstElementChild as HTMLElement
+    button.setAttribute('onclick', 'alert(1)')
+
+    const prepared = prepare(App, undefined, { textEngine: fakeTextEngine })
+    const layout = reflow(prepared, { maxWidth: 500, maxHeight: 500 }, { lineHeight: 20 })
+    const state = { domNodes: [] as Array<HTMLElement | Text | null>, portalRoots: new Map() }
+
+    commitHydrate(layout, prepared, root, state, { strictMismatch: true })
+
+    expect(button.getAttribute('onclick')).toBeNull()
+  })
+
+  test('hydration neutralizes javascript: URL scheme to #blocked', () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'a',
+      attrs: {
+        href: 'javascript:alert(1)',
+      },
+      children: [{ type: 'text' as const, content: 'Link' }],
+    }))
+
+    const html = renderToString(App, { textEngine: fakeTextEngine })
+    const win = new Window()
+    globalThis.window = win as unknown as typeof globalThis.window
+    globalThis.document = win.document as unknown as Document
+    globalThis.HTMLElement = win.HTMLElement as unknown as typeof HTMLElement
+    globalThis.Text = win.Text as unknown as typeof Text
+    win.document.write(html)
+
+    const root = document.getElementById('app') as HTMLElement
+    const link = root.firstElementChild as HTMLElement
+    link.setAttribute('href', 'javascript:alert(1)')
+
+    const prepared = prepare(App, undefined, { textEngine: fakeTextEngine })
+    const layout = reflow(prepared, { maxWidth: 500, maxHeight: 500 }, { lineHeight: 20 })
+    const state = { domNodes: [] as Array<HTMLElement | Text | null>, portalRoots: new Map() }
+
+    commitHydrate(layout, prepared, root, state, { strictMismatch: true })
+
+    expect(link.getAttribute('href')).toBe('#blocked')
+  })
+
+  test('safe attrs are preserved during hydration', () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      attrs: {
+        title: 'safe title',
+      },
+      children: [{ type: 'text' as const, content: 'Content' }],
+    }))
+
+    const html = renderToString(App, { textEngine: fakeTextEngine })
+    const win = new Window()
+    globalThis.window = win as unknown as typeof globalThis.window
+    globalThis.document = win.document as unknown as Document
+    globalThis.HTMLElement = win.HTMLElement as unknown as typeof HTMLElement
+    globalThis.Text = win.Text as unknown as typeof Text
+    win.document.write(html)
+
+    const root = document.getElementById('app') as HTMLElement
+    const div = root.firstElementChild as HTMLElement
+    div.setAttribute('data-legacy', '1')
+
+    const prepared = prepare(App, undefined, { textEngine: fakeTextEngine })
+    const layout = reflow(prepared, { maxWidth: 500, maxHeight: 500 }, { lineHeight: 20 })
+    const state = { domNodes: [] as Array<HTMLElement | Text | null>, portalRoots: new Map() }
+
+    commitHydrate(layout, prepared, root, state, { strictMismatch: true })
+
+    expect(div.getAttribute('title')).toBe('safe title')
+    expect(div.getAttribute('data-legacy')).toBe('1')
   })
 })

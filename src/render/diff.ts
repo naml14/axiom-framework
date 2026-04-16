@@ -152,29 +152,39 @@ export function fullDiff(
 
   // Same nodeCount — value change only, use fastDiff + text check
   if (prevLayout !== null && prevLayout.nodeCount === newLayout.nodeCount) {
+    const prevByIndex = buildIndexMap(prevPrepared)
+    const newByIndex = buildIndexMap(newPrepared)
+
     const changed = fastDiff(prevLayout, newLayout)
+    const changedSet = new Set<number>(changed)
+    const markChanged = (idx: number): void => {
+      if (!changedSet.has(idx)) {
+        changedSet.add(idx)
+        changed.push(idx)
+      }
+    }
 
     // Also check for text content changes
     forEachNode(newPrepared, (node) => {
       const idx = getNodeIndex(node)
       if (getNodeType(node) === 'text') {
-        const oldNode = findNodeByIndex(prevPrepared, idx)
+        const oldNode = prevByIndex.get(idx)
         const newText = getTextContent(node)
         const oldText = oldNode ? getTextContent(oldNode) : undefined
-        if (newText !== oldText && !changed.includes(idx)) {
-          changed.push(idx)
+        if (newText !== oldText) {
+          markChanged(idx)
         }
       } else if (getNodeType(node) === 'element') {
-        const oldNode = findNodeByIndex(prevPrepared, idx)
+        const oldNode = prevByIndex.get(idx)
         const newOn = getOn(node)
         const oldOn = oldNode ? getOn(oldNode) : undefined
-        if (newOn !== oldOn && !changed.includes(idx)) {
-          changed.push(idx)
+        if (newOn !== oldOn) {
+          markChanged(idx)
         }
         const newStyle = getStyle(node)
         const oldStyle = oldNode ? getStyle(oldNode) : undefined
-        if (newStyle !== oldStyle && !changed.includes(idx)) {
-          changed.push(idx)
+        if (newStyle !== oldStyle) {
+          markChanged(idx)
         }
       }
     })
@@ -190,17 +200,16 @@ export function fullDiff(
       }
 
       // Check text content changes
-      const newNode = findNodeByIndex(newPrepared, idx)
+      const newNode = newByIndex.get(idx)
+      const oldNode = prevByIndex.get(idx)
       if (newNode && getNodeType(newNode) === 'text') {
         const newText = getTextContent(newNode)
-        const oldNode = findNodeByIndex(prevPrepared, idx)
         const oldText = oldNode ? getTextContent(oldNode) : undefined
         if (newText !== oldText) {
           op.newTextContent = newText
         }
       } else if (newNode && getNodeType(newNode) === 'element') {
         const newOn = getOn(newNode)
-        const oldNode = findNodeByIndex(prevPrepared, idx)
         const oldOn = oldNode ? getOn(oldNode) : undefined
         if (newOn !== oldOn) {
           op.newOn = newOn
@@ -236,6 +245,7 @@ function fullTreeDiff(
   // Build key maps for reconciliation
   const prevByKey = buildKeyMap(prevPrepared)
   const newByKey = buildKeyMap(newPrepared)
+  const prevByIndex = buildIndexMap(prevPrepared)
 
   // Build index sets
   const prevIndices = new Set<number>()
@@ -252,7 +262,7 @@ function fullTreeDiff(
   for (const oldIdx of prevIndices) {
     if (!newIndices.has(oldIdx)) {
       // Check if this node can be matched by key
-      const oldNode = findNodeByIndex(prevPrepared, oldIdx)
+      const oldNode = prevByIndex.get(oldIdx)
       const oldKey = oldNode ? getKey(oldNode) : undefined
 
       if (oldKey === undefined || !newByKey.has(oldKey)) {
@@ -323,7 +333,7 @@ function fullTreeDiff(
       let newStyle: import('../features/style.js').SafeStyleProps | undefined
 
       if (nodeType === 'text') {
-        const oldNode = findNodeByIndex(prevPrepared, idx)
+        const oldNode = prevByIndex.get(idx)
         const oldText = oldNode ? getTextContent(oldNode) : undefined
         const newText = getTextContent(node)
         if (newText !== oldText) {
@@ -331,7 +341,7 @@ function fullTreeDiff(
           newTextContent = newText
         }
       } else if (nodeType === 'element') {
-        const oldNode = findNodeByIndex(prevPrepared, idx)
+        const oldNode = prevByIndex.get(idx)
         const oldOn = oldNode ? getOn(oldNode) : undefined
         const currentOn = getOn(node)
         if (currentOn !== oldOn) {
@@ -389,12 +399,10 @@ function buildKeyMap(prepared: PreparedComponent): Map<string, number> {
   return map
 }
 
-function findNodeByIndex(prepared: PreparedComponent, index: number): PreparedComponent | null {
-  let found: PreparedComponent | null = null
+function buildIndexMap(prepared: PreparedComponent): Map<number, PreparedComponent> {
+  const map = new Map<number, PreparedComponent>()
   forEachNode(prepared, (node) => {
-    if (getNodeIndex(node) === index) {
-      found = node
-    }
+    map.set(getNodeIndex(node), node)
   })
-  return found
+  return map
 }

@@ -232,6 +232,8 @@ function buildRouteStateFromPath(
 // ============================================================
 
 export function createRouter(routes: Route[]): Router {
+  const browserWindow = typeof window !== 'undefined' ? window : undefined
+
   const parsedRoutes: ParsedRoute[] = routes
     .map((route) => {
       const normalizedRoutePath = route.path === '*' ? '*' : normalizePath(route.path)
@@ -250,7 +252,9 @@ export function createRouter(routes: Route[]): Router {
     .sort((a, b) => b.specificity - a.specificity)
 
   const initialPath =
-    window.location.pathname + window.location.search + window.location.hash
+    browserWindow !== undefined
+      ? browserWindow.location.pathname + browserWindow.location.search + browserWindow.location.hash
+      : '/'
 
   const $route = signal<RouteState>(
     buildRouteStateFromPath(initialPath, parsedRoutes)
@@ -260,20 +264,26 @@ export function createRouter(routes: Route[]): Router {
     const normalizedFullPath = normalizeFullPath(fullPath)
     $route.value = buildRouteStateFromPath(normalizedFullPath, parsedRoutes)
 
+    if (browserWindow === undefined) return
+
     if (method === 'push') {
-      window.history.pushState(null, '', normalizedFullPath)
+      browserWindow.history.pushState(null, '', normalizedFullPath)
     } else {
-      window.history.replaceState(null, '', normalizedFullPath)
+      browserWindow.history.replaceState(null, '', normalizedFullPath)
     }
   }
 
   const popstateHandler = (): void => {
+    if (browserWindow === undefined) return
+
     const fullPath =
-      window.location.pathname + window.location.search + window.location.hash
+      browserWindow.location.pathname + browserWindow.location.search + browserWindow.location.hash
     $route.value = buildRouteStateFromPath(fullPath, parsedRoutes)
   }
 
-  window.addEventListener('popstate', popstateHandler)
+  if (browserWindow !== undefined) {
+    browserWindow.addEventListener('popstate', popstateHandler)
+  }
 
   const router = {
     $route,
@@ -285,10 +295,12 @@ export function createRouter(routes: Route[]): Router {
     },
     go(n: number): void {
       if (n === 0) return
-      window.history.go(n)
+      if (browserWindow === undefined) return
+      browserWindow.history.go(n)
     },
     dispose(): void {
-      window.removeEventListener('popstate', popstateHandler)
+      if (browserWindow === undefined) return
+      browserWindow.removeEventListener('popstate', popstateHandler)
     },
   }
 

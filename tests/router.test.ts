@@ -500,4 +500,25 @@ describe('router: edge cases (RED)', () => {
     expect(router.$route.value.path).toBe('/about')
     expect(router.$route.value.matched?.path).toBe('/about')
   })
+
+  test('SSR-safe: createRouter no depende de window en servidor', () => {
+    const SSRPage = makeComponent('SSR')
+    const previousWindow = (globalThis as { window?: typeof globalThis.window }).window
+
+    delete (globalThis as { window?: typeof globalThis.window }).window
+
+    try {
+      const router = createRouter([{ path: '/', component: SSRPage }])
+
+      expect(router.$route.value.path).toBe('/')
+      expect(router.$route.value.matched?.path).toBe('/')
+      expect(() => router.push('/ssr-only')).not.toThrow()
+      expect(router.$route.value.path).toBe('/ssr-only')
+      expect(() => router.replace('/')).not.toThrow()
+      expect(() => router.go(-1)).not.toThrow()
+      expect(() => router.dispose()).not.toThrow()
+    } finally {
+      ;(globalThis as { window?: typeof globalThis.window }).window = previousWindow
+    }
+  })
 })

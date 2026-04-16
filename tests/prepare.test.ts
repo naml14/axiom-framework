@@ -1,6 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from 'bun:test'
 import { defineComponent } from '../src/render/component.js'
-import { prepare } from '../src/render/prepare.js'
+import { prepare, getNodeIndex } from '../src/render/prepare.js'
 import type { ComponentNode } from '../src/core/types.js'
 
 // ============================================================
@@ -157,5 +157,26 @@ describe('prepare', () => {
     const comp = defineComponent(() => buildTree(20))
     const result = prepare(comp, undefined, { textEngine: fakeTextEngine })
     expect(result).toBeDefined()
+  })
+
+  test('keeps index allocation isolated per prepare invocation (SSR-safe conceptual)', () => {
+    const nested = defineComponent(() => ({
+      type: 'text' as const,
+      content: 'nested',
+    }))
+
+    const outer = defineComponent(() => {
+      // Simula interferencia entre solicitudes/re-entrada:
+      // una invocación adicional de prepare ocurre mientras se construye el árbol externo.
+      prepare(nested, undefined, { textEngine: fakeTextEngine })
+
+      return {
+        type: 'text' as const,
+        content: 'outer',
+      }
+    })
+
+    const preparedOuter = prepare(outer, undefined, { textEngine: fakeTextEngine })
+    expect(getNodeIndex(preparedOuter)).toBe(0)
   })
 })

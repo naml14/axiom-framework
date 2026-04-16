@@ -8,13 +8,14 @@ export type SchedulerFn = (cb: RenderCallback) => void
 
 const pendingRenders = new Set<RenderCallback>()
 let scheduled = false
+let _globalScheduler: SchedulerFn = defaultScheduler
 
 export function scheduleRender(callback: RenderCallback, scheduler?: SchedulerFn): void {
   pendingRenders.add(callback)
 
   if (!scheduled) {
     scheduled = true
-    const sched = scheduler ?? defaultScheduler
+    const sched = scheduler ?? _globalScheduler
 
     sched(() => {
       scheduled = false
@@ -35,10 +36,11 @@ export function cancelScheduled(): void {
 export function resetScheduler(): void {
   pendingRenders.clear()
   scheduled = false
+  _globalScheduler = defaultScheduler
 }
 
 export function setScheduler(scheduler: SchedulerFn): void {
-  // For future use — currently scheduler is passed per-call
+  _globalScheduler = scheduler
 }
 
 // Default scheduler uses requestAnimationFrame

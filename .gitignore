@@ -11,6 +11,10 @@ node_modules/
 
 # --- Dev Scripts (internal exploration scripts, not part of public API) ---
 scripts/
+!scripts/
+scripts/*
+!scripts/validate-api-stability.ts
+!scripts/validate-coverage.ts
 
 # --- Editor / IDE ---
 .vscode/

@@ -21,10 +21,18 @@ import { effect } from './reactivity/signals.js'
 import { scheduleRender, cancelScheduled } from './scheduler.js'
 import { getNodeType, getTag, getChildren, getDebugDisplayName, getDebugRoute } from './render/prepare.js'
 import { resolveComponentDisplayName } from './render/component.js'
+import { applyPluginHook } from './features/plugin.js'
+import type { PluginContext } from './features/plugin.js'
 
 // ============================================================
 // Internal helpers
 // ============================================================
+
+/** Module-scoped counter for deterministic, collision-free app IDs within a JS context. */
+let _appCounter = 0
+function generateAppId(): string {
+  return `axiom-app-${++_appCounter}`
+}
 
 /** Remove only the DOM nodes Axiom inserted into each portal target — never nuke foreign content. */
 function clearPortalRoots(domState: DOMState): void {
@@ -123,6 +131,8 @@ export interface AppOptions {
   strictHydration?: boolean
   hydrationDebug?: boolean
   onError?: (err: unknown, context: AppErrorContext) => void
+  /** Stable identifier for this app instance. Auto-generated if absent. */
+  appId?: string
 }
 
 export type AppErrorPhase = 'prepare' | 'reflow' | 'commit' | 'hydrate'
@@ -172,6 +182,8 @@ export function createApp(
   options?: AppOptions
 ): App {
   const rootDisplayName = resolveComponentDisplayName(component as ComponentDefinition<unknown>)
+  const appId = options?.appId ?? generateAppId()
+  const pluginCtx: PluginContext = { appId }
 
   const state: AppState = {
     prevPrepared: null,
@@ -373,6 +385,7 @@ export function createApp(
 
     state.prevPrepared = prepared
     state.prevLayout = layout
+    applyPluginHook('onUpdate', pluginCtx)
   }
 
   function emitProfile(cycle: number, phase: ProfilePhase, durationMs: number): void {
@@ -445,6 +458,7 @@ export function createApp(
       updateHotReloadSnapshot('none')
       state.mounted = true
       installDevHook(state)
+      applyPluginHook('onMount', pluginCtx)
 
       // Wire reactivity — subsequent updates go through scheduler
       // The effect reads signals by calling component._fn() to establish dependencies
@@ -459,6 +473,7 @@ export function createApp(
     },
 
     unmount(): void {
+      const wasMounted = state.mounted
       state.stopEffect?.()
       cancelScheduled()
       options?.router?.dispose?.()
@@ -475,6 +490,7 @@ export function createApp(
       state.domState.portalRoots = new Map()
       updateHotReloadSnapshot('none')
       clearDevHook()
+      if (wasMounted) applyPluginHook('onUnmount', pluginCtx)
     },
 
     getMetrics(): RenderMetrics {

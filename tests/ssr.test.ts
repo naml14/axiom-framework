@@ -135,3 +135,41 @@ describe('SSR: export público', () => {
     expect(typeof renderToString).toBe('function')
   })
 })
+
+describe('SSR: attrs security policy', () => {
+  test('SSR output omits on* event attrs', async () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'button',
+      attrs: {
+        onclick: 'evil()',
+        onerror: 'boom()',
+        title: 'safe',
+      },
+      children: [{ type: 'text' as const, content: 'Click' }],
+    }))
+
+    const html = await renderToString(App)
+
+    expect(html).toContain('<button')
+    expect(html).toContain('title="safe"')
+    expect(html).not.toContain('onclick=')
+    expect(html).not.toContain('onerror=')
+  })
+
+  test('SSR output neutralizes javascript: URLs to #blocked', async () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'a',
+      attrs: {
+        href: 'javascript:alert(1)',
+      },
+      children: [{ type: 'text' as const, content: 'Dangerous link' }],
+    }))
+
+    const html = await renderToString(App)
+
+    expect(html).toContain('href="#blocked"')
+    expect(html).not.toContain('href="javascript:alert(1)"')
+  })
+})

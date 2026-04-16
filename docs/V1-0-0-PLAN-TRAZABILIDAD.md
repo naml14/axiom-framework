@@ -1,6 +1,7 @@
 # Plan maestro y trazabilidad — Axiom v1.0.0
 
 > Estado inicial: **2026-04-15**
+> Estado actual (rama `feat/v1-0-0-kickoff`): **P0 5/5 implementados, P1 5/5 implementados (pendiente merge/CI final en PR)**
 > Objetivo: lanzar `v1.0.0` con calidad **excelente** en estabilidad API, SSR/hydration, seguridad, testing y operación.
 
 ## 1) Objetivo y alcance
@@ -32,25 +33,25 @@ Este plan convierte la auditoría técnica en ejecución concreta con criterios 
 
 ## Fase M0 — Gate de release y trazabilidad (1-2 días)
 
-- [ ] Crear épica 1.0.0 + issues hijas (P0/P1/P2).
-- [ ] Definir tablero de estado en este documento + log de evidencia.
-- [ ] Establecer checklist Go/No-Go de release.
+- [x] Crear épica 1.0.0 + issues hijas (P0/P1/P2).
+- [x] Definir tablero de estado en este documento + log de evidencia.
+- [x] Establecer checklist Go/No-Go de release.
 
 ## Fase M1 — Cierre P0 (3-7 días)
 
-- [ ] Integrar hooks de plugin en ciclo de vida de app.
-- [ ] Hacer router SSR-safe sin `window` en servidor.
-- [ ] Eliminar dependencia de contador global para aislamiento SSR.
-- [ ] Actualizar threat model en SECURITY.md.
-- [ ] Publicar contrato de estabilidad API 1.0 (`stable/experimental/internal`).
+- [x] Integrar hooks de plugin en ciclo de vida de app.
+- [x] Hacer router SSR-safe sin `window` en servidor.
+- [x] Eliminar dependencia de contador global para aislamiento SSR.
+- [x] Actualizar threat model en SECURITY.md.
+- [x] Publicar contrato de estabilidad API 1.0 (`stable/experimental/internal`).
 
 ## Fase M2 — Cierre P1 (1-2 semanas)
 
-- [ ] Hardening adicional de attrs/event attrs y URL schemes.
-- [ ] Resolver APIs no-op/ambiguas (ej. scheduler API vacía).
-- [ ] Añadir gate de coverage en CI.
-- [ ] Resolver contradicciones docs/código (README, docs técnicas).
-- [ ] Optimización incremental en diff para escalabilidad.
+- [x] Hardening adicional de attrs/event attrs y URL schemes.
+- [x] Resolver APIs no-op/ambiguas (ej. scheduler API vacía).
+- [x] Añadir gate de coverage en CI.
+- [x] Hardening XSS residual en hidratación + alineación docs/código.
+- [x] Optimización incremental en diff para escalabilidad.
 
 ## Fase M3 — Validación integral (3-5 días)
 
@@ -70,16 +71,16 @@ Este plan convierte la auditoría técnica en ejecución concreta con criterios 
 
 | Prioridad | Tema | Impacto | Estado |
 | --- | --- | --- | --- |
-| P0 | Plugin lifecycle runtime | Correctness/API contract | Open (#32) |
-| P0 | Router SSR-safe | SSR correctness | Open (#33) |
-| P0 | Aislamiento SSR (`prepare`) | Reliability/concurrency | Open (#31) |
-| P0 | SECURITY.md threat model | Security governance | Open (#35) |
-| P0 | API stability contract | SemVer/compatibilidad | Open (#34) |
-| P1 | Hardening attrs/event attrs | Security hardening | Open (#36) |
-| P1 | Scheduler API no-op | API coherence | Open (#37) |
-| P1 | Coverage gate en CI | Release quality gate | Open (#38) |
-| P1 | Docs vs código | DX/trust | Open (#39) |
-| P1 | Diff performance index lookup | Performance/scalability | Open (#40) |
+| P0 | Plugin lifecycle runtime | Correctness/API contract | Done (branch) (#32) |
+| P0 | Router SSR-safe | SSR correctness | Done (branch) (#33) |
+| P0 | Aislamiento SSR (`prepare`) | Reliability/concurrency | Done (branch) (#31) |
+| P0 | SECURITY.md threat model | Security governance | Done (branch) (#35) |
+| P0 | API stability contract | SemVer/compatibilidad | Done (branch) (#34) |
+| P1 | Hardening attrs/event attrs | Security hardening | Done (branch) (#36) |
+| P1 | Scheduler API no-op | API coherence | Done (branch) (#37) |
+| P1 | Coverage gate en CI | Release quality gate | Done (branch) (#38) |
+| P1 | Hardening XSS residual + alineación docs/código | Security/DX trust | Done (branch) (#39) |
+| P1 | Diff performance index lookup | Performance/scalability | Done (branch) (#40) |
 
 ---
 
@@ -87,11 +88,11 @@ Este plan convierte la auditoría técnica en ejecución concreta con criterios 
 
 El release `1.0.0` solo puede aprobarse si:
 
-- [ ] Todos los issues P0 cerrados.
-- [ ] Al menos 80% de P1 cerrados o explícitamente diferidos con justificación.
-- [ ] CI verde + coverage gate activo y cumpliendo umbral.
-- [ ] SECURITY.md actualizado al modelo real del framework.
-- [ ] Documento de estabilidad API 1.0 publicado.
+- [x] Todos los issues P0 cerrados (implementados en rama).
+- [x] Al menos 80% de P1 cerrados o explícitamente diferidos con justificación.
+- [ ] CI verde + coverage gate activo y cumpliendo umbral (pendiente ejecución en PR).
+- [x] SECURITY.md actualizado al modelo real del framework.
+- [x] Documento de estabilidad API 1.0 publicado.
 - [ ] Changelog/release notes alineadas con cambios reales.
 
 ---
@@ -102,16 +103,16 @@ El release `1.0.0` solo puede aprobarse si:
 
 | Item | Issue | PR | Evidencia (tests/coverage/doc) | Estado |
 | --- | --- | --- | --- | --- |
-| P0 Plugin lifecycle runtime | #32 | TBD | TBD | Open |
-| P0 Router SSR-safe | #33 | TBD | TBD | Open |
-| P0 Aislamiento SSR prepare | #31 | TBD | TBD | Open |
-| P0 SECURITY threat model | #35 | TBD | TBD | Open |
-| P0 API stability contract | #34 | TBD | TBD | Open |
-| P1 Hardening attrs/event attrs | #36 | TBD | TBD | Open |
-| P1 Scheduler API no-op | #37 | TBD | TBD | Open |
-| P1 Coverage gate en CI | #38 | TBD | TBD | Open |
-| P1 Docs vs código | #39 | TBD | TBD | Open |
-| P1 Diff performance | #40 | TBD | TBD | Open |
+| P0 Plugin lifecycle runtime | #32 | TBD | `tests/app.test.ts` + `tests/plugin.test.ts` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
+| P0 Router SSR-safe | #33 | TBD | `tests/router.test.ts` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
+| P0 Aislamiento SSR prepare | #31 | TBD | `tests/prepare.test.ts` + `tests/portal.test.ts` + `tests/router.test.ts` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
+| P0 SECURITY threat model | #35 | TBD | `SECURITY.md` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
+| P0 API stability contract | #34 | TBD | `scripts/validate-api-stability.ts` + `docs/STABILITY.md` + `bun run validate:api` | Done (branch) |
+| P1 Hardening attrs/event attrs | #36 | TBD | `tests/edge-cases.test.ts` + suite coverage + `SECURITY.md` | Done (branch) |
+| P1 Scheduler API no-op | #37 | TBD | `tests/scheduler.test.ts` + `tests/app.test.ts` | Done (branch) |
+| P1 Coverage gate en CI | #38 | TBD | `.github/workflows/ci.yml` + `scripts/validate-coverage.ts` + `bun run test:coverage` | Done (branch) |
+| P1 Hardening XSS residual + alineación docs/código | #39 | TBD | `tests/commit.test.ts` + `tests/ssr.test.ts` + `SECURITY.md` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
+| P1 Diff performance | #40 | TBD | `tests/diff.test.ts` + `tests/integration.test.ts` + `tests/benchmark.test.ts` | Done (branch) |
 
 ---
 
@@ -128,7 +129,7 @@ El release `1.0.0` solo puede aprobarse si:
   - #36 Hardening attrs/event attrs
   - #37 Scheduler API no-op
   - #38 Coverage gate CI
-  - #39 Docs vs código
+  - #39 Hardening XSS residual + alineación docs/código
   - #40 Diff performance
 
 ---

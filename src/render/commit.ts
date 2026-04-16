@@ -31,6 +31,9 @@ import {
 // functional refactoring (strategy pattern or callback injection).
 import { applyStyleToElement } from '../features/style.js'
 
+// Security: attribute sanitization for XSS prevention
+import { sanitizeAttrs } from '../core/attrs.js'
+
 // ============================================================
 // Public API
 // ============================================================
@@ -193,6 +196,8 @@ export function commitHydrate(
       }
       return
     }
+
+    sanitizeHydratedElementAttrs(domEl, getAttrs(node))
 
     const listeners = getOn(node)
     if (listeners !== undefined) {
@@ -485,8 +490,8 @@ function buildDOMTree(
     el.className = classes.join(' ')
   }
 
-  // Apply attributes
-  const attrs = getAttrs(prepared)
+  // Apply attributes (sanitized for security)
+  const attrs = sanitizeAttrs(getAttrs(prepared))
   if (attrs !== undefined) {
     for (const [key, value] of Object.entries(attrs)) {
       el.setAttribute(key, value)
@@ -538,8 +543,10 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
     el.className = op.classes.join(' ')
   }
 
-  if (op.attrs !== undefined) {
-    for (const [key, value] of Object.entries(op.attrs)) {
+  // Apply attributes (sanitized for security)
+  const attrs = sanitizeAttrs(op.attrs)
+  if (attrs !== undefined) {
+    for (const [key, value] of Object.entries(attrs)) {
       el.setAttribute(key, value)
     }
   }
@@ -557,6 +564,40 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
   }
 
   return el
+}
+
+function readElementAttrs(el: Element): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const attr of Array.from(el.attributes)) {
+    result[attr.name] = attr.value
+  }
+  return result
+}
+
+function sanitizeHydratedElementAttrs(
+  el: Element,
+  preparedAttrs: Record<string, string> | undefined
+): void {
+  const currentAttrs = readElementAttrs(el)
+  const sanitizedCurrent = sanitizeAttrs(currentAttrs) ?? {}
+
+  for (const [key, value] of Object.entries(currentAttrs)) {
+    if (!(key in sanitizedCurrent)) {
+      el.removeAttribute(key)
+      continue
+    }
+
+    if (sanitizedCurrent[key] !== value) {
+      el.setAttribute(key, sanitizedCurrent[key]!)
+    }
+  }
+
+  const sanitizedPrepared = sanitizeAttrs(preparedAttrs)
+  if (sanitizedPrepared !== undefined) {
+    for (const [key, value] of Object.entries(sanitizedPrepared)) {
+      el.setAttribute(key, value)
+    }
+  }
 }
 
 function assertValidTagName(tag: string): void {
