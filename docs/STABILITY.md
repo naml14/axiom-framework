@@ -12,7 +12,7 @@ For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 ## Stable APIs (95)
 
 | Export | Module | Since |
-| ------ | ------ | ----- |
+|--------|--------|-------|
 | signal | ./reactivity/signals | v1.0.0 |
 | computed | ./reactivity/signals | v1.0.0 |
 | effect | ./reactivity/signals | v1.0.0 |
@@ -112,13 +112,13 @@ For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 ## Beta APIs (0)
 
 | Export | Module | Since |
-| ------ | ------ | ----- |
+|--------|--------|-------|
 | (none) | - | - |
 
 ## Experimental APIs (0)
 
 | Export | Module |
-| ------ | ------ |
+|--------|--------|
 | (none) | - |
 
 ## Enforcement

@@ -2,11 +2,12 @@
 
 ## Supported Versions
 
-| Version | Supported      | Notes                                 |
-|---------|----------------|---------------------------------------|
-| 1.x     | ✅ Yes         | CSR + SSR, full security support      |
-| 0.2.x   | ⚠️ Limited     | CSR only, critical fixes only         |
-| < 0.2   | ❌ No          | End of life                           |
+| Version | Supported | Notes |
+| ------- | -------------- | ------------------------------------- |
+| 1.x | 🧭 Planned | Target support line after 1.0.0 |
+| 0.9.x | ✅ Yes | CSR + SSR, stabilization release line |
+| 0.2.x | ⚠️ Limited | CSR only, critical fixes only |
+| < 0.2 | ❌ No | End of life |
 
 ## Reporting a Vulnerability
 
@@ -35,12 +36,12 @@ If you discover a security vulnerability, report it privately using one of these
 
 ## Scope
 
-Axiom runs in **two environments** as of v1.0.0:
+Axiom runs in **two environments** as of v0.9.0:
 
 | Environment | Runtime | Since |
 | ----------- | ---------------- | ------ |
 | CSR (Client-Side Rendering) | Browser | v0.1.0 |
-| SSR (Server-Side Rendering) | Node.js, Bun | v1.0.0 |
+| SSR (Server-Side Rendering) | Node.js, Bun | v0.9.0 |
 
 Each environment has distinct attack surfaces documented below:
 

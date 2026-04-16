@@ -2,8 +2,8 @@
  * @module axiom-framework/testing
  *
  * Public testing utilities for component unit tests.
- * API Stability Contract v1.0.0 applies to all exports in this module.
- * Default tier for kickoff is stable (@since v1.0.0) unless explicitly tagged otherwise.
+ * API Stability Contract (target v1.0.0) is published in this pre-1.0 phase.
+ * In v0.9.x, tags are forward-compatibility markers toward the 1.0 baseline.
  *
  * Consumers use these helpers to render components in a test environment,
  * dispatch events, and query the DOM — without needing to know about
