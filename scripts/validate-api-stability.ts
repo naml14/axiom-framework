@@ -21,8 +21,8 @@
  */
 
 import { Project, Node, type ExportDeclaration } from 'ts-morph'
-import { resolve } from 'path'
-import { writeFileSync } from 'fs'
+import { resolve } from 'node:path'
+import { writeFileSync } from 'node:fs'
 
 // ============================================================
 // Types

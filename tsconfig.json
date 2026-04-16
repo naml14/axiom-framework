@@ -33,6 +33,6 @@
     "sourceMap": true,
     "outDir": "dist"
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "demo/**/*.ts"],
+  "include": ["src/**/*.ts", "tests/**/*.ts", "demo/**/*.ts", "scripts/**/*.ts"],
   "exclude": ["node_modules", "dist", "pretext-main"]
 }
