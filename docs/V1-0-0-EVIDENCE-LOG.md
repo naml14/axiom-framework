@@ -36,6 +36,23 @@ Plantilla:
 
 ## Entradas
 
+### 2026-04-15 — Snapshot final local pre-PR (release readiness)
+
+- Issue: #30 (épica 1.0.0)
+- PR: TBD (rama local `feat/v1-0-0-kickoff`)
+- Verificación:
+  - [x] `bun run typecheck`
+  - [x] `bun run test:coverage`
+  - [x] Revisión de trazabilidad P0/P1 en plan maestro
+- Evidencia:
+  - checks: typecheck en verde
+  - coverage: `All files % Lines 96.15%` (threshold gate 85.00%)
+  - tests: suite completa (476 pass / 2 skip / 0 fail)
+  - archivos: `docs/V1-0-0-PLAN-TRAZABILIDAD.md`, `docs/V1-0-0-EVIDENCE-LOG.md`
+- Resultado: PASS
+- Notas/Riesgos:
+  - CI de PR pendiente para confirmar verde remoto antes de merge.
+
 ### 2026-04-15 — Implementación P1: Optimización incremental de diff (index lookup)
 
 - Issue: #40
