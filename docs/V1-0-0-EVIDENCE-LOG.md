@@ -36,6 +36,23 @@ Plantilla:
 
 ## Entradas
 
+### 2026-04-15 — Implementación P1: Coverage gate en CI
+
+- Issue: #38
+- PR: TBD (rama local `feat/v1-0-0-kickoff`)
+- Verificación:
+  - [x] `bun run test:coverage`
+  - [x] `bun run typecheck`
+  - [x] Integración del gate en workflow de CI
+- Evidencia:
+  - checks: `test:coverage` (line coverage global 96.10% >= threshold 85.00%)
+  - tests: suite completa (469 pass / 2 skip / 0 fail)
+  - archivos: `.github/workflows/ci.yml`, `scripts/validate-coverage.ts`, `package.json`, `.gitignore`, `docs/TESTING-GUIDE.md`, `tests/scheduler.test.ts`
+  - comportamiento validado: CI falla si fallan tests, si cambia formato de coverage no parseable, o si `% Lines` global cae por debajo de 85%.
+- Resultado: PASS
+- Notas/Riesgos:
+  - El parser depende de la fila `All files`; si Bun cambia el formato, el gate falla explícitamente como `coverage-format-failure`.
+
 ### 2026-04-15 — Implementación P1: Scheduler API coherente (setScheduler funcional)
 
 - Issue: #37
