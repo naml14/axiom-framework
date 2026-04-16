@@ -276,10 +276,7 @@ import {
   sanitizeAttrValue,
   isDangerousEventAttr,
   hasDangerousUrlScheme,
-  isUrlSensitiveAttr,
   isValidAttrName,
-  DANGEROUS_EVENT_ATTRS,
-  URL_SENSITIVE_ATTRS,
 } from '../src/core/attrs.js'
 
 describe('security: attribute sanitization module', () => {

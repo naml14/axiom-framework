@@ -59,6 +59,11 @@ function allocIndex(ctx: PrepareContext): number {
   return index
 }
 
+/**
+ * @deprecated Desde v1.0.0 este método es no-op.
+ * El índice ahora se aísla por invocación dentro de `prepare()`.
+ * Se conserva solo por compatibilidad hacia atrás.
+ */
 export function resetIndexCounter(): void {
   // Compatibilidad pública:
   // El contador ahora es local por invocación de `prepare`, por lo que
