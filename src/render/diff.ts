@@ -92,10 +92,11 @@ function buildPortalMap(prepared: PreparedComponent): Map<number, PortalMapEntry
 
 function classesEqual(a: string[] | undefined, b: string[] | undefined): boolean {
   if (a === b) return true
-  if (a === undefined || b === undefined) return false
-  if (a.length !== b.length) return false
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false
+  const arrA = a ?? []
+  const arrB = b ?? []
+  if (arrA.length !== arrB.length) return false
+  for (let i = 0; i < arrA.length; i++) {
+    if (arrA[i] !== arrB[i]) return false
   }
   return true
 }
@@ -211,6 +212,8 @@ export function fullDiff(
       }
     })
 
+    allChanged.sort((a, b) => a - b)
+
     for (const idx of allChanged) {
       const op: DOMOperation = {
         type: 'update',
@@ -325,6 +328,46 @@ function fullTreeDiff(
             width: newLayout.width[idx],
             height: newLayout.height[idx],
           })
+
+          const oldNode = prevByIndex.get(oldIdx)
+          if (oldNode !== undefined) {
+            const metadataUpdate: DOMOperation = { type: 'update', index: idx }
+            let hasMetadataUpdate = false
+
+            if (nodeType === 'text') {
+              const oldText = getTextContent(oldNode)
+              const newText = getTextContent(node)
+              if (newText !== oldText) {
+                metadataUpdate.newTextContent = newText
+                hasMetadataUpdate = true
+              }
+            } else if (nodeType === 'element') {
+              const oldOn = getOn(oldNode)
+              const currentOn = getOn(node)
+              if (currentOn !== oldOn) {
+                metadataUpdate.newOn = currentOn
+                hasMetadataUpdate = true
+              }
+
+              const oldStyle = getStyle(oldNode)
+              const currentStyle = getStyle(node)
+              if (currentStyle !== oldStyle) {
+                metadataUpdate.newStyle = currentStyle
+                hasMetadataUpdate = true
+              }
+
+              const oldClasses = getClasses(oldNode)
+              const currentClasses = getClasses(node)
+              if (!classesEqual(currentClasses, oldClasses)) {
+                metadataUpdate.newClasses = currentClasses
+                hasMetadataUpdate = true
+              }
+            }
+
+            if (hasMetadataUpdate) {
+              ops.push(metadataUpdate)
+            }
+          }
           return
         }
       }

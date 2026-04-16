@@ -39,7 +39,7 @@ Plantilla:
 ### 2026-04-16 — Fix P0: fast path no detecta cambios de clases CSS en re-render
 
 - Issue: #43
-- PR: TBD (rama `fix/issue-43-class-diff`)
+- PR: #44 (rama `fix/issue-43-class-diff`)
 - Verificación:
   - [x] `bun run typecheck` — limpio (0 errores)
   - [x] `bun test` — 417 pass / 2 skip / 0 fail
