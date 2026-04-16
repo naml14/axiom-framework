@@ -21,7 +21,7 @@
  */
 
 import { Project, Node, type ExportDeclaration } from 'ts-morph'
-import { resolve, normalize, basename } from 'node:path'
+import { resolve, normalize } from 'node:path'
 import { writeFileSync } from 'node:fs'
 
 // ============================================================
@@ -107,14 +107,13 @@ const STABILITY_TAGS: StabilityTier[] = ['stable', 'beta', 'experimental', 'inte
 /**
  * Helper to detect if a file path is a public entry point (src/index.ts or src/testing.ts).
  * Cross-platform compatible (works on Windows, Linux, macOS).
+ * Restricted to exactly the two documented public surface files.
  */
 function isPublicEntry(filePath: string): boolean {
-  // Normalize to forward slashes and check against both basename and relative path
   const normalized = normalize(filePath).replace(/\\/g, '/')
   return (
     normalized.endsWith('src/index.ts') ||
-    normalized.endsWith('src/testing.ts') ||
-    basename(filePath) === 'index.ts' && normalized.includes('/src/')
+    normalized.endsWith('src/testing.ts')
   )
 }
 
@@ -311,15 +310,15 @@ function validateExports(exports: ExportInfo[]): ValidationError[] {
       })
     }
 
-    // Rule 4: @internal in public API
-    if (exp.stability === 'internal' && exp.filePath.includes('src/index.ts')) {
+    // Rule 4: @internal in public API (applies to ALL public entry points)
+    if (exp.stability === 'internal' && isPublicEntry(exp.filePath)) {
       errors.push({
         type: 'error',
         file: exp.filePath,
         line: exp.line,
         export: exp.name,
-        message: `@internal exports should not be in public API (src/index.ts)`,
-        suggestion: `Remove from src/index.ts or change to @experimental`,
+        message: `@internal exports should not be in public API (${exp.filePath})`,
+        suggestion: `Remove from public entry file or change to @experimental`,
       })
     }
 
@@ -336,6 +335,35 @@ function validateExports(exports: ExportInfo[]): ValidationError[] {
     }
   })
 
+  return errors
+}
+
+/**
+ * Checks that no public entry point uses bare `export * from './foo'`.
+ * Bare re-exports bypass stability tag checks — all public APIs must be named.
+ */
+function checkBareStarExports(project: Project, entryPoints: string[]): ValidationError[] {
+  const errors: ValidationError[] = []
+  for (const filePath of entryPoints) {
+    const sourceFile = project.getSourceFile(filePath)
+    if (!sourceFile) continue
+    for (const exportDecl of sourceFile.getExportDeclarations()) {
+      const moduleSpecifier = exportDecl.getModuleSpecifierValue()
+      if (!moduleSpecifier) continue
+      const hasNamed = exportDecl.getNamedExports().length > 0
+      const hasNamespace = !!exportDecl.getNamespaceExport?.()
+      if (!hasNamed && !hasNamespace) {
+        errors.push({
+          type: 'error',
+          file: filePath,
+          line: exportDecl.getStartLineNumber(),
+          export: `export * from '${moduleSpecifier}'`,
+          message: `Bare 'export * from' in public entry point bypasses stability tag checks`,
+          suggestion: `Use named exports: export { Foo, Bar } from '${moduleSpecifier}'`,
+        })
+      }
+    }
+  }
   return errors
 }
 
@@ -523,7 +551,8 @@ async function main() {
   }
 
   const errors = validateExports(allExports)
-  const report = generateReport(allExports, errors)
+  const bareStarErrors = checkBareStarExports(project, [indexPath, testingPath])
+  const report = generateReport(allExports, [...errors, ...bareStarErrors])
 
   printReport(report)
 
