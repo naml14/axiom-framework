@@ -58,7 +58,7 @@ Each environment has distinct attack surfaces documented below:
 
 ### XSS via Attributes
 
-**Framework protection**: Multiple layers of defense implemented in `src/core/attrs.ts`:
+**Framework protection**: Multiple layers of defense implemented in `src/core/attrs.ts` and applied consistently in CSR (`commitFull` / `createDOMElement`), SSR (`renderToString`), and hydration (`commitHydrate`):
 
 1. **Attribute name validation**: `VALID_ATTR_NAME_RE` validates all attribute names match `/^[A-Za-z_][\w:.-]*$/`. Invalid names are silently dropped.
 2. **Event attribute blocking**: Inline event handlers (`onclick`, `onerror`, `onload`, etc.) in the `attrs` object are automatically removed. Use `on: { click: fn }` instead.
@@ -115,7 +115,7 @@ await renderToString(app, { metadata: { inlineStyles: safeCss } });
 
 ### External Stylesheet SSRF
 
-`SSRRenderOptions.metadata.stylesheets[].href` is emitted as a `<link rel="stylesheet">` href attribute. Axiom escapes the value but does **not** validate the protocol or hostname.
+`SSRRenderOptions.metadata.stylesheets` (`string[]`) is emitted as `<link rel="stylesheet">` href attributes. Axiom escapes the value but does **not** validate the protocol or hostname.
 
 **Risk**: A server-side request or redirect to an attacker-controlled URL (SSRF / open redirect).
 
@@ -123,11 +123,11 @@ await renderToString(app, { metadata: { inlineStyles: safeCss } });
 
 ```ts
 // ❌ Vulnerable
-const sheets = [{ href: req.query.css }];
+const sheets = [req.query.css];
 
 // ✅ Safe
 const ALLOWED = /^https:\/\/cdn\.example\.com\//;
-const sheets = userSheets.filter(s => ALLOWED.test(s.href));
+const sheets = userSheets.filter((href) => ALLOWED.test(href));
 await renderToString(app, { metadata: { stylesheets: sheets } });
 ```
 
@@ -177,7 +177,7 @@ Plugin hooks (`onMount`, `onUnmount`, `onUpdate`) run with the **full permission
 
 The following are **not covered** by this security policy:
 
-1. **Application-level data sanitization** — `metadata.inlineStyles`, `stylesheets[].href`, `textContent`, `attrs`, and `metadata.og` keys are the consuming application's responsibility.
+1. **Application-level semantic validation** — The framework sanitizes base XSS vectors (attribute name validation, `on*` blocking, dangerous URL scheme neutralization in CSR/SSR/hydration, and HTML escaping). Consumers still own semantic/business validation such as trusted URL hosts, CSS allowlists for `metadata.inlineStyles`, and allowlisted metadata keys.
 2. **Third-party plugin security** — Plugins run with full process permissions; vetting them is the consumer's responsibility.
 3. **Theoretical vulnerabilities** — Reports must include a working proof of concept.
 4. **Physical access** — Vulnerabilities that require physical access to the user's or server's machine.

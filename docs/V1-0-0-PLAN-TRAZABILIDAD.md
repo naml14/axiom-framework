@@ -49,7 +49,7 @@ Este plan convierte la auditoría técnica en ejecución concreta con criterios 
 - [ ] Hardening adicional de attrs/event attrs y URL schemes.
 - [ ] Resolver APIs no-op/ambiguas (ej. scheduler API vacía).
 - [ ] Añadir gate de coverage en CI.
-- [ ] Resolver contradicciones docs/código (README, docs técnicas).
+- [ ] Hardening XSS residual en hidratación + alineación docs/código.
 - [ ] Optimización incremental en diff para escalabilidad.
 
 ## Fase M3 — Validación integral (3-5 días)
@@ -78,7 +78,7 @@ Este plan convierte la auditoría técnica en ejecución concreta con criterios 
 | P1 | Hardening attrs/event attrs | Security hardening | Open (#36) |
 | P1 | Scheduler API no-op | API coherence | Open (#37) |
 | P1 | Coverage gate en CI | Release quality gate | Open (#38) |
-| P1 | Docs vs código | DX/trust | Open (#39) |
+| P1 | Hardening XSS residual + alineación docs/código | Security/DX trust | Open (#39) |
 | P1 | Diff performance index lookup | Performance/scalability | Open (#40) |
 
 ---
@@ -110,7 +110,7 @@ El release `1.0.0` solo puede aprobarse si:
 | P1 Hardening attrs/event attrs | #36 | TBD | TBD | Open |
 | P1 Scheduler API no-op | #37 | TBD | TBD | Open |
 | P1 Coverage gate en CI | #38 | TBD | TBD | Open |
-| P1 Docs vs código | #39 | TBD | TBD | Open |
+| P1 Hardening XSS residual + alineación docs/código | #39 | TBD | tests/commit.test.ts + tests/ssr.test.ts + SECURITY.md + docs/V1-0-0-EVIDENCE-LOG.md | Open |
 | P1 Diff performance | #40 | TBD | TBD | Open |
 
 ---
@@ -128,7 +128,7 @@ El release `1.0.0` solo puede aprobarse si:
   - #36 Hardening attrs/event attrs
   - #37 Scheduler API no-op
   - #38 Coverage gate CI
-  - #39 Docs vs código
+  - #39 Hardening XSS residual + alineación docs/código
   - #40 Diff performance
 
 ---

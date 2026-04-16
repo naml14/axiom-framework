@@ -197,6 +197,8 @@ export function commitHydrate(
       return
     }
 
+    sanitizeHydratedElementAttrs(domEl, getAttrs(node))
+
     const listeners = getOn(node)
     if (listeners !== undefined) {
       const oldListeners = (domEl as any)._listeners as Record<string, EventListener> | undefined
@@ -562,6 +564,40 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
   }
 
   return el
+}
+
+function readElementAttrs(el: Element): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const attr of Array.from(el.attributes)) {
+    result[attr.name] = attr.value
+  }
+  return result
+}
+
+function sanitizeHydratedElementAttrs(
+  el: Element,
+  preparedAttrs: Record<string, string> | undefined
+): void {
+  const currentAttrs = readElementAttrs(el)
+  const sanitizedCurrent = sanitizeAttrs(currentAttrs) ?? {}
+
+  for (const [key, value] of Object.entries(currentAttrs)) {
+    if (!(key in sanitizedCurrent)) {
+      el.removeAttribute(key)
+      continue
+    }
+
+    if (sanitizedCurrent[key] !== value) {
+      el.setAttribute(key, sanitizedCurrent[key]!)
+    }
+  }
+
+  const sanitizedPrepared = sanitizeAttrs(preparedAttrs)
+  if (sanitizedPrepared !== undefined) {
+    for (const [key, value] of Object.entries(sanitizedPrepared)) {
+      el.setAttribute(key, value)
+    }
+  }
 }
 
 function assertValidTagName(tag: string): void {
