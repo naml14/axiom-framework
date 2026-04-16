@@ -48,6 +48,7 @@ export interface DOMOperation {
   newTextContent?: string
   newOn?: Record<string, EventListener>
   newStyle?: import('../features/style.js').SafeStyleProps
+  newClasses?: string[]
 }
 
 // ============================================================
@@ -83,6 +84,21 @@ function buildPortalMap(prepared: PreparedComponent): Map<number, PortalMapEntry
   }
   walk(prepared)
   return map
+}
+
+// ============================================================
+// Class Equality Helper
+// ============================================================
+
+function classesEqual(a: string[] | undefined, b: string[] | undefined): boolean {
+  if (a === b) return true
+  const arrA = a ?? []
+  const arrB = b ?? []
+  if (arrA.length !== arrB.length) return false
+  for (let i = 0; i < arrA.length; i++) {
+    if (arrA[i] !== arrB[i]) return false
+  }
+  return true
 }
 
 // ============================================================
@@ -155,16 +171,18 @@ export function fullDiff(
     const prevByIndex = buildIndexMap(prevPrepared)
     const newByIndex = buildIndexMap(newPrepared)
 
-    const changed = fastDiff(prevLayout, newLayout)
-    const changedSet = new Set<number>(changed)
+    const layoutChangedIndices = fastDiff(prevLayout, newLayout)
+    const layoutChangedSet = new Set<number>(layoutChangedIndices)
+    const allChanged = [...layoutChangedIndices]
+    const allChangedSet = new Set<number>(layoutChangedIndices)
     const markChanged = (idx: number): void => {
-      if (!changedSet.has(idx)) {
-        changedSet.add(idx)
-        changed.push(idx)
+      if (!allChangedSet.has(idx)) {
+        allChangedSet.add(idx)
+        allChanged.push(idx)
       }
     }
 
-    // Also check for text content changes
+    // Also check for text content, on, style and class changes
     forEachNode(newPrepared, (node) => {
       const idx = getNodeIndex(node)
       if (getNodeType(node) === 'text') {
@@ -186,17 +204,30 @@ export function fullDiff(
         if (newStyle !== oldStyle) {
           markChanged(idx)
         }
+        const newClasses = getClasses(node)
+        const oldClasses = oldNode ? getClasses(oldNode) : undefined
+        if (!classesEqual(newClasses, oldClasses)) {
+          markChanged(idx)
+        }
       }
     })
 
-    for (const idx of changed) {
+    allChanged.sort((a, b) => a - b)
+
+    for (const idx of allChanged) {
       const op: DOMOperation = {
         type: 'update',
         index: idx,
-        x: newLayout.x[idx],
-        y: newLayout.y[idx],
-        width: newLayout.width[idx],
-        height: newLayout.height[idx],
+      }
+
+      // Emit layout coords ONLY when layout actually changed.
+      // Portal CSS-managed children must NOT receive position coords for metadata-only changes
+      // (class/text/style/on) — applyFrameworkLayout would stack them all at (0,0).
+      if (layoutChangedSet.has(idx)) {
+        op.x = newLayout.x[idx]
+        op.y = newLayout.y[idx]
+        op.width = newLayout.width[idx]
+        op.height = newLayout.height[idx]
       }
 
       // Check text content changes
@@ -218,6 +249,11 @@ export function fullDiff(
         const oldStyle = oldNode ? getStyle(oldNode) : undefined
         if (newStyle !== oldStyle) {
           op.newStyle = newStyle
+        }
+        const newClasses = getClasses(newNode)
+        const oldClasses = oldNode ? getClasses(oldNode) : undefined
+        if (!classesEqual(newClasses, oldClasses)) {
+          op.newClasses = newClasses
         }
       }
 
@@ -292,6 +328,46 @@ function fullTreeDiff(
             width: newLayout.width[idx],
             height: newLayout.height[idx],
           })
+
+          const oldNode = prevByIndex.get(oldIdx)
+          if (oldNode !== undefined) {
+            const metadataUpdate: DOMOperation = { type: 'update', index: idx }
+            let hasMetadataUpdate = false
+
+            if (nodeType === 'text') {
+              const oldText = getTextContent(oldNode)
+              const newText = getTextContent(node)
+              if (newText !== oldText) {
+                metadataUpdate.newTextContent = newText
+                hasMetadataUpdate = true
+              }
+            } else if (nodeType === 'element') {
+              const oldOn = getOn(oldNode)
+              const currentOn = getOn(node)
+              if (currentOn !== oldOn) {
+                metadataUpdate.newOn = currentOn
+                hasMetadataUpdate = true
+              }
+
+              const oldStyle = getStyle(oldNode)
+              const currentStyle = getStyle(node)
+              if (currentStyle !== oldStyle) {
+                metadataUpdate.newStyle = currentStyle
+                hasMetadataUpdate = true
+              }
+
+              const oldClasses = getClasses(oldNode)
+              const currentClasses = getClasses(node)
+              if (!classesEqual(currentClasses, oldClasses)) {
+                metadataUpdate.newClasses = currentClasses
+                hasMetadataUpdate = true
+              }
+            }
+
+            if (hasMetadataUpdate) {
+              ops.push(metadataUpdate)
+            }
+          }
           return
         }
       }
@@ -331,6 +407,8 @@ function fullTreeDiff(
       let newOn: Record<string, EventListener> | undefined
       let styleChanged = false
       let newStyle: import('../features/style.js').SafeStyleProps | undefined
+      let classesChanged = false
+      let newClassesVal: string[] | undefined
 
       if (nodeType === 'text') {
         const oldNode = prevByIndex.get(idx)
@@ -354,9 +432,15 @@ function fullTreeDiff(
           styleChanged = true
           newStyle = currentStyle
         }
+        const oldClasses = oldNode ? getClasses(oldNode) : undefined
+        const currentClasses = getClasses(node)
+        if (!classesEqual(currentClasses, oldClasses)) {
+          classesChanged = true
+          newClassesVal = currentClasses
+        }
       }
 
-      if (layoutChanged || textChanged || onChanged || styleChanged) {
+      if (layoutChanged || textChanged || onChanged || styleChanged || classesChanged) {
         const op: DOMOperation = {
           type: 'update',
           index: idx,
@@ -375,6 +459,9 @@ function fullTreeDiff(
         }
         if (styleChanged) {
           op.newStyle = newStyle
+        }
+        if (classesChanged) {
+          op.newClasses = newClassesVal
         }
         ops.push(op)
       }

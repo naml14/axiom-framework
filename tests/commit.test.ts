@@ -120,6 +120,43 @@ describe('applyOps', () => {
     expect(Array.isArray((child as any).__axiomManagedStyleKeys)).toBe(true)
   })
 
+  test('update con newClasses aplica el className correcto al elemento', () => {
+    const root = document.createElement('div')
+    const child = document.createElement('article')
+    child.className = 'card'
+    root.appendChild(child)
+
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+
+    const ops: DOMOperation[] = [
+      { type: 'update', index: 0, newClasses: ['card', 'active'] },
+    ]
+
+    applyOps(ops, root, domNodes)
+
+    expect(child.className).toBe('card active')
+    // Sin coords en el op — no debe haberse aplicado layout
+    expect(child.style.transform).toBe('')
+    expect(child.style.position).toBe('')
+  })
+
+  test('update con newClasses vacío limpia el className', () => {
+    const root = document.createElement('div')
+    const child = document.createElement('article')
+    child.className = 'card active'
+    root.appendChild(child)
+
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+
+    const ops: DOMOperation[] = [
+      { type: 'update', index: 0, newClasses: [] },
+    ]
+
+    applyOps(ops, root, domNodes)
+
+    expect(child.className).toBe('')
+  })
+
   test('operations are applied in order: removes → updates → inserts', () => {
     const root = document.createElement('div')
     const oldChild = document.createElement('span')

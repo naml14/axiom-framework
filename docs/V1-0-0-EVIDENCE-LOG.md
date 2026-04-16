@@ -36,6 +36,22 @@ Plantilla:
 
 ## Entradas
 
+### 2026-04-16 — Fix P0: fast path no detecta cambios de clases CSS en re-render
+
+- Issue: #43
+- PR: #44 (rama `fix/issue-43-class-diff`)
+- Verificación:
+  - [x] `bun run typecheck` — limpio (0 errores)
+  - [x] `bun test` — 417 pass / 2 skip / 0 fail
+- Evidencia:
+  - Root cause: `fullDiff` fast path y `fullTreeDiff` nunca comparaban el array `classes`; `applyOps` no tenía handler para `newClasses`; el fast path emitía coords de layout para cambios de metadata, rompiendo portal CSS-managed children.
+  - Fix: helper `classesEqual()`, campo `newClasses?: string[]` en `DOMOperation`, separación de `layoutChangedSet` vs `allChangedSet` en fast path (coords solo cuando layout cambió), detección de `classesChanged` en `fullTreeDiff`, handler `el.className` en `applyOps`.
+  - Nuevos tests: `same-shape fast path detecta cambio de clases y emite newClasses sin coords de layout`, `fullTreeDiff detecta cambio de clases`, `applyOps aplica newClasses`, `applyOps con newClasses vacío limpia className`.
+  - archivos: `src/render/diff.ts`, `src/render/commit.ts`, `tests/diff.test.ts`, `tests/commit.test.ts`
+- Resultado: PASS
+- Notas/Riesgos:
+  - Bug secundario (coords emitidas para nodos de portal CSS-managed en cambios de metadata) corregido como parte del mismo fix — separación de `layoutChangedSet`.
+
 ### 2026-04-15 — Snapshot final local pre-PR (release readiness)
 
 - Issue: #30 (épica 1.0.0)
