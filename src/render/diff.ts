@@ -48,6 +48,7 @@ export interface DOMOperation {
   newTextContent?: string
   newOn?: Record<string, EventListener>
   newStyle?: import('../features/style.js').SafeStyleProps
+  newClasses?: string[]
 }
 
 // ============================================================
@@ -83,6 +84,20 @@ function buildPortalMap(prepared: PreparedComponent): Map<number, PortalMapEntry
   }
   walk(prepared)
   return map
+}
+
+// ============================================================
+// Class Equality Helper
+// ============================================================
+
+function classesEqual(a: string[] | undefined, b: string[] | undefined): boolean {
+  if (a === b) return true
+  if (a === undefined || b === undefined) return false
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
 }
 
 // ============================================================
@@ -155,16 +170,18 @@ export function fullDiff(
     const prevByIndex = buildIndexMap(prevPrepared)
     const newByIndex = buildIndexMap(newPrepared)
 
-    const changed = fastDiff(prevLayout, newLayout)
-    const changedSet = new Set<number>(changed)
+    const layoutChangedIndices = fastDiff(prevLayout, newLayout)
+    const layoutChangedSet = new Set<number>(layoutChangedIndices)
+    const allChanged = [...layoutChangedIndices]
+    const allChangedSet = new Set<number>(layoutChangedIndices)
     const markChanged = (idx: number): void => {
-      if (!changedSet.has(idx)) {
-        changedSet.add(idx)
-        changed.push(idx)
+      if (!allChangedSet.has(idx)) {
+        allChangedSet.add(idx)
+        allChanged.push(idx)
       }
     }
 
-    // Also check for text content changes
+    // Also check for text content, on, style and class changes
     forEachNode(newPrepared, (node) => {
       const idx = getNodeIndex(node)
       if (getNodeType(node) === 'text') {
@@ -186,17 +203,28 @@ export function fullDiff(
         if (newStyle !== oldStyle) {
           markChanged(idx)
         }
+        const newClasses = getClasses(node)
+        const oldClasses = oldNode ? getClasses(oldNode) : undefined
+        if (!classesEqual(newClasses, oldClasses)) {
+          markChanged(idx)
+        }
       }
     })
 
-    for (const idx of changed) {
+    for (const idx of allChanged) {
       const op: DOMOperation = {
         type: 'update',
         index: idx,
-        x: newLayout.x[idx],
-        y: newLayout.y[idx],
-        width: newLayout.width[idx],
-        height: newLayout.height[idx],
+      }
+
+      // Emit layout coords ONLY when layout actually changed.
+      // Portal CSS-managed children must NOT receive position coords for metadata-only changes
+      // (class/text/style/on) — applyFrameworkLayout would stack them all at (0,0).
+      if (layoutChangedSet.has(idx)) {
+        op.x = newLayout.x[idx]
+        op.y = newLayout.y[idx]
+        op.width = newLayout.width[idx]
+        op.height = newLayout.height[idx]
       }
 
       // Check text content changes
@@ -218,6 +246,11 @@ export function fullDiff(
         const oldStyle = oldNode ? getStyle(oldNode) : undefined
         if (newStyle !== oldStyle) {
           op.newStyle = newStyle
+        }
+        const newClasses = getClasses(newNode)
+        const oldClasses = oldNode ? getClasses(oldNode) : undefined
+        if (!classesEqual(newClasses, oldClasses)) {
+          op.newClasses = newClasses
         }
       }
 
@@ -331,6 +364,8 @@ function fullTreeDiff(
       let newOn: Record<string, EventListener> | undefined
       let styleChanged = false
       let newStyle: import('../features/style.js').SafeStyleProps | undefined
+      let classesChanged = false
+      let newClassesVal: string[] | undefined
 
       if (nodeType === 'text') {
         const oldNode = prevByIndex.get(idx)
@@ -354,9 +389,15 @@ function fullTreeDiff(
           styleChanged = true
           newStyle = currentStyle
         }
+        const oldClasses = oldNode ? getClasses(oldNode) : undefined
+        const currentClasses = getClasses(node)
+        if (!classesEqual(currentClasses, oldClasses)) {
+          classesChanged = true
+          newClassesVal = currentClasses
+        }
       }
 
-      if (layoutChanged || textChanged || onChanged || styleChanged) {
+      if (layoutChanged || textChanged || onChanged || styleChanged || classesChanged) {
         const op: DOMOperation = {
           type: 'update',
           index: idx,
@@ -375,6 +416,9 @@ function fullTreeDiff(
         }
         if (styleChanged) {
           op.newStyle = newStyle
+        }
+        if (classesChanged) {
+          op.newClasses = newClassesVal
         }
         ops.push(op)
       }

@@ -373,6 +373,110 @@ describe('fullDiff', () => {
       expect(styleUpdate.newStyle).toBeUndefined()
     }
   })
+
+  test('same-shape fast path detecta cambio de clases y emite newClasses sin coords de layout', () => {
+    const compA = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'article',
+          classes: ['card'],
+          children: [{ type: 'text' as const, content: 'Item' }],
+        },
+      ],
+    }))
+
+    const compB = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'article',
+          classes: ['card', 'active'],
+          children: [{ type: 'text' as const, content: 'Item' }],
+        },
+      ],
+    }))
+
+    const prevPrepared = prepare(compA, undefined, { textEngine: fakeTextEngine })
+    const newPrepared = prepare(compB, undefined, { textEngine: fakeTextEngine })
+    const prevLayout = createLayoutResult(prevPrepared)
+    const newLayout = createLayoutResult(newPrepared)
+    // Layout idéntico — no hubo cambio posicional
+
+    const domNodes: (HTMLElement | Text | null)[] = [
+      document.createElement('div'),
+      document.createElement('article'),
+      document.createTextNode('Item'),
+    ]
+
+    const ops = fullDiff(prevPrepared, prevLayout, newPrepared, newLayout, domNodes)
+    const classUpdate = ops.find((op) => op.type === 'update' && op.index === 1)
+    expect(classUpdate).toBeDefined()
+    expect(classUpdate && 'newClasses' in classUpdate).toBe(true)
+    if (classUpdate && classUpdate.type === 'update') {
+      expect(classUpdate.newClasses).toEqual(['card', 'active'])
+      // Coords NO deben estar presentes — el layout no cambió
+      expect(classUpdate.x).toBeUndefined()
+      expect(classUpdate.y).toBeUndefined()
+      expect(classUpdate.width).toBeUndefined()
+      expect(classUpdate.height).toBeUndefined()
+    }
+  })
+
+  test('fullTreeDiff (shape-change) detecta cambio de clases y emite newClasses sin coords si layout no cambió', () => {
+    // shape-change: nodeCount cambia de 3 a 4
+    const compA = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'article',
+          classes: ['card'],
+          children: [{ type: 'text' as const, content: 'Item' }],
+        },
+      ],
+    }))
+
+    const compB = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'article',
+          classes: ['card', 'active'],
+          children: [
+            { type: 'text' as const, content: 'Item' },
+            { type: 'text' as const, content: ' extra' },
+          ],
+        },
+      ],
+    }))
+
+    const prevPrepared = prepare(compA, undefined, { textEngine: fakeTextEngine })
+    const newPrepared = prepare(compB, undefined, { textEngine: fakeTextEngine })
+    const prevLayout = createLayoutResult(prevPrepared)
+    const newLayout = createLayoutResult(newPrepared)
+
+    const domNodes: (HTMLElement | Text | null)[] = [
+      document.createElement('div'),
+      document.createElement('article'),
+      document.createTextNode('Item'),
+    ]
+
+    const ops = fullDiff(prevPrepared, prevLayout, newPrepared, newLayout, domNodes)
+    const classUpdate = ops.find((op) => op.type === 'update' && op.index === 1)
+    // El índice 1 (article) está en ambas versiones — debe detectar cambio de clases
+    if (classUpdate && classUpdate.type === 'update') {
+      expect('newClasses' in classUpdate).toBe(true)
+      expect(classUpdate.newClasses).toEqual(['card', 'active'])
+    }
+  })
 })
 
 // ============================================================

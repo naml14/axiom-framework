@@ -338,6 +338,10 @@ export function applyOps(
           applyManagedStyleToElement(el, op.newStyle)
         }
       }
+
+      if ('newClasses' in op && el instanceof HTMLElement) {
+        el.className = (op.newClasses ?? []).join(' ')
+      }
     }
 
     if (op.type === 'move') {
