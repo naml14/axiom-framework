@@ -36,6 +36,38 @@ Plantilla:
 
 ## Entradas
 
+### 2026-04-15 — Implementación P1: Scheduler API coherente (setScheduler funcional)
+
+- Issue: #37
+- PR: TBD (rama local `feat/v1-0-0-kickoff`)
+- Verificación:
+  - [x] `bun test tests/scheduler.test.ts`
+  - [x] `bun test tests/app.test.ts`
+  - [x] Compatibilidad con scheduler por llamada (`scheduleRender(..., scheduler?)`)
+- Evidencia:
+  - tests: `scheduler.test.ts` + `app.test.ts` (36 passed / 0 failed)
+  - archivos: `src/scheduler.ts`, `tests/scheduler.test.ts`
+  - comportamiento validado: `setScheduler()` dejó de ser no-op; scheduler global configurable y `resetScheduler()` restaura default scheduler.
+- Resultado: PASS
+- Notas/Riesgos:
+  - Riesgo residual bajo de contaminación en tests/integraciones si no se llama `resetScheduler()` tras set global custom.
+
+### 2026-04-15 — Implementación P1: Hardening attrs/event attrs
+
+- Issue: #36
+- PR: TBD (rama local `feat/v1-0-0-kickoff`)
+- Verificación:
+  - [x] `bun test tests/edge-cases.test.ts`
+  - [x] `bun test`
+  - [x] Validación de attrs en CSR y SSR
+- Evidencia:
+  - tests: `edge-cases.test.ts` (44 passed / 0 failed), suite total (466 pass / 0 fail)
+  - archivos: `src/core/attrs.ts`, `src/render/commit.ts`, `src/ssr.ts`, `tests/edge-cases.test.ts`, `SECURITY.md`
+  - comportamiento validado: bloqueo de event attrs inline, neutralización de schemes peligrosos (`javascript:`, `data:`, `vbscript:`, `file:`), validación de nombres de atributos.
+- Resultado: PASS
+- Notas/Riesgos:
+  - Compatibilidad mantenida: atributos seguros y URLs legítimas permanecen sin alteración.
+
 ### 2026-04-15 — Implementación P0: API stability contract v1.0.0
 
 - Issue: #34
