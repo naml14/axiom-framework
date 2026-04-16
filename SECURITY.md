@@ -2,10 +2,11 @@
 
 ## Supported Versions
 
-| Version | Supported |
-|---------|-----------|
-| 0.2.x   | ✅ Yes    |
-| < 0.2   | ❌ No     |
+| Version | Supported      | Notes                                 |
+|---------|----------------|---------------------------------------|
+| 1.x     | ✅ Yes         | CSR + SSR, full security support      |
+| 0.2.x   | ⚠️ Limited     | CSR only, critical fixes only         |
+| < 0.2   | ❌ No          | End of life                           |
 
 ## Reporting a Vulnerability
 
@@ -34,14 +35,151 @@ If you discover a security vulnerability, report it privately using one of these
 
 ## Scope
 
-This library runs in the browser (client-side only). There is no server-side execution, no network requests, and no data persistence. The attack surface is limited to:
+Axiom runs in **two environments** as of v1.0.0:
 
-- Prototype pollution via `ComponentNode` props
-- XSS via unsanitized `textContent` or `attrs` values passed by the consuming application
-- Dependency vulnerabilities (scanned weekly via GitHub Actions + CodeQL)
+| Environment | Runtime          | Since  |
+|-------------|------------------|--------|
+| CSR (Client-Side Rendering) | Browser | v0.1.0 |
+| SSR (Server-Side Rendering) | Node.js, Bun     | v1.0.0 |
+
+Each environment has distinct attack surfaces documented below:
+
+- [CSR Threats (Browser)](#csr-threats-browser)
+- [SSR Threats (Server)](#ssr-threats-server)
+- [Plugin Lifecycle Risks](#plugin-lifecycle-risks)
+
+## CSR Threats (Browser)
+
+### Prototype Pollution via Props
+
+**Framework protection**: `isSafeKey()` blocks keys `__proto__`, `constructor`, and `prototype` on all component prop objects before they are applied to the DOM.
+
+**Consumer responsibility**: None — the framework handles this transparently.
+
+### XSS via Attributes
+
+**Framework protection**: `escapeHtml()` escapes attribute values, and `VALID_ATTR_RE` validates attribute names. Tag names are validated by `sanitizeTagName()` + `VALID_TAG_RE`.
+
+**Consumer responsibility**: The framework does not validate the **semantic meaning** of URLs. Validate `href`, `src`, and `action` values yourself before passing them as props:
+
+```ts
+// ❌ Vulnerable — untrusted URL passed directly
+createApp({ tag: 'a', attrs: { href: userInput } });
+
+// ✅ Safe — validate protocol first
+const safe = /^https?:\/\//.test(userInput) ? userInput : '#';
+createApp({ tag: 'a', attrs: { href: safe } });
+```
+
+### Event Handler Misuse
+
+**Framework protection**: None — Axiom does not restrict event handler content.
+
+**Consumer responsibility**: Never pass `eval`, `Function()`, or dynamic code execution inside event handlers:
+
+```ts
+// ❌ Vulnerable
+createApp({ tag: 'button', on: { click: () => eval(userCode) } });
+
+// ✅ Safe
+createApp({ tag: 'button', on: { click: () => handleClick() } });
+```
+
+## SSR Threats (Server)
+
+### Inline Styles Injection
+
+`SSRRenderOptions.metadata.inlineStyles` is rendered as-is inside a `<style>` block. Axiom calls `escapeStyleText()` to prevent premature `</style>` tag injection, but does **not** sanitize CSS property values.
+
+**Risk**: An attacker controlling `inlineStyles` content can inject CSS `url()` expressions to exfiltrate data.
+
+**Consumer responsibility**: Sanitize all CSS before passing it to `renderToString`:
+
+```ts
+// ❌ Vulnerable — CSS from untrusted source
+await renderToString(app, { metadata: { inlineStyles: userCss } });
+
+// ✅ Safe — sanitize first (example using a CSS sanitizer library)
+const safeCss = sanitizeCss(userCss); // strip url(), @import, etc.
+await renderToString(app, { metadata: { inlineStyles: safeCss } });
+```
+
+### External Stylesheet SSRF
+
+`SSRRenderOptions.metadata.stylesheets[].href` is emitted as a `<link rel="stylesheet">` href attribute. Axiom escapes the value but does **not** validate the protocol or hostname.
+
+**Risk**: A server-side request or redirect to an attacker-controlled URL (SSRF / open redirect).
+
+**Consumer responsibility**: Validate that all stylesheet hrefs use allowed protocols and trusted hosts:
+
+```ts
+// ❌ Vulnerable
+const sheets = [{ href: req.query.css }];
+
+// ✅ Safe
+const ALLOWED = /^https:\/\/cdn\.example\.com\//;
+const sheets = userSheets.filter(s => ALLOWED.test(s.href));
+await renderToString(app, { metadata: { stylesheets: sheets } });
+```
+
+### Metadata Key Injection
+
+`metadata.og` keys are rendered as `<meta property="og:KEY">` attributes. Do not map untrusted input objects directly to `metadata.og`.
+
+**Consumer responsibility**: Allowlist the keys you emit:
+
+```ts
+// ❌ Vulnerable — untrusted keys become meta tags
+await renderToString(app, { metadata: { og: untrustedObject } });
+
+// ✅ Safe — explicit allowlist
+const { title, description } = untrustedObject;
+await renderToString(app, { metadata: { og: { title, description } } });
+```
+
+See also [Plugin Lifecycle Risks](#plugin-lifecycle-risks) for additional SSR concerns.
+
+## Plugin Lifecycle Risks
+
+### Cross-Request Pollution
+
+The plugin registry (`_registry`) is a **module-level singleton**. On long-running Bun/Node servers, plugins registered at startup persist for the entire process lifetime and receive lifecycle callbacks for **every** app instance across **all** requests.
+
+**Risk**: A plugin that accumulates request-scoped state will leak data between requests.
+
+**Consumer recommendations**:
+
+1. Register plugins once at server startup, not per-request.
+2. Keep plugin `onMount`/`onUnmount` hooks **stateless**.
+3. For strict request isolation, run each request in a separate Worker with its own module scope.
+
+### Supply Chain Risk
+
+Plugin hooks (`onMount`, `onUnmount`, `onUpdate`) run with the **full permissions of the server process** — file system, network, environment variables, and child processes.
+
+**Consumer recommendations**:
+
+1. Vet every third-party plugin before installing it.
+2. Audit plugin source code and watch for suspicious hooks.
+3. Pin plugin versions and review changelogs before upgrading.
+4. Sandbox untrusted plugins in a restricted Worker or subprocess.
 
 ## Out of Scope
 
-- Vulnerabilities in the consuming application's own code
-- Issues that require physical access to the user's machine
-- Theoretical vulnerabilities without a proof of concept
+The following are **not covered** by this security policy:
+
+1. **Application-level data sanitization** — `metadata.inlineStyles`, `stylesheets[].href`, `textContent`, `attrs`, and `metadata.og` keys are the consuming application's responsibility.
+2. **Third-party plugin security** — Plugins run with full process permissions; vetting them is the consumer's responsibility.
+3. **Theoretical vulnerabilities** — Reports must include a working proof of concept.
+4. **Physical access** — Vulnerabilities that require physical access to the user's or server's machine.
+
+## API Stability and Security
+
+The security review coverage of a given API depends on its stability tier:
+
+| API Type     | Security Posture                                              |
+|--------------|---------------------------------------------------------------|
+| **Stable**   | Fully reviewed; breaking changes require a major version bump |
+| **Experimental** | May have undiscovered security gaps; not recommended for production security-sensitive code |
+
+**Recommendation**: Use only stable APIs (`createApp`, `renderToString`, `createPlugin`, `createRouter`) in production environments where security is a concern. Experimental APIs may be promoted or removed between minor versions.
