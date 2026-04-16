@@ -32,6 +32,7 @@
     "build": "bunx tsc --project tsconfig.build.json",
     "typecheck": "bunx tsc --noEmit",
     "test": "bun test",
+    "validate:api": "bun run scripts/validate-api-stability.ts",
     "prepublishOnly": "bun run typecheck && bun test && bun run build",
     "demo:build": "bun run build && bun build demo/app.ts --outfile demo/app.js --target browser",
     "run:demo": "bun run demo/server.ts --no-build",
@@ -63,6 +64,7 @@
   "devDependencies": {
     "@types/bun": "1.3.11",
     "happy-dom": "^20.8.9",
+    "ts-morph": "^24.0.0",
     "typescript": "^6.0.2"
   }
 }

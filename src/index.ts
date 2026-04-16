@@ -3,6 +3,8 @@
 // ============================================================
 //
 // This is the ONLY surface consumers should import from.
+// API Stability Contract v1.0.0 applies to all exports in this file.
+// Default tier for kickoff is stable (@since v1.0.0) unless explicitly tagged otherwise.
 // Internal modules (prepare internals, diff, scheduler)
 // are NOT exported here — they are implementation details that
 // can change between minor versions without semver guarantees.
