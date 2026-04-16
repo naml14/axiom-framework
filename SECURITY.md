@@ -115,7 +115,7 @@ await renderToString(app, { metadata: { inlineStyles: safeCss } });
 
 ### External Stylesheet SSRF
 
-`SSRRenderOptions.metadata.stylesheets` (`string[]`) is emitted as `<link rel="stylesheet">` href attributes. Axiom escapes the value but does **not** validate the protocol or hostname.
+`SSRRenderOptions.metadata.stylesheets` (`string[]`) are emitted as `<link rel="stylesheet">` href attributes. Axiom escapes the value but does **not** validate the protocol or hostname.
 
 **Risk**: A server-side request or redirect to an attacker-controlled URL (SSRF / open redirect).
 

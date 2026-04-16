@@ -28,7 +28,7 @@ import { writeFileSync } from 'node:fs'
 // Types
 // ============================================================
 
-type StabilityTier = 'stable' | 'beta' | 'experimental' | 'internal' | 'deprecated'
+type StabilityTier = 'stable' | 'beta' | 'experimental' | 'internal'
 
 const API_CONTRACT_VERSION = '1.0.0'
 
@@ -431,9 +431,9 @@ function generateStabilityDoc(report: ValidationReport) {
     // Extract module specifier from /src/ paths
     if (normalized.includes('/src/')) {
       const match = normalized.match(/\/src\/(.*?)$/)
-      if (match) {
-        const module = match[1]
-        return module.startsWith('.') ? module : `./${module}`
+      const modulePath = match ? (match[1] as string) : null
+      if (modulePath) {
+        return modulePath.startsWith('.') ? modulePath : `./${modulePath}`
       }
     }
     // If already has ./ prefix, keep it
