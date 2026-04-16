@@ -477,3 +477,21 @@ test('handles component error', () => {
   expect(() => render(BadComponent)).toThrow()
 })
 ```
+
+## Coverage Gate
+
+Axiom enforces a global **85% minimum line coverage** gate in CI.
+
+### Run the same gate locally
+
+```bash
+bun run test:coverage
+```
+
+What this command does:
+
+- Runs `bun test --coverage` once from the repository root.
+- Parses the final `All files` / `% Lines` summary emitted by Bun.
+- Fails clearly if tests fail, if the coverage summary cannot be parsed, or if line coverage drops below `85%`.
+
+CI uses the same command, so local output should match the workflow behavior.

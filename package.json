@@ -32,6 +32,7 @@
     "build": "bunx tsc --project tsconfig.build.json",
     "typecheck": "bunx tsc --noEmit",
     "test": "bun test",
+    "test:coverage": "bun run scripts/validate-coverage.ts",
     "validate:api": "bun run scripts/validate-api-stability.ts",
     "prepublishOnly": "bun run typecheck && bun test && bun run build",
     "demo:build": "bun run build && bun build demo/app.ts --outfile demo/app.js --target browser",

@@ -118,18 +118,28 @@ describe('setScheduler', () => {
 
     resetScheduler() // reset — custom should no longer be the global
 
-    // In Bun, requestAnimationFrame is undefined so defaultScheduler uses setTimeout.
-    // We mock setTimeout to confirm the default scheduler (not custom) is invoked.
+    // Other test files may define requestAnimationFrame globally.
+    // Force the fallback branch explicitly so this assertion stays deterministic
+    // in the full suite and under coverage instrumentation.
     let timeoutScheduled = false
     const origSetTimeout = globalThis.setTimeout
-    ;(globalThis as any).setTimeout = (cb: () => void) => {
+    const origRequestAnimationFrame = globalThis.requestAnimationFrame
+    delete (globalThis as Partial<typeof globalThis>).requestAnimationFrame
+    ;(globalThis as any).setTimeout = (_cb: () => void) => {
       timeoutScheduled = true
       return 0
     }
 
-    scheduleRender(() => {}) // no per-call scheduler — must use resetted defaultScheduler
-
-    globalThis.setTimeout = origSetTimeout
+    try {
+      scheduleRender(() => {}) // no per-call scheduler — must use reset defaultScheduler
+    } finally {
+      globalThis.setTimeout = origSetTimeout
+      if (origRequestAnimationFrame === undefined) {
+        delete (globalThis as Partial<typeof globalThis>).requestAnimationFrame
+      } else {
+        globalThis.requestAnimationFrame = origRequestAnimationFrame
+      }
+    }
 
     expect(customCalled).toBe(false)
     expect(timeoutScheduled).toBe(true)

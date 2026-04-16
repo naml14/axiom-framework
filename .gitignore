@@ -14,6 +14,7 @@ scripts/
 !scripts/
 scripts/*
 !scripts/validate-api-stability.ts
+!scripts/validate-coverage.ts
 
 # --- Editor / IDE ---
 .vscode/
