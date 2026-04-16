@@ -690,9 +690,7 @@ Pretext se usa para el sub-problema de medición de texto dentro del framework:
 ## Referencias
 
 - `SPEC-TEXT-LAYOUT-ENGINE.md` — Análisis técnico profundo de pretext
-- `pretext-main/src/` — Código fuente de referencia
-- `pretext-main/AGENTS.md` — Notas de implementación y convenciones
-- `pretext-main/thoughts.md` — Visión filosófica del autor
+- `https://github.com/chenglou/pretext` — Código fuente de referencia, notas y contexto upstream oficial
 
 ---
 

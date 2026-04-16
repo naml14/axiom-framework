@@ -457,7 +457,7 @@ tests\style.test.ts:
 (pass) applyStyleToElement > applies resolved token values correctly
 (pass) Style integration — ElementNode to commit > style: {} on type check — ElementNode accepts SafeStyleProps
 
-pretext-main\src\layout.test.ts:
+https://github.com/chenglou/pretext (src/layout.test.ts):
 (pass) prepare invariants > whitespace-only input stays empty
 (pass) prepare invariants > collapses ordinary whitespace runs and trims the edges [15.00ms]
 (pass) prepare invariants > pre-wrap mode keeps ordinary spaces instead of collapsing them

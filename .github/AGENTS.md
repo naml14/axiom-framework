@@ -368,4 +368,4 @@ El height calculado del root node (índice 0) se aplica al contenedor DOM: `root
 
 - `PLAN-DESARROLLO.md` — Plan completo de desarrollo
 - `SPEC-TEXT-LAYOUT-ENGINE.md` — Análisis técnico de pretext (inspiración)
-- `pretext-main/` — Código fuente de referencia
+- `https://github.com/chenglou/pretext` — Código fuente de referencia (upstream oficial)

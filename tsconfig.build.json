@@ -14,5 +14,5 @@
     "types": []
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "tests", "demo", "pretext-main"]
+  "exclude": ["node_modules", "dist", "tests", "demo"]
 }

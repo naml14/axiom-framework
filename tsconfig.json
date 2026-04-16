@@ -34,5 +34,5 @@
     "outDir": "dist"
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "demo/**/*.ts", "scripts/**/*.ts"],
-  "exclude": ["node_modules", "dist", "pretext-main"]
+  "exclude": ["node_modules", "dist"]
 }
