@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.1](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.0...axiom-framework-v0.9.1) (2026-04-16)
+
+
+### Bug Fixes
+
+* **diff/commit:** detectar cambios de clases CSS en re-render ([244699f](https://github.com/naml14/axiom-framework/commit/244699f9c3427d92b11d5d36335abb1ffde975d8)), closes [#43](https://github.com/naml14/axiom-framework/issues/43)
+* **diff:** address PR [#44](https://github.com/naml14/axiom-framework/issues/44) review threads ([a28a8d4](https://github.com/naml14/axiom-framework/commit/a28a8d4f655dad2822d7abb64ca1d700267e3976)), closes [#43](https://github.com/naml14/axiom-framework/issues/43)
+* **diff:** detectar cambios de clases CSS en fast path ([a8da6d3](https://github.com/naml14/axiom-framework/commit/a8da6d3ea4f30376d58ab8e2ecba77c769459f9f))
+
 ## [0.9.0](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.2.10...axiom-framework-v0.9.0) (2026-04-16)
 
 
