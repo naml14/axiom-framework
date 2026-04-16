@@ -4,6 +4,7 @@ import { defineComponent } from '../src/render/component.js'
 import { prepare } from '../src/render/prepare.js'
 import { reflow } from '../src/render/reflow.js'
 import { commitFull, commitHydrate } from '../src/render/commit.js'
+import { fullDiff } from '../src/render/diff.js'
 import { renderToString } from '../src/ssr.js'
 import type { DOMState } from '../src/render/commit.js'
 
@@ -40,7 +41,7 @@ const ITEMS = 200 // 200 items × ~5 nodes each ≈ 1000 nodes
 const CONSTRAINTS = { maxWidth: 800, maxHeight: 6000 }
 
 // Build a realistic component tree: app > list > N cards > (title + body text)
-function buildBenchmarkComponent(count: number) {
+function buildBenchmarkComponent(count: number, bodySuffix = '') {
   return defineComponent(() => ({
     type: 'element' as const,
     tag: 'div',
@@ -63,13 +64,37 @@ function buildBenchmarkComponent(count: number) {
           tag: 'p',
           children: [{
             type: 'text' as const,
-            content: `This is the body text for card ${i + 1}. It contains enough content to exercise the text measurement path and ensure multiple lines are calculated correctly under a constrained width.`,
+            content: `This is the body text for card ${i + 1}. It contains enough content to exercise the text measurement path and ensure multiple lines are calculated correctly under a constrained width.${bodySuffix}`,
           }],
         },
       ],
     })),
   }))
 }
+
+describe('benchmark: diff (1000-node same-shape)', () => {
+  const PrevComp = buildBenchmarkComponent(ITEMS, '')
+  const NextComp = buildBenchmarkComponent(ITEMS, ' updated')
+
+  test('fullDiff() same-shape smoke under 200ms (CI threshold)', () => {
+    const prevPrepared = prepare(PrevComp, undefined, { textEngine: fakeTextEngine })
+    const nextPrepared = prepare(NextComp, undefined, { textEngine: fakeTextEngine })
+
+    const prevLayout = reflow(prevPrepared, CONSTRAINTS, { lineHeight: 20 })
+    const nextLayout = reflow(nextPrepared, CONSTRAINTS, { lineHeight: 20 })
+
+    const domNodes: (HTMLElement | Text | null)[] = Array.from({ length: prevLayout.nodeCount }, () => null)
+
+    const t0 = performance.now()
+    const ops = fullDiff(prevPrepared, prevLayout, nextPrepared, nextLayout, domNodes)
+    const elapsed = performance.now() - t0
+
+    console.log(`[benchmark:diff] fullDiff(${nextLayout.nodeCount} nodes): ${elapsed.toFixed(2)}ms, ops: ${ops.length}`)
+
+    expect(ops.length).toBeGreaterThan(0)
+    expect(elapsed).toBeLessThan(200)
+  })
+})
 
 describe('benchmark: 1000-node tree', () => {
   const BenchComp = buildBenchmarkComponent(ITEMS)
