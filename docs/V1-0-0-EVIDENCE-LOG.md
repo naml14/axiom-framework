@@ -36,6 +36,23 @@ Plantilla:
 
 ## Entradas
 
+### 2026-04-15 — Implementación P1: Optimización incremental de diff (index lookup)
+
+- Issue: #40
+- PR: TBD (rama local `feat/v1-0-0-kickoff`)
+- Verificación:
+  - [x] `bun test tests/diff.test.ts`
+  - [x] `bun test tests/integration.test.ts`
+  - [x] `bun test tests/benchmark.test.ts`
+- Evidencia:
+  - tests: `diff.test.ts` + `integration.test.ts` + `benchmark.test.ts` (63 passed / 0 failed)
+  - benchmark smoke: `fullDiff` same-shape (~1000 nodos) bajo umbral CI (200ms)
+  - archivos: `src/render/diff.ts`, `tests/diff.test.ts`, `tests/benchmark.test.ts`
+  - comportamiento validado: reemplazo de búsquedas lineales repetidas por mapas de índice (`Map`) y deduplicación O(1) con `Set`, manteniendo semántica de operaciones.
+- Resultado: PASS
+- Notas/Riesgos:
+  - Umbral de benchmark puede variar por runner/entorno; se mantiene como smoke gate para detectar regresiones gruesas.
+
 ### 2026-04-15 — Implementación P1: Hydration attrs hardening XSS residual
 
 - Issue: #39
