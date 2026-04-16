@@ -475,6 +475,11 @@ describe('fullDiff', () => {
     if (classUpdate && classUpdate.type === 'update') {
       expect('newClasses' in classUpdate).toBe(true)
       expect(classUpdate.newClasses).toEqual(['card', 'active'])
+      // En shape-change, si el layout de ese índice no cambia, no debe emitir coords.
+      expect(classUpdate.x).toBeUndefined()
+      expect(classUpdate.y).toBeUndefined()
+      expect(classUpdate.width).toBeUndefined()
+      expect(classUpdate.height).toBeUndefined()
     }
   })
 })
