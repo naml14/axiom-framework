@@ -49,20 +49,20 @@ const label = computed(() => `Count: ${count.value}`)
 
 // --- Component ---
 const Counter = defineComponent(() => ({
-  type: 'element' as const,
+  type: 'element',
   tag: 'div',
   layout: { flexDirection: 'column', gap: 8, padding: 16 },
   children: [
     {
-      type: 'element' as const,
+      type: 'element',
       tag: 'h1',
-      children: [{ type: 'text' as const, content: label.value }],
+      children: [{ type: 'text', content: label.value }],
     },
     {
-      type: 'element' as const,
+      type: 'element',
       tag: 'button',
       attrs: { id: 'increment' },
-      children: [{ type: 'text' as const, content: 'Increment' }],
+      children: [{ type: 'text', content: 'Increment' }],
     },
   ],
 }))
@@ -73,7 +73,7 @@ app.mount()
 
 // --- Reactivity ---
 document.getElementById('increment')!.addEventListener('click', () => {
-  count.value++
+  count.value++  // Automatically triggers prepare → reflow → commit in next rAF
 })
 ```
 
@@ -155,21 +155,21 @@ import { defineComponent } from 'axiom-framework'
 import type { ComponentNode } from 'axiom-framework'
 
 const Card = defineComponent((props: { title: string; body: string }) => ({
-  type: 'element' as const,
+  type: 'element',
   tag: 'article',
   classes: ['card'],
   layout: { flexDirection: 'column', gap: 8, padding: 16 },
   children: [
-    { type: 'element' as const, tag: 'h3',
-      children: [{ type: 'text' as const, content: props.title }] },
-    { type: 'element' as const, tag: 'p',
-      children: [{ type: 'text' as const, content: props.body }] },
+    { type: 'element', tag: 'h3',
+      children: [{ type: 'text', content: props.title }] },
+    { type: 'element', tag: 'p',
+      children: [{ type: 'text', content: props.body }] },
   ],
 }))
 
 // Components are directly callable — use them in children arrays:
 const App = defineComponent(() => ({
-  type: 'element' as const,
+  type: 'element',
   tag: 'main',
   children: [
     Card({ title: 'Hello', body: 'World' }),
@@ -180,7 +180,7 @@ const App = defineComponent(() => ({
 #### ComponentNode types
 
 ```typescript
-type ComponentNode = ElementNode | TextNode | FragmentNode
+type ComponentNode = ElementNode | TextNode | FragmentNode | PortalNode
 
 interface ElementNode {
   type: 'element'
@@ -188,6 +188,8 @@ interface ElementNode {
   key?: string              // for list reconciliation
   classes?: string[]
   attrs?: Record<string, string>
+  on?: Record<string, EventListener>      // event handlers
+  style?: SafeStyleProps                  // inline styles with token resolution
   layout?: LayoutProps      // triggers flex layout engine
   children?: ComponentNode[]
 }
@@ -201,19 +203,32 @@ interface FragmentNode {
   type: 'fragment'
   children: ComponentNode[]
 }
+
+interface PortalNode {
+  type: 'portal'
+  target: HTMLElement       // target DOM element for portal
+  cssManaged?: boolean      // use CSS transforms instead of relocation
+  children: ComponentNode[]
+}
 ```
 
 #### LayoutProps
 
 ```typescript
 interface LayoutProps {
-  flexDirection?: 'row' | 'column'   // default: 'column'
-  gap?: number                        // gap between children (px)
+  display?: 'flex' | 'grid'             // layout mode: flex (default) or grid
+  flexDirection?: 'row' | 'column'      // for flex: default is 'column'
+  gap?: number                           // gap between children (px)
+  columnGap?: number                     // gap between columns (grid)
+  rowGap?: number                        // gap between rows (grid)
   justifyContent?: 'start' | 'center' | 'end' | 'space-between'
   alignItems?: 'start' | 'center' | 'end' | 'stretch'
   width?: number | `${number}px` | `${number}%` | `${number}vw` | `${number}vh`
   height?: number | `${number}px` | `${number}%` | `${number}vw` | `${number}vh`
-  padding?: number                    // uniform padding (px)
+  padding?: number                       // uniform padding (px)
+  gridTemplateColumns?: number | `repeat(${number}, 1fr)` // grid columns (MVP)
+  gridRowSpan?: number                  // vertical span in grid
+  gridColumnSpan?: number               // horizontal span in grid
   breakpoints?: Array<{
     minWidth?: number
     maxWidth?: number
@@ -233,6 +248,9 @@ const app = createApp(
   {
     lineHeight: 20,            // default line height for text (px)
     font: '16px sans-serif',   // font used for text metrics
+    hydrate: false,            // reuse server-rendered DOM if available
+    strictHydration: false,    // warn (true) or throw on hydration mismatch
+    hydrationDebug: false,     // log per-node hydration details
   }
 )
 
@@ -241,6 +259,7 @@ app.unmount()  // cleanup effects, clear DOM
 
 // Performance metrics from the last render cycle:
 const { prepareMs, reflowMs, commitMs } = app.getMetrics()
+// Returns { prepareMs: number, reflowMs: number, commitMs: number } in milliseconds
 ```
 
 ---
@@ -255,6 +274,7 @@ Axiom automatically routes nodes to the most efficient layout algorithm:
 | ----------- | ------ | ------------- |
 | No `layout` props + simple children | **Fast path** | Top-to-bottom block layout. No allocations. |
 | Has `layout` props (flex/gap/etc.) | **Flex path** | Full flex engine with justify/align/padding. |
+| Has `display: 'grid'` | **Grid path** | CSS Grid layout with fixed columns, spans, auto-placement (MVP). |
 
 ### Position model
 
@@ -275,7 +295,9 @@ All positions (`x`, `y`) are **relative to the direct parent** — not absolute 
 | `prepare()` per component | < 5ms | Once per shape change |
 | `reflow()` per component | < 0.5ms | No DOM, no strings, no allocations |
 | `commit()` per update | < 2ms | Sequential writes, zero reads |
-| Full hot path (reflow + commit) | < 16ms | 60fps for trees of ~1000 nodes |
+| Full hot path (reflow + commit) | < 16ms target | 60fps for trees of ~1000 nodes (not measured in CI) |
+
+> **Note**: Use `app.getMetrics()` to access real timings from the last render cycle: `{ prepareMs: number, reflowMs: number, commitMs: number }` in milliseconds.
 
 ### What the hot path NEVER does
 
@@ -304,12 +326,12 @@ All positions (`x`, `y`) are **relative to the direct parent** — not absolute 
 | --------- | ---------------- | ------- | ----- | -------- |
 | DOM reads in hot path | **0** | Yes (reconciler) | Yes (reconciler) | Minimal |
 | Layout algorithm | **In-memory arithmetic** | Browser CSS | Browser CSS | Browser CSS |
-| Masonry layout | **Native** | CSS hack | CSS hack | CSS hack |
+| Grid layout | **Native (MVP)** | CSS | CSS | CSS |
 | Signals | **Built-in** | useState/Zustand | ref/reactive | Stores |
 | Bundle size | **~12KB min / ~4KB gzip** | ~40KB | ~34KB | ~2KB |
 | TypeScript | **First-class** | Yes | Yes | Yes |
 
-> **Note**: axiom-framework is a low-level layout engine, not a full-stack application framework. It excels at compute-heavy layouts where precise control over positioning is needed.
+> **Note**: axiom-framework is a low-level layout engine, not a full-stack application framework. It excels at compute-heavy layouts where precise control over positioning is needed. Bundle size claims not currently verified in CI. Run `bun run build && wc -c dist/index.js` to measure locally.
 
 ---
 
@@ -402,4 +424,7 @@ Tests use [Bun's built-in test runner](https://bun.sh/docs/cli/test) and [Happy 
 
 ## License
 
-[MIT](./LICENSE) © Nelson Andrés Mora López (naml14)
+[MIT OR Apache-2.0](./LICENSE) © 2026 Nelson Andrés Mora López (naml14)
+
+This project is dual-licensed. Choose either the MIT License or Apache License 2.0.
+See [LICENSE](./LICENSE), [LICENSE-MIT](./LICENSE-MIT), and [LICENSE-APACHE](./LICENSE-APACHE) for details.
