@@ -71,7 +71,7 @@ Plantilla:
 
 ### 2026-04-15 — Implementación P1: Optimización incremental de diff (index lookup)
 
-- Issue: #40
+- Issue: #38
 - PR: TBD (rama local `feat/v1-0-0-kickoff`)
 - Verificación:
   - [x] `bun test tests/diff.test.ts`
@@ -85,10 +85,11 @@ Plantilla:
 - Resultado: PASS
 - Notas/Riesgos:
   - Umbral de benchmark puede variar por runner/entorno; se mantiene como smoke gate para detectar regresiones gruesas.
+  - Nota de trazabilidad: commits históricos como `3a3b7fa` referenciaron `#40`, pero el issue canónico en GitHub para esta optimización es `#38`.
 
-### 2026-04-15 — Implementación P1: Hydration attrs hardening XSS residual
+### 2026-04-15 — Implementación P1: Hardening XSS residual + alineación docs/código
 
-- Issue: #39
+- Issue: #40
 - PR: TBD (rama local `feat/v1-0-0-kickoff`)
 - Verificación:
   - [x] `bun test tests/commit.test.ts`
@@ -97,14 +98,14 @@ Plantilla:
 - Evidencia:
   - tests: `commitHydrate: security hardening` (remove `on*`, neutralize `javascript:` a `#blocked`, preservación de attrs seguros) y `SSR: attrs security policy`
   - archivos: `src/render/commit.ts`, `tests/commit.test.ts`, `tests/ssr.test.ts`, `SECURITY.md`, `docs/V1-0-0-EVIDENCE-LOG.md`, `docs/V1-0-0-PLAN-TRAZABILIDAD.md`
-  - comportamiento validado: hidratación sanea attrs peligrosos preexistentes del DOM reutilizado y mantiene coherencia de política con SSR.
+  - comportamiento validado: hidratación sanea attrs peligrosos preexistentes del DOM reutilizado y alinea la política documentada de seguridad con el comportamiento real de SSR/hidratación.
 - Resultado: PASS
 - Notas/Riesgos:
   - Endurecimiento deliberado sobre DOM inseguro preexistente; no se introduce reconciliación completa de attrs benignos en hidratación.
 
 ### 2026-04-15 — Implementación P1: Coverage gate en CI
 
-- Issue: #38
+- Issue: #36
 - PR: TBD (rama local `feat/v1-0-0-kickoff`)
 - Verificación:
   - [x] `bun run test:coverage`
@@ -137,7 +138,7 @@ Plantilla:
 
 ### 2026-04-15 — Implementación P1: Hardening attrs/event attrs
 
-- Issue: #36
+- Issue: #39
 - PR: TBD (rama local `feat/v1-0-0-kickoff`)
 - Verificación:
   - [x] `bun test tests/edge-cases.test.ts`
@@ -167,6 +168,22 @@ Plantilla:
 - Resultado: PASS
 - Notas/Riesgos:
   - Política kickoff: export público no etiquetado se considera `stable` en v1.0.0; en fase posterior conviene migrar a tags explícitos por export.
+
+### 2026-04-15 — Implementación P0: SECURITY threat model real (CSR + SSR)
+
+- Issue: #35
+- PR: #41
+- Verificación:
+  - [x] Revisión de `SECURITY.md`
+  - [x] Coherencia de alcance CSR + SSR
+  - [x] Responsabilidades del consumidor documentadas
+- Evidencia:
+  - archivos: `SECURITY.md`
+  - comportamiento validado: el threat model documenta explícitamente CSR y SSR, delimita scope/out-of-scope y aclara responsabilidades sobre sanitización de input, attrs, URLs y riesgos de plugins.
+  - commit relacionado: `3df31b8` (`docs(security): update threat model for v1.0.0 (CSR+SSR, plugins, API stability)`)
+- Resultado: PASS
+- Notas/Riesgos:
+  - La issue quedó abierta por falta de autocierre en PR/commit, no por ausencia de implementación técnica.
 
 ### 2026-04-15 — Implementación P0: Plugin lifecycle runtime
 
