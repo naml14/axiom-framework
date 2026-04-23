@@ -76,11 +76,11 @@ Este plan convierte la auditoría técnica en ejecución concreta con criterios 
 | P0 | Aislamiento SSR (`prepare`) | Reliability/concurrency | Done (branch) (#31) |
 | P0 | SECURITY.md threat model | Security governance | Done (branch) (#35) |
 | P0 | API stability contract | SemVer/compatibilidad | Done (branch) (#34) |
-| P1 | Hardening attrs/event attrs | Security hardening | Done (branch) (#36) |
+| P1 | Hardening attrs/event attrs | Security hardening | Done (branch) (#39) |
 | P1 | Scheduler API no-op | API coherence | Done (branch) (#37) |
-| P1 | Coverage gate en CI | Release quality gate | Done (branch) (#38) |
-| P1 | Hardening XSS residual + alineación docs/código | Security/DX trust | Done (branch) (#39) |
-| P1 | Diff performance index lookup | Performance/scalability | Done (branch) (#40) |
+| P1 | Coverage gate en CI | Release quality gate | Done (branch) (#36) |
+| P1 | Hardening XSS residual + alineación docs/código | Security/DX trust | Done (branch) (#40) |
+| P1 | Diff performance index lookup | Performance/scalability | Done (branch) (#38) |
 
 ---
 
@@ -108,11 +108,11 @@ El release `1.0.0` solo puede aprobarse si:
 | P0 Aislamiento SSR prepare | #31 | TBD | `tests/prepare.test.ts` + `tests/portal.test.ts` + `tests/router.test.ts` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
 | P0 SECURITY threat model | #35 | TBD | `SECURITY.md` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
 | P0 API stability contract | #34 | TBD | `scripts/validate-api-stability.ts` + `docs/STABILITY.md` + `bun run validate:api` | Done (branch) |
-| P1 Hardening attrs/event attrs | #36 | TBD | `tests/edge-cases.test.ts` + suite coverage + `SECURITY.md` | Done (branch) |
+| P1 Hardening attrs/event attrs | #39 | TBD | `tests/edge-cases.test.ts` + suite coverage + `SECURITY.md` | Done (branch) |
 | P1 Scheduler API no-op | #37 | TBD | `tests/scheduler.test.ts` + `tests/app.test.ts` | Done (branch) |
-| P1 Coverage gate en CI | #38 | TBD | `.github/workflows/ci.yml` + `scripts/validate-coverage.ts` + `bun run test:coverage` | Done (branch) |
-| P1 Hardening XSS residual + alineación docs/código | #39 | TBD | `tests/commit.test.ts` + `tests/ssr.test.ts` + `SECURITY.md` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
-| P1 Diff performance | #40 | TBD | `tests/diff.test.ts` + `tests/integration.test.ts` + `tests/benchmark.test.ts` | Done (branch) |
+| P1 Coverage gate en CI | #36 | TBD | `.github/workflows/ci.yml` + `scripts/validate-coverage.ts` + `bun run test:coverage` | Done (branch) |
+| P1 Hardening XSS residual + alineación docs/código | #40 | TBD | `tests/commit.test.ts` + `tests/ssr.test.ts` + `SECURITY.md` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
+| P1 Diff performance | #38 | TBD | `tests/diff.test.ts` + `tests/integration.test.ts` + `tests/benchmark.test.ts` | Done (branch) |
 
 ---
 
@@ -126,11 +126,11 @@ El release `1.0.0` solo puede aprobarse si:
   - #35 SECURITY threat model
   - #34 API stability contract
 - P1:
-  - #36 Hardening attrs/event attrs
+  - #39 Hardening attrs/event attrs
   - #37 Scheduler API no-op
-  - #38 Coverage gate CI
-  - #39 Hardening XSS residual + alineación docs/código
-  - #40 Diff performance
+  - #36 Coverage gate CI
+  - #40 Hardening XSS residual + alineación docs/código
+  - #38 Diff performance
 
 ---
 
