@@ -25,6 +25,10 @@ interface DevHookWindow extends Window {
 export function initDxShowcase(deps: DxShowcaseDeps): void {
   const { app } = deps
 
+  // These buttons (dx-profiling-btn, dx-hotreload-btn, etc.) are static HTML elements
+  // declared in static.html — outside Axiom's rendered tree. addEventListener is the
+  // correct "browser-level integration" pattern for controls that live outside Axiom.
+  // Axiom-owned elements use `on: { click: handler }` declared inside defineComponent.
   const profilingBtn = document.getElementById('dx-profiling-btn') as HTMLButtonElement
   const hotReloadBtn = document.getElementById('dx-hotreload-btn') as HTMLButtonElement
   const devHookRefreshBtn = document.getElementById('dx-devhook-refresh') as HTMLButtonElement
