@@ -248,6 +248,7 @@ describe('integration: signal → declarative on-handler → rerender', () => {
     expect(btnAfter?.textContent).toContain('Count: 1')
 
     app.unmount()
+    root.remove()
   })
 
   test('múltiples clicks acumulan el estado correctamente', () => {
@@ -285,6 +286,7 @@ describe('integration: signal → declarative on-handler → rerender', () => {
     expect(btn()?.textContent).toBe('3')
 
     app.unmount()
+    root.remove()
   })
 
   test('handler declarado con on:{input} responde a evento input', () => {
@@ -324,6 +326,7 @@ describe('integration: signal → declarative on-handler → rerender', () => {
     expect(text.value).toBe('hello')
 
     app.unmount()
+    root.remove()
   })
 
   test('no se necesita getElementById ni addEventListener post-render para elementos del árbol Axiom', () => {
@@ -360,5 +363,6 @@ describe('integration: signal → declarative on-handler → rerender', () => {
     expect(clicked.value).toBe(true)
 
     app.unmount()
+    root.remove()
   })
 })
