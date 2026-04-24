@@ -91,6 +91,25 @@ export type {
   AsyncRule,
 } from './features/forms.js'
 
+// --- Syntax Layer (v2.0.0) ---
+// Nivel 1: h(), t(), fragment()
+// Nivel 2: stack(), vstack, row(), grid(), box(), For, Show, Switch, Match, Each
+export { h, t, fragment }             from './syntax/h.js'
+export { stack, vstack, row, grid, box } from './syntax/layout.js'
+export { For, Show, Switch, Match, Each } from './syntax/flow.js'
+export type { SwitchCase }            from './syntax/flow.js'
+export type {
+  HProps,
+  HChild,
+  AxiomEventHandlers,
+  LayoutShortcuts,
+  HtmlAttrs,
+  ResponsiveMap,
+  StackProps,
+  RowProps,
+  GridProps,
+} from './syntax/index.js'
+
 // --- Types ---
 export type {
   AxiomDevHook,
