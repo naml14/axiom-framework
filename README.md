@@ -61,7 +61,7 @@ const Counter = defineComponent(() => ({
     {
       type: 'element',
       tag: 'button',
-      attrs: { id: 'increment' },
+      on: { click: () => { count.value++ } },  // declarative handler — lives in the tree
       children: [{ type: 'text', content: 'Increment' }],
     },
   ],
@@ -70,14 +70,13 @@ const Counter = defineComponent(() => ({
 // --- Mount ---
 const app = createApp(Counter, document.getElementById('app')!)
 app.mount()
-
-// --- Reactivity ---
-document.getElementById('increment')!.addEventListener('click', () => {
-  count.value++  // Automatically triggers prepare → reflow → commit in next rAF
-})
 ```
 
-When `count.value` changes, Axiom automatically re-runs `prepare → reflow → commit` in the next animation frame — batching any rapid updates into a single render.
+The `on` property wires event handlers **declaratively inside the tree** — no `getElementById`, no post-render `addEventListener`. When `count.value` changes, Axiom automatically re-runs `prepare → reflow → commit` in the next animation frame — batching any rapid updates into a single render.
+
+> **Interaction model**: event handlers belong in the component tree via `on: { click, input, change, … }`.  
+> `addEventListener` on `window`, `document`, or external elements is an explicit escape hatch for  
+> browser-level integration (routing, third-party widgets) — not the default pattern.
 
 ---
 

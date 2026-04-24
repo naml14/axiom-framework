@@ -93,6 +93,9 @@ function initGridDemo(): void {
   gridApp.mount()
 
   // Controles: añadir/quitar celdas
+  // Note: addBtn/removeBtn are static HTML elements outside the Axiom tree (in static.html).
+  // addEventListener is the correct escape hatch here. If these buttons were rendered
+  // by Axiom (inside defineComponent), they would use `on: { click: handler }` instead.
   const addBtn = document.getElementById('ruta-b-grid-add')
   const removeBtn = document.getElementById('ruta-b-grid-remove')
   const statusEl = document.getElementById('ruta-b-grid-status')
@@ -256,6 +259,10 @@ function initAnimationDemo(): void {
   const runBtn = document.getElementById('ruta-b-anim-run')
   const cancelBtn = document.getElementById('ruta-b-anim-cancel')
 
+  // Note: runBtn/cancelBtn are static HTML controls outside the Axiom tree.
+  // addEventListener here is an explicit browser-level integration escape hatch.
+  // Axiom-owned interactive nodes should declare handlers via `on: { click: ... }`.
+
   const transition = createTransition('opacity', { duration: 800, easing: 'ease-in-out' })
   const bgTransition = createTransition('backgroundColor', { duration: 600, easing: 'ease-out', delay: 100 })
 
@@ -318,6 +325,10 @@ function initPluginDemo(): void {
   const updateBtn = document.getElementById('ruta-b-plugin-update')
   const unmountBtn = document.getElementById('ruta-b-plugin-unmount')
   const clearBtn = document.getElementById('ruta-b-plugin-clear')
+
+  // Note: plugin demo controls are static HTML outside Axiom's rendered tree.
+  // addEventListener is the correct escape hatch for these external controls.
+  // If rendered by Axiom, handlers should live in `on: { click: ... }`.
 
   if (logEl === null) return
   const log = logEl

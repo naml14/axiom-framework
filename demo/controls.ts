@@ -73,6 +73,10 @@ export function initControls(deps: ControlsDeps) {
 
   // ============================================================
   // DOM Controls
+  // Note: these controls are static HTML elements in the demo page
+  // (index.html / static.html) that live OUTSIDE Axiom's rendered tree.
+  // addEventListener here is the correct "browser-level integration" escape hatch.
+  // Axiom-owned elements (inside defineComponent) use `on: { event: handler }` instead.
   // ============================================================
 
   const widthSlider = document.getElementById('width-slider') as HTMLInputElement

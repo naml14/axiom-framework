@@ -202,3 +202,167 @@ describe('integration: SSR -> hydrate -> interaction', () => {
     expect((root?.getElementsByTagName('button')[0] ?? null)?.textContent).toContain('Count: 1')
   })
 })
+
+// ============================================================
+// Integration: signal → declarative event → rerender
+// Verifies the canonical component-first interaction model:
+//   on: { click: handler } is the primary way to wire Axiom-owned elements.
+//   No getElementById, no post-render addEventListener.
+// ============================================================
+
+describe('integration: signal → declarative on-handler → rerender', () => {
+  test('click handler declarado en on:{} muta signal y provoca rerender', () => {
+    const count = signal(0)
+
+    const Counter = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'button',
+          on: { click: () => { count.value++ } },
+          children: [{ type: 'text' as const, content: `Count: ${count.value}` }],
+        },
+      ],
+    }))
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+
+    const app = createApp(Counter, root, {
+      textEngine: fakeTextEngine,
+      scheduler: (cb) => cb(),
+    })
+    app.mount()
+
+    const btn = root.getElementsByTagName('button')[0]
+    expect(btn).toBeDefined()
+    expect(btn?.textContent).toContain('Count: 0')
+
+    btn?.dispatchEvent(new window.Event('click'))
+
+    // After click: signal changed → performUpdate → rerender
+    expect(count.value).toBe(1)
+    const btnAfter = root.getElementsByTagName('button')[0]
+    expect(btnAfter?.textContent).toContain('Count: 1')
+
+    app.unmount()
+    root.remove()
+  })
+
+  test('múltiples clicks acumulan el estado correctamente', () => {
+    const count = signal(0)
+
+    const Counter = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'button',
+          on: { click: () => { count.value++ } },
+          children: [{ type: 'text' as const, content: `${count.value}` }],
+        },
+      ],
+    }))
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+
+    const app = createApp(Counter, root, {
+      textEngine: fakeTextEngine,
+      scheduler: (cb) => cb(),
+    })
+    app.mount()
+
+    const btn = () => root.getElementsByTagName('button')[0]
+
+    btn()?.dispatchEvent(new window.Event('click'))
+    btn()?.dispatchEvent(new window.Event('click'))
+    btn()?.dispatchEvent(new window.Event('click'))
+
+    expect(count.value).toBe(3)
+    expect(btn()?.textContent).toBe('3')
+
+    app.unmount()
+    root.remove()
+  })
+
+  test('handler declarado con on:{input} responde a evento input', () => {
+    const text = signal('')
+
+    const Input = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'span',
+          on: {
+            input: (e: Event) => {
+              text.value = (e.target as HTMLInputElement).value ?? 'triggered'
+            },
+          },
+          children: [{ type: 'text' as const, content: text.value }],
+        },
+      ],
+    }))
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+
+    const app = createApp(Input, root, {
+      textEngine: fakeTextEngine,
+      scheduler: (cb) => cb(),
+    })
+    app.mount()
+
+    const span = root.getElementsByTagName('span')[0]
+    const event = new window.Event('input')
+    Object.defineProperty(event, 'target', { value: { value: 'hello' }, writable: false })
+    span?.dispatchEvent(event)
+
+    expect(text.value).toBe('hello')
+
+    app.unmount()
+    root.remove()
+  })
+
+  test('no se necesita getElementById ni addEventListener post-render para elementos del árbol Axiom', () => {
+    // Este test sirve como documentación ejecutable del principio:
+    // cualquier elemento renderizado por Axiom debe usar on:{} para interacción.
+    // El patrón anti-principio sería: document.getElementById('btn')?.addEventListener(...)
+    const clicked = signal(false)
+
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'section',
+      children: [
+        {
+          type: 'element' as const,
+          tag: 'button',
+          // ✅ handler declarativo — no getElementById, no post-render addEventListener
+          on: { click: () => { clicked.value = true } },
+          children: [{ type: 'text' as const, content: 'Act' }],
+        },
+      ],
+    }))
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+
+    const app = createApp(App, root, {
+      textEngine: fakeTextEngine,
+      scheduler: (cb) => cb(),
+    })
+    app.mount()
+
+    expect(clicked.value).toBe(false)
+    root.getElementsByTagName('button')[0]?.dispatchEvent(new window.Event('click'))
+    expect(clicked.value).toBe(true)
+
+    app.unmount()
+    root.remove()
+  })
+})
