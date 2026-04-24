@@ -767,3 +767,135 @@ body {
 .ruta-b-error-section .sidebar-section-title {
   color: var(--accent-rose);
 }
+
+/* ============================================================
+    Syntax v2 Showcase Sections
+   ============================================================ */
+
+.syntax-section {
+  background: linear-gradient(160deg, rgba(124,58,237,0.05), transparent 80%);
+}
+
+.syntax-section .sidebar-section-title {
+  color: var(--accent-violet);
+}
+
+/* ---- Side-by-side comparison panel ---- */
+
+.syntax-side-by-side {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.syntax-panel {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.syntax-panel-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-3);
+}
+
+.syntax-panel > div:last-child {
+  padding: 6px 8px;
+  min-height: 40px;
+}
+
+/* ---- Layout DSL preview container ---- */
+
+.syntax-layout-preview {
+  position: relative;
+  min-height: 80px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+/* ---- Benchmark bar ---- */
+
+.syntax-bench-bar-track {
+  width: 100%;
+  height: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.syntax-bench-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent-violet), var(--accent-teal));
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.syntax-bench-bar.over-budget {
+  background: linear-gradient(90deg, var(--accent-amber), var(--accent-rose));
+}
+
+.syntax-bench-section {
+  background: linear-gradient(160deg, rgba(124,58,237,0.08), rgba(13,148,136,0.04) 80%);
+}
+
+/* ---- Syntax demo card items (used inside Axiom trees) ---- */
+
+.syntax-demo-item {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.syntax-demo-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-violet);
+  background: rgba(124,58,237,0.1);
+  color: var(--accent-violet);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.syntax-demo-btn:hover {
+  background: rgba(124,58,237,0.22);
+}
+
+/* ---- Flow control labels ---- */
+
+.syntax-flow-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* ---- Switch item variant ---- */
+
+.syntax-demo-item--switch {
+  border-color: rgba(2, 132, 199, 0.35);
+  color: var(--accent-sky);
+  background: rgba(2, 132, 199, 0.06);
+}

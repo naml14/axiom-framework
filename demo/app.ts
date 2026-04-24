@@ -7,6 +7,7 @@ import { initControls } from './controls.ts'
 import { initPortalDemo } from './portal-demo.ts'
 import { initDxShowcase } from './dx-showcase.ts'
 import { initRutaBShowcase } from './ruta-b-showcase.ts'
+import { initSyntaxShowcase } from './syntax-showcase.ts'
 
 // Activar modo desarrollo para que __AXIOM__ dev hook esté disponible en el demo
 ;(globalThis as { __AXIOM_DEV__?: boolean }).__AXIOM_DEV__ = true
@@ -125,3 +126,9 @@ initPortalDemo()
 // ============================================================
 
 initRutaBShowcase({ containerWidth })
+
+// ============================================================
+// Syntax v2 Showcase — h(), Layout DSL, Flow, Events, Benchmark
+// ============================================================
+
+initSyntaxShowcase()
