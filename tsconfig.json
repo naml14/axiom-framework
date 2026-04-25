@@ -12,6 +12,12 @@
 
     // Bundler mode
     "moduleResolution": "bundler",
+    "paths": {
+      "axiom-framework": ["./src/index.ts"],
+      "axiom-framework/jsx-runtime": ["./src/jsx-runtime.ts"],
+      "axiom-framework/jsx-dev-runtime": ["./src/jsx-dev-runtime.ts"],
+      "axiom-framework/jsx-types": ["./src/jsx.d.ts"]
+    },
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,

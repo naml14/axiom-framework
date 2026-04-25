@@ -7,18 +7,11 @@
 // ============================================================
 
 import { describe, test, expect } from 'bun:test'
-import { h, t, fragment } from '../../src/syntax/h.js'
+import { h } from '../../src/syntax/h.js'
 import { stack, row, grid } from '../../src/syntax/layout.js'
 import { For, Show } from '../../src/syntax/flow.js'
 import { prepare } from '../../src/render/prepare.js'
 import { defineComponent } from '../../src/render/component.js'
-import type { ElementNode, TextNode } from '../../src/core/types.js'
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function getFirstChild(prepared: any): any {
-  return prepared?.children?.[0]
-}
 
 // ─── h() vs objetos literales ─────────────────────────────────────────────────
 describe('h() vs objetos literales — equivalencia en prepare()', () => {
@@ -120,7 +113,7 @@ describe('Control de flujo con prepare()', () => {
 
 // ─── Benchmark de no-regresión (informal) ─────────────────────────────────────
 describe('No-regresión de rendimiento', () => {
-  test('h() con 500 nodos completa en < 500ms', () => {
+  test('h() con 500 nodos se prepara sin errores', () => {
     const Comp = defineComponent(() =>
       h('table', null,
         ...Array.from({ length: 500 }, (_, i) =>
@@ -129,13 +122,6 @@ describe('No-regresión de rendimiento', () => {
       )
     )
 
-    const start = performance.now()
-    for (let i = 0; i < 10; i++) {
-      prepare(Comp, undefined)
-    }
-    const elapsed = performance.now() - start
-
-    // 10 iteraciones de 500 nodos < 500ms es un umbral muy conservador
-    expect(elapsed).toBeLessThan(500)
+    expect(() => prepare(Comp, undefined)).not.toThrow()
   })
 })

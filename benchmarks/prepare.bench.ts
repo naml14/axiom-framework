@@ -15,7 +15,9 @@
 
 import { prepare } from '../src/render/prepare.js'
 import { defineComponent } from '../src/index.js'
-import { writeFileSync, existsSync, readFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { tmpdir } from 'node:os'
 
 // ─── Golden Standard: 5000 celdas con API literal ────────────────────────────
 const LiteralTable = defineComponent(() => ({
@@ -103,9 +105,23 @@ if (existsSync(goldenPath)) {
   }
 } else {
   // Primera ejecución — guardar como golden
-  writeFileSync(goldenPath, JSON.stringify(result, null, 2))
+  writeJsonAtomic(goldenPath, result)
   console.log(`\n✅ Golden Standard guardado en benchmarks/.golden.json`)
   console.log('   Próximas ejecuciones compararán contra este número.')
 }
 
 console.log()
+
+function writeJsonAtomic(path: string, value: unknown): void {
+  const dir = dirname(path)
+  mkdirSync(dir, { recursive: true })
+
+  const tempDir = mkdtempSync(join(tmpdir(), 'axiom-bench-'))
+  const tempFile = join(tempDir, '.golden.json')
+  try {
+    writeFileSync(tempFile, JSON.stringify(value, null, 2))
+    renameSync(tempFile, path)
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true })
+  }
+}

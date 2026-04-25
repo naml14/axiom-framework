@@ -4,7 +4,7 @@
 
 import { describe, test, expect } from 'bun:test'
 import { For, Show, Switch, Match, Each } from '../../src/syntax/flow.js'
-import { h, fragment } from '../../src/syntax/h.js'
+import { h } from '../../src/syntax/h.js'
 import type { ComponentNode } from '../../src/core/types.js'
 
 // ─── For ─────────────────────────────────────────────────────────────────────
