@@ -243,26 +243,13 @@ function initEventsAttrs(): void {
 
   const output = outputEl as HTMLElement
 
-  // El output se actualiza cuando los signals cambian (el componente se re-renderiza)
-  // Aquí hacemos que el outputEl refleje el estado via efecto manual en el DOM
-  // (no hay efecto reactivo en el output nativo — se actualiza al re-render)
-  const origMount = app.mount.bind(app)
-  void origMount
-
-  // Poll simple: actualizar el pre en cada animationFrame mientras hay interacción
-  let lastClick = -1
-  let lastHover = -1
-  function syncOutput() {
-    const c = clickCount.value
-    const h2 = hoverCount.value
-    if (c !== lastClick || h2 !== lastHover) {
-      lastClick = c
-      lastHover = h2
-      output.textContent = `onClick disparado: ${c}x  |  onMouseEnter: ${h2}x\naria: { label: "Botón de click" }  data: { testid: "click-btn" }`
-    }
-    requestAnimationFrame(syncOutput)
+  function updateOutput(): void {
+    output.textContent = `onClick disparado: ${clickCount.value}x  |  onMouseEnter: ${hoverCount.value}x\naria: { label: "Botón de click" }  data: { testid: "click-btn" }`
   }
-  syncOutput()
+
+  container.addEventListener('click', updateOutput)
+  container.addEventListener('mouseenter', updateOutput, true)
+  updateOutput()
 }
 
 // ============================================================

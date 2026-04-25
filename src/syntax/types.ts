@@ -3,8 +3,9 @@
 // Axiom Framework — Nueva Capa de Sintaxis v2.0.0
 // ============================================================
 //
-// INVARIANTE: Este archivo no importa NADA de src/render/ ni src/features/.
-// Es la capa de tipos pura de la API de autoría.
+// INVARIANTE: Este archivo no importa NADA de src/render/.
+// Puede depender de tipos públicos de features cuando forman parte del contrato
+// de autoría (por ejemplo SafeStyleProps), pero no debe importar runtime.
 // ============================================================
 
 import type { LayoutProps, LayoutDimension } from '../core/types.js'
@@ -59,45 +60,87 @@ export type LayoutShortcuts = {
 }
 
 // ─── Atributos HTML — whitelist explícita (C2) ────────────────────────────────
-// Solo se admiten los atributos tipados aquí.
+// Solo se admiten los atributos declarados en HTML_ATTR_DOM_NAMES.
 // data-* y aria-* van como objetos separados { data: {}, aria: {} }.
-export type HtmlAttrs = {
-  id?:          string
-  role?:        string
-  href?:        string
-  src?:         string
-  alt?:         string
-  type?:        string
-  placeholder?: string
-  name?:        string
-  value?:       string
-  checked?:     boolean
-  selected?:    boolean
-  disabled?:    boolean
-  tabIndex?:    number
-  target?:      string
-  rel?:         string
-  action?:      string
-  method?:      string
-  htmlFor?:     string
-  autoComplete?: string
-  autoFocus?:   boolean
-  spellCheck?:  boolean
-  readOnly?:    boolean
-  multiple?:    boolean
-  rows?:        number
-  cols?:        number
-  min?:         string | number
-  max?:         string | number
-  step?:        string | number
-  pattern?:     string
-  required?:    boolean
-  minLength?:   number
-  maxLength?:   number
+export const HTML_ATTR_DOM_NAMES = {
+  id:           'id',
+  role:         'role',
+  href:         'href',
+  src:          'src',
+  alt:          'alt',
+  type:         'type',
+  placeholder:  'placeholder',
+  name:         'name',
+  value:        'value',
+  checked:      'checked',
+  selected:     'selected',
+  disabled:     'disabled',
+  tabIndex:     'tabindex',
+  target:       'target',
+  rel:          'rel',
+  action:       'action',
+  method:       'method',
+  htmlFor:      'for',
+  autoComplete: 'autocomplete',
+  autoFocus:    'autofocus',
+  spellCheck:   'spellcheck',
+  readOnly:     'readonly',
+  multiple:     'multiple',
+  rows:         'rows',
+  cols:         'cols',
+  min:          'min',
+  max:          'max',
+  step:         'step',
+  pattern:      'pattern',
+  required:     'required',
+  minLength:    'minlength',
+  maxLength:    'maxlength',
+} as const
+
+const BOOLEAN_HTML_ATTR_KEY_LIST = [
+  'checked',
+  'selected',
+  'disabled',
+  'autoFocus',
+  'readOnly',
+  'multiple',
+  'required',
+] as const
+
+const NUMBER_HTML_ATTR_KEY_LIST = [
+  'tabIndex',
+  'rows',
+  'cols',
+  'minLength',
+  'maxLength',
+] as const
+
+const STRING_OR_NUMBER_HTML_ATTR_KEY_LIST = [
+  'min',
+  'max',
+  'step',
+] as const
+
+export const BOOLEAN_HTML_ATTR_KEYS = new Set<string>(BOOLEAN_HTML_ATTR_KEY_LIST)
+
+export type HtmlAttrKey = keyof typeof HTML_ATTR_DOM_NAMES
+
+type BooleanHtmlAttrKey = (typeof BOOLEAN_HTML_ATTR_KEY_LIST)[number]
+type NumberHtmlAttrKey = (typeof NUMBER_HTML_ATTR_KEY_LIST)[number]
+type StringOrNumberHtmlAttrKey = (typeof STRING_OR_NUMBER_HTML_ATTR_KEY_LIST)[number]
+type StringHtmlAttrKey = Exclude<HtmlAttrKey, BooleanHtmlAttrKey | NumberHtmlAttrKey | StringOrNumberHtmlAttrKey>
+
+type HtmlAttrValueMap =
+  & Record<StringHtmlAttrKey, string>
+  & Record<BooleanHtmlAttrKey, boolean>
+  & Record<NumberHtmlAttrKey, number>
+  & Record<StringOrNumberHtmlAttrKey, string | number>
+
+export type HtmlAttrs = Partial<HtmlAttrValueMap> & {
   // Atributos data-* como objeto separado
-  data?:        Record<string, string>
+  data?: Record<string, string>
   // Atributos aria-* como objeto separado
-  aria?:        Record<string, string | boolean>
+  aria?: Record<string, string | boolean>
 }
 
 // ─── Escape hatch explícito para attrs DOM crudos ───────────────────────────

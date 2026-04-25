@@ -15,7 +15,8 @@ import type {
   FragmentNode,
   LayoutProps,
 } from '../core/types.js'
-import type { HProps, HChild, ResponsiveMap, LayoutShortcuts, ExplicitAttrs } from './types.js'
+import { BOOLEAN_HTML_ATTR_KEYS, HTML_ATTR_DOM_NAMES } from './types.js'
+import type { HProps, HChild, ResponsiveMap, LayoutShortcuts } from './types.js'
 
 // ─── Tipo para componentes funcionales JSX ────────────────────────────────────
 type FunctionalComponent<P = Record<string, unknown>> = (props: P) => ComponentNode
@@ -38,17 +39,6 @@ const SYNTHETIC_EVENT_MAP: Readonly<Record<string, string>> = {
   onAnimationEnd:  'animationend',
   onTransitionEnd: 'transitionend',
 }
-
-// ─── Whitelist de attrs HTML conocidos (C2) ───────────────────────────────────
-// NOTA: HtmlAttrs en types.ts enumera exactamente estas keys.
-// Mantener sincronizado.
-const HTML_ATTR_KEYS = new Set<string>([
-  'id', 'role', 'href', 'src', 'alt', 'type', 'placeholder', 'name',
-  'value', 'target', 'rel', 'action', 'method', 'htmlFor',
-  'autoComplete', 'spellCheck', 'pattern',
-  'checked', 'selected', 'disabled', 'autoFocus', 'readOnly', 'multiple', 'required',
-  'tabIndex', 'rows', 'cols', 'min', 'max', 'step', 'minLength', 'maxLength',
-])
 
 // ─── h() ─────────────────────────────────────────────────────────────────────
 // Sobrecarga 1: tag string → siempre retorna ElementNode
@@ -164,72 +154,101 @@ function normalizeClasses(cls: string | string[] | undefined): string[] | undefi
 }
 
 // ─── extractAttrs — whitelist (C2) ───────────────────────────────────────────
-// Solo keys explícitamente en HTML_ATTR_KEYS se convierten a attrs.
+// Solo keys explícitamente en HTML_ATTR_DOM_NAMES se convierten a attrs.
 // Props de layout, eventos y class se manejan en sus propios extractores.
 function extractAttrs(props: HProps | null | undefined): Record<string, string> | undefined {
   if (!props) return undefined
 
   const result: Record<string, string> = {}
-  let hasAny = false
+  const state = { hasAny: false }
 
-  for (const key in props) {
-    const value = (props as Record<string, unknown>)[key]
-    if (value === undefined || value === null) continue
-
-    if (HTML_ATTR_KEYS.has(key)) {
-      // htmlFor → for (nombre en DOM)
-      result[key === 'htmlFor' ? 'for' : key] = String(value)
-      hasAny = true
-      continue
-    }
-
-    // data-* como objeto { data: { id: '1' } } → data-id="1"
-    if (key === 'data' && typeof value === 'object') {
-      for (const [dk, dv] of Object.entries(value as Record<string, string>)) {
-        result[`data-${dk}`] = String(dv)
-        hasAny = true
-      }
-      continue
-    }
-
-    // aria-* como objeto { aria: { label: 'Cerrar' } } → aria-label="Cerrar"
-    if (key === 'aria' && typeof value === 'object') {
-      for (const [ak, av] of Object.entries(value as Record<string, unknown>)) {
-        result[`aria-${ak}`] = String(av)
-        hasAny = true
-      }
-      continue
-    }
-  }
+  applyKnownAttrs(result, props as Record<string, unknown>, state, false)
 
   const explicitAttrs = props.attrs
   if (explicitAttrs !== undefined) {
-    for (const key in explicitAttrs) {
-      const value = explicitAttrs[key]
-      if (value === undefined || value === null) continue
-
-      if (key === 'data' && typeof value === 'object') {
-        for (const [dk, dv] of Object.entries(value as Record<string, string>)) {
-          result[`data-${dk}`] = String(dv)
-          hasAny = true
-        }
-        continue
-      }
-
-      if (key === 'aria' && typeof value === 'object') {
-        for (const [ak, av] of Object.entries(value as Record<string, unknown>)) {
-          result[`aria-${ak}`] = String(av)
-          hasAny = true
-        }
-        continue
-      }
-
-      result[key === 'htmlFor' ? 'for' : key] = String(value)
-      hasAny = true
-    }
+    applyKnownAttrs(result, explicitAttrs as Record<string, unknown>, state, true)
   }
 
-  return hasAny ? result : undefined
+  return state.hasAny ? result : undefined
+}
+
+function applyKnownAttrs(
+  result: Record<string, string>,
+  source: Record<string, unknown>,
+  state: { hasAny: boolean },
+  allowRawAttrs: boolean
+): void {
+  for (const key in source) {
+    const value = source[key]
+    if (value === undefined || value === null) continue
+
+    if (key === 'data' && isPlainAttrBag(value)) {
+      applyPrefixedAttrs(result, 'data', value, state)
+      continue
+    }
+
+    if (key === 'aria' && isPlainAttrBag(value)) {
+      applyPrefixedAttrs(result, 'aria', value, state)
+      continue
+    }
+
+    const domName = (HTML_ATTR_DOM_NAMES as Record<string, string>)[key]
+    if (domName !== undefined) {
+      applyAttribute(result, domName, key, value, state)
+      continue
+    }
+
+    if (allowRawAttrs && isScalarAttrValue(value)) {
+      applyAttribute(result, key, key, value, state)
+    }
+  }
+}
+
+function applyPrefixedAttrs(
+  result: Record<string, string>,
+  prefix: 'data' | 'aria',
+  values: Record<string, unknown>,
+  state: { hasAny: boolean }
+): void {
+  for (const [key, value] of Object.entries(values)) {
+    if (!isScalarAttrValue(value)) continue
+    result[`${prefix}-${key}`] = String(value)
+    state.hasAny = true
+  }
+}
+
+function applyAttribute(
+  result: Record<string, string>,
+  domName: string,
+  sourceName: string,
+  value: unknown,
+  state: { hasAny: boolean }
+): void {
+  if (typeof value === 'boolean') {
+    if (!BOOLEAN_HTML_ATTR_KEYS.has(sourceName)) {
+      result[domName] = String(value)
+      state.hasAny = true
+      return
+    }
+
+    if (value) {
+      result[domName] = ''
+      state.hasAny = true
+    }
+    return
+  }
+
+  if (!isScalarAttrValue(value)) return
+  result[domName] = String(value)
+  state.hasAny = true
+}
+
+function isPlainAttrBag(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function isScalarAttrValue(value: unknown): value is string | number | boolean {
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
 }
 
 // ─── extractHandlers — con mapa sintético (C4) ───────────────────────────────
@@ -242,26 +261,29 @@ function extractHandlers(
   let hasAny = false
 
   for (const key in props) {
-    // Detectar onXxx: empieza con 'on', tercera letra mayúscula
-    if (key.length < 3) continue
-    if (key[0] !== 'o' || key[1] !== 'n') continue
-    const third = key[2]!
-    if (third !== third.toUpperCase() || third === third.toLowerCase()) continue
+    if (!isEventProp(key)) continue
 
     const value = (props as Record<string, unknown>)[key]
     if (typeof value !== 'function') continue
 
-    // Mapa sintético primero (onDoubleClick → dblclick)
-    // Para el resto: onKeyDown → keydown (todo lowercase del nombre completo sin 'on')
-    const eventName = key in SYNTHETIC_EVENT_MAP
-      ? SYNTHETIC_EVENT_MAP[key]!
-      : key.slice(2).toLowerCase()  // onClick → click, onKeyDown → keydown
-
-    handlers[eventName] = value as EventListener
+    handlers[toEventName(key)] = value as EventListener
     hasAny = true
   }
 
   return hasAny ? handlers : undefined
+}
+
+function isEventProp(key: string): boolean {
+  if (key.length < 3) return false
+  if (key[0] !== 'o' || key[1] !== 'n') return false
+  const third = key[2]!
+  return third === third.toUpperCase() && third !== third.toLowerCase()
+}
+
+function toEventName(key: string): string {
+  return key in SYNTHETIC_EVENT_MAP
+    ? SYNTHETIC_EVENT_MAP[key]!
+    : key.slice(2).toLowerCase()
 }
 
 // ─── extractLayout — merge determinístico (C1) ───────────────────────────────
@@ -318,8 +340,11 @@ const BREAKPOINT_PX: Readonly<Record<string, number>> = {
 }
 
 function resolveAt(at: ResponsiveMap): LayoutProps['breakpoints'] {
-  return Object.entries(at).map(([key, overrides]) => ({
-    minWidth: BREAKPOINT_PX[key] ?? Number(key),
-    layout:   buildLayoutFromShortcuts(overrides as LayoutShortcuts) ?? {},
-  }))
+  return Object.entries(at)
+    .map(([key, overrides]) => ({
+      minWidth: BREAKPOINT_PX[key] ?? Number(key),
+      layout:   buildLayoutFromShortcuts(overrides as LayoutShortcuts) ?? {},
+    }))
+    .filter((breakpoint) => Number.isFinite(breakpoint.minWidth))
+    .sort((a, b) => a.minWidth - b.minWidth)
 }

@@ -10,7 +10,7 @@
 
 import { h } from './h.js'
 import type { HProps, HChild } from './types.js'
-import type { LayoutProps, ElementNode } from '../core/types.js'
+import type { ComponentNode, LayoutProps, ElementNode } from '../core/types.js'
 
 // ─── Tipos de layout helpers ─────────────────────────────────────────────────
 
@@ -20,8 +20,9 @@ export type StackProps = Omit<HProps, 'flex'> & { tag?: string }
 // RowProps: igual que HProps pero sin 'flex' (siempre es 'row')
 export type RowProps = Omit<HProps, 'flex'> & { tag?: string }
 
-// GridProps: sin 'flex' ni 'layout' (el grid genera su propio layout base)
-export type GridProps = Omit<HProps, 'flex' | 'layout'> & {
+// GridProps: sin 'flex' (siempre es grid). `layout` se permite y se fusiona
+// con la base generada para soportar spans/posicionamiento avanzado.
+export type GridProps = Omit<HProps, 'flex'> & {
   columnGap?: number
   rowGap?:    number
   tag?:       string
@@ -51,7 +52,7 @@ export function row(props?: RowProps | null, ...children: HChild[]): ElementNode
 // El layout base del grid (display: grid, gridTemplateColumns) se fusiona
 // con cualquier layout explícito del usuario — no se descarta.
 export function grid(
-  columns: number | string,
+  columns: number | `repeat(${number}, 1fr)`,
   props?: GridProps | null,
   ...children: HChild[]
 ): ElementNode {
@@ -86,15 +87,34 @@ export function grid(
 // Valor: comunica intención de "contenedor semántico" al lector del código.
 // Si el equipo prefiere h() directamente, box() puede no usarse — ambos son válidos.
 export function box(tag: string, props?: HProps | null, ...children: HChild[]): ElementNode
+export function box(tag: string, ...children: HChild[]): ElementNode
 export function box(props?: HProps | null, ...children: HChild[]): ElementNode
 export function box(
   tagOrProps?: string | HProps | null,
   ...rest: unknown[]
 ): ElementNode {
   if (typeof tagOrProps === 'string') {
-    const [props, ...children] = rest as [HProps | null | undefined, ...HChild[]]
-    return h(tagOrProps, props ?? null, ...children)
+    const [first, ...tail] = rest as [HProps | HChild | null | undefined, ...HChild[]]
+    if (isPropsArgument(first)) {
+      return h(tagOrProps, first ?? null, ...tail)
+    }
+
+    const children = first === undefined ? tail : [first, ...tail]
+    return h(tagOrProps, null, ...children as HChild[])
   }
   const [firstChild, ...otherChildren] = rest as HChild[]
   return h('div', tagOrProps as HProps | null, firstChild, ...otherChildren)
+}
+
+function isPropsArgument(value: HProps | HChild | null | undefined): value is HProps | null | undefined {
+  if (value === undefined || value === null) return true
+  if (Array.isArray(value)) return false
+  if (typeof value !== 'object') return false
+  return !isComponentNode(value)
+}
+
+function isComponentNode(value: object): value is ComponentNode {
+  if (!('type' in value)) return false
+  const type = (value as { type?: unknown }).type
+  return type === 'element' || type === 'text' || type === 'fragment' || type === 'portal'
 }

@@ -210,7 +210,11 @@ describe('h() — attrs (C2: whitelist)', () => {
   })
 
   test('disabled → attrs.disabled', () => {
-    expect(h('button', { disabled: true }).attrs?.['disabled']).toBe('true')
+    expect(h('button', { disabled: true }).attrs?.['disabled']).toBe('')
+  })
+
+  test('boolean attr false se omite', () => {
+    expect(h('button', { disabled: false }).attrs?.['disabled']).toBeUndefined()
   })
 
   test('htmlFor → attrs.for (DOM name)', () => {
@@ -243,6 +247,18 @@ describe('h() — attrs (C2: whitelist)', () => {
     expect(attrs?.['style']).toBe('color:#fff;background:#000;')
     expect(attrs?.['title']).toBe('Demo SSR')
     expect(attrs?.['data-track']).toBe('hero')
+  })
+
+  test('data y aria ignoran arrays como bolsas de atributos', () => {
+    const attrs = h('div', {
+      attrs: {
+        data: ['bad'] as unknown as Record<string, string>,
+        aria: ['bad'] as unknown as Record<string, string | boolean>,
+      },
+    }).attrs
+
+    expect(attrs?.['data-0']).toBeUndefined()
+    expect(attrs?.['aria-0']).toBeUndefined()
   })
 
   test('props de layout NO terminan en attrs', () => {

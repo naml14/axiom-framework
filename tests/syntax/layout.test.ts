@@ -66,10 +66,11 @@ describe('grid()', () => {
     expect(node.layout?.gridTemplateColumns).toBe('repeat(3, 1fr)')
   })
 
-  test('string de columnas → pasa directo', () => {
-    const node = grid('200px 1fr')
+  test('string repeat de columnas → pasa directo', () => {
+    const node = grid('repeat(4, 1fr)')
     // gridTemplateColumns no está en el tipo LayoutProps como string genérico
     // pero el layout se genera con la string provista
+    expect(node.layout?.gridTemplateColumns).toBe('repeat(4, 1fr)')
     expect(node.layout?.display).toBe('grid')
   })
 
@@ -95,7 +96,7 @@ describe('grid()', () => {
 
   // C7: fusiona layout del usuario, no lo descarta
   test('layout explícito del usuario se fusiona (C7)', () => {
-    const node = grid(3, { layout: { padding: 32 } } as any)
+    const node = grid(3, { layout: { padding: 32 } })
     expect(node.layout?.display).toBe('grid')           // base no se pierde
     expect(node.layout?.gridTemplateColumns).toBe('repeat(3, 1fr)')
     expect(node.layout?.padding).toBe(32)               // del usuario
@@ -122,6 +123,14 @@ describe('box()', () => {
   test('con hijos', () => {
     const node = box('section', null, h('h1', null, 'Título'))
     expect(node.children!.length).toBe(1)
+  })
+
+  test('con tag explícito y props omitidas trata el primer nodo como hijo', () => {
+    const child = h('h1', null, 'Título')
+    const node = box('section', child)
+
+    expect(node.attrs).toBeUndefined()
+    expect(node.children).toEqual([child])
   })
 
   test('equivalente a h() con el mismo tag', () => {

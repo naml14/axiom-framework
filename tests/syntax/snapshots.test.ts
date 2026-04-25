@@ -21,7 +21,7 @@ test('h() — snapshot con attrs y eventos', () => {
   const fn = () => {}
   const node = h('button', {
     id: 'submit-btn',
-    disabled: false,
+    disabled: true,
     onClick: fn,
     aria: { label: 'Enviar formulario' },
     data: { testid: 'submit' },

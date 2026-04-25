@@ -34,12 +34,24 @@ export function hDev(
   }
 
   if (props) {
+    const rawChildren = getRawChildrenForWarnings(props, children)
     warnLayoutConflict(tag, props)
-    warnMissingKey(tag, children)
+    warnMissingKey(tag, rawChildren)
     warnInvalidFlex(tag, props)
     warnReservedProps(tag, props)
   }
   return hProd(tag, props, ...children)
+}
+
+function getRawChildrenForWarnings(
+  props: HProps | ComponentProps,
+  children: HChild[]
+): HChild[] {
+  if (children.length > 0) return children
+
+  const propChildren = (props as { children?: HChild | HChild[] | null }).children
+  if (propChildren == null) return []
+  return Array.isArray(propChildren) ? propChildren : [propChildren]
 }
 
 // ─── warnLayoutConflict ───────────────────────────────────────────────────────

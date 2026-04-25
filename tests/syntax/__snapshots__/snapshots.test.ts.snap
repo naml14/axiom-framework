@@ -57,7 +57,7 @@ exports[`h() — snapshot con attrs y eventos 1`] = `
   "attrs": {
     "aria-label": "Enviar formulario",
     "data-testid": "submit",
-    "disabled": "false",
+    "disabled": "",
     "id": "submit-btn",
   },
   "children": [
