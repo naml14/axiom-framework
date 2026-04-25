@@ -16,7 +16,7 @@ describe('stack()', () => {
 
   test('con hijos', () => {
     const node = stack(null, h('p', null, 'A'), h('p', null, 'B'))
-    expect(node.children.length).toBe(2)
+    expect(node.children!.length).toBe(2)
   })
 
   test('con gap y padding', () => {
@@ -56,7 +56,7 @@ describe('row()', () => {
 
   test('con hijos', () => {
     const node = row(null, h('span', null, 'A'), h('span', null, 'B'))
-    expect(node.children.length).toBe(2)
+    expect(node.children!.length).toBe(2)
   })
 })
 
@@ -103,7 +103,7 @@ describe('grid()', () => {
 
   test('con hijos', () => {
     const node = grid(2, null, h('div', null, '1'), h('div', null, '2'))
-    expect(node.children.length).toBe(2)
+    expect(node.children!.length).toBe(2)
   })
 })
 
@@ -121,7 +121,7 @@ describe('box()', () => {
 
   test('con hijos', () => {
     const node = box('section', null, h('h1', null, 'Título'))
-    expect(node.children.length).toBe(1)
+    expect(node.children!.length).toBe(1)
   })
 
   test('equivalente a h() con el mismo tag', () => {
