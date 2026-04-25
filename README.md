@@ -89,7 +89,7 @@ const node = h('article', {
   },
 },
   h('h2', null, 'Hello'),
-  h('p', null, 'Strings and numbers become TextNode automatically'),
+  h('p', null, 'Strings and numbers become TextNodes automatically'),
 )
 ```
 
