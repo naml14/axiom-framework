@@ -120,6 +120,8 @@ function prepareNode(
       return prepareFragmentNode(node, ctx, options, ownDebug)
     case 'portal':
       return preparePortalNode(node, ctx, options, ownDebug)
+    default:
+      throw new Error(`[Axiom] prepareNode: unknown node type "${(node as ComponentNode & { type: unknown }).type}". This is a bug — a non-ComponentNode value was inserted into the children array.`)
   }
 }
 

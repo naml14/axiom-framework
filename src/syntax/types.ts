@@ -100,18 +100,31 @@ export type HtmlAttrs = {
   aria?:        Record<string, string | boolean>
 }
 
+// ─── Escape hatch explícito para attrs DOM crudos ───────────────────────────
+// Permite pasar atributos DOM de forma intencional sin reabrir una index signature
+// sobre HProps completa. Se sanitiza más adelante en SSR/commit.
+export type ExplicitAttrs = {
+  [key: string]: string | number | boolean | Record<string, string> | Record<string, string | boolean> | undefined
+  style?: string
+  data?: Record<string, string>
+  aria?: Record<string, string | boolean>
+}
+
 // ─── HProps — tipo principal de la capa de sintaxis (C2: sin index signature) ─
 // La ausencia de [attr: string]: unknown es INTENCIONAL.
 // Evita que props de layout terminen en attrs del DOM por accidente.
 export type HProps = AxiomEventHandlers & LayoutShortcuts & HtmlAttrs & {
-  class?:   string | string[]
-  style?:   SafeStyleProps
+  class?:    string | string[]
+  attrs?:    ExplicitAttrs
+  style?:    SafeStyleProps
   // layout explícito — se FUSIONA con shortcuts, no los reemplaza (C1)
-  layout?:  LayoutProps
-  key?:     string
+  layout?:   LayoutProps
+  key?:      string
+  // JSX passes children as a prop when there are multiple children (jsxs)
+  children?: HChild | HChild[]
   // Reservado para versiones futuras (C16) — never fuerza error en compilación
-  ref?:     never
-  context?: never
+  ref?:      never
+  context?:  never
 }
 
 // ─── Tipos de children ────────────────────────────────────────────────────────

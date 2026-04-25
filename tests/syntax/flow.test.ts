@@ -28,7 +28,7 @@ describe('For()', () => {
     const items = [{ id: 'a', name: 'Alpha' }, { id: 'b', name: 'Beta' }]
     const node = For({
       each: items,
-      key: (item) => item.id,
+      keyBy: (item) => item.id,
       children: (item) => h('li', null, item.name),
     })
     const children = (node as any).children as ComponentNode[]
@@ -55,6 +55,22 @@ describe('For()', () => {
       },
     })
     expect(indices).toEqual([0, 1, 2])
+  })
+
+  test('children función se preserva al invocar For vía h() como componente funcional', () => {
+    const ForComponent = For as unknown as (props: {
+      each: string[]
+      children: (item: string, index: number) => ComponentNode
+    }) => ComponentNode
+
+    const node = h(ForComponent, {
+      each: ['Alpha', 'Beta'],
+      children: (item: string) => h('li', null, item),
+    })
+
+    expect((node as any).type).toBe('fragment')
+    expect((node as any).children.length).toBe(2)
+    expect(((node as any).children[0] as any).tag).toBe('li')
   })
 })
 

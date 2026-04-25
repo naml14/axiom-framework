@@ -19,6 +19,16 @@ declare global {
 
     interface ElementChildrenAttribute { children: {} }
 
+    // key es una prop especial del runtime JSX — aceptada en todos los elementos HTML.
+    // Para componentes funcionales, key se inyecta via IntrinsicAttributes solo en elementos
+    // intrínsecos. En componentes funcionales, key es consumida por el runtime antes de
+    // llegar a las props del componente.
+    interface IntrinsicAttributes { key?: string }
+
+    // Para componentes funcionales: excluir key de las props del componente
+    // (key es manejada por el runtime, no llega a las props reales del componente)
+    type LibraryManagedAttributes<C, P> = Omit<P, 'key'> & { key?: string }
+
     // Base generada desde HTMLElementTagNameMap (C11)
     // Todos los elementos HTML estándar tienen HProps como base.
     type HtmlIntrinsicElements = {

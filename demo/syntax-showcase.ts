@@ -162,7 +162,7 @@ function initFlowControl(): void {
 
     const forItems = For({
       each: items.value,
-      key: (item) => item,
+      keyBy: (item) => item,
       children: (item) =>
         h('div', { class: 'syntax-demo-item', padding: 4 }, t(`• ${item}`)),
     })
@@ -313,7 +313,7 @@ function runLiveBenchmark(): number {
   const BenchComponent = defineComponent(() => {
     const forNode = For({
       each: ITEMS,
-      key: (item) => item.id,
+      keyBy: (item) => item.id,
       children: (item) =>
         h('div', { class: 'syntax-demo-item' }, t(item.label)),
     })

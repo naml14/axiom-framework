@@ -16,30 +16,30 @@ describe('h() — nodos básicos', () => {
 
   test('string hijo → TextNode automático', () => {
     const node = h('p', null, 'Hola')
-    expect(node.children[0]).toEqual({ type: 'text', content: 'Hola' })
+    expect(node.children![0]).toEqual({ type: 'text', content: 'Hola' })
   })
 
   test('number hijo → TextNode con string', () => {
     const node = h('span', null, 42)
-    expect(node.children[0]).toEqual({ type: 'text', content: '42' })
+    expect(node.children![0]).toEqual({ type: 'text', content: '42' })
   })
 
   test('filtra null, undefined y false', () => {
     const node = h('div', null, null, undefined, false, 'texto')
-    expect(node.children.length).toBe(1)
-    expect(node.children[0]).toEqual({ type: 'text', content: 'texto' })
+    expect(node.children!.length).toBe(1)
+    expect(node.children![0]).toEqual({ type: 'text', content: 'texto' })
   })
 
   test('flatten de arrays de hijos', () => {
     const items = ['a', 'b', 'c']
     const node = h('ul', null, items.map(i => h('li', null, i)))
-    expect(node.children.length).toBe(3)
-    expect((node.children[0] as any).tag).toBe('li')
+    expect(node.children!.length).toBe(3)
+    expect((node.children![0] as any).tag).toBe('li')
   })
 
   test('flatten recursivo de arrays anidados', () => {
     const node = h('div', null, [['a', 'b'], ['c']])
-    expect(node.children.length).toBe(3)
+    expect(node.children!.length).toBe(3)
   })
 
   test('props null no rompe', () => {
@@ -227,6 +227,22 @@ describe('h() — attrs (C2: whitelist)', () => {
     const attrs = h('button', { aria: { label: 'Cerrar', hidden: false } }).attrs
     expect(attrs?.['aria-label']).toBe('Cerrar')
     expect(attrs?.['aria-hidden']).toBe('false')
+  })
+
+  test('attrs explícitos anidados se serializan como escape hatch DOM', () => {
+    const attrs = h('div', {
+      attrs: {
+        id: 'demo',
+        style: 'color:#fff;background:#000;',
+        title: 'Demo SSR',
+        data: { track: 'hero' },
+      },
+    }).attrs
+
+    expect(attrs?.['id']).toBe('demo')
+    expect(attrs?.['style']).toBe('color:#fff;background:#000;')
+    expect(attrs?.['title']).toBe('Demo SSR')
+    expect(attrs?.['data-track']).toBe('hero')
   })
 
   test('props de layout NO terminan en attrs', () => {

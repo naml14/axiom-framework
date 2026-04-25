@@ -31,14 +31,14 @@ function makeEmptyFragment() {
 // rompiendo el modelo donde el COMPONENTE PADRE es la unidad de reactividad.
 export function For<T>(props: {
   each: T[]
-  key?: (item: T, index: number) => string
+  keyBy?: (item: T, index: number) => string
   children: (item: T, index: number) => ComponentNode
 }): ComponentNode {
   const nodes = props.each.map((item, index) => {
     const node = props.children(item, index)
 
-    if (props.key) {
-      const keyValue = props.key(item, index)
+    if (props.keyBy) {
+      const keyValue = props.keyBy(item, index)
       if (node.type === 'element') {
         return { ...node, key: keyValue }
       }
@@ -106,7 +106,7 @@ export function Each<T>(
 ): ComponentNode {
   return For({
     each: items,
-    key:  key ? (item, _i) => key(item) : undefined,
+    keyBy: key ? (item, _i) => key(item) : undefined,
     children: render,
   })
 }

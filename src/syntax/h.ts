@@ -15,7 +15,11 @@ import type {
   FragmentNode,
   LayoutProps,
 } from '../core/types.js'
-import type { HProps, HChild, ResponsiveMap, LayoutShortcuts } from './types.js'
+import type { HProps, HChild, ResponsiveMap, LayoutShortcuts, ExplicitAttrs } from './types.js'
+
+// ─── Tipo para componentes funcionales JSX ────────────────────────────────────
+type FunctionalComponent<P = Record<string, unknown>> = (props: P) => ComponentNode
+type ComponentProps = Record<string, unknown> | null | undefined
 
 // ─── Mapa de eventos sintéticos (C4) ─────────────────────────────────────────
 // Eventos cuyo nombre DOM NO es simplemente camelCase → lowercase.
@@ -47,21 +51,52 @@ const HTML_ATTR_KEYS = new Set<string>([
 ])
 
 // ─── h() ─────────────────────────────────────────────────────────────────────
+// Sobrecarga 1: tag string → siempre retorna ElementNode
+export function h(tag: string, props?: HProps | null, ...children: HChild[]): ElementNode
+// Sobrecarga 2: tag función → retorna ComponentNode (resultado del componente)
+export function h(tag: FunctionalComponent<any>, props?: ComponentProps, ...children: HChild[]): ComponentNode
 export function h(
-  tag: string,
-  props?: HProps | null,
+  tag: string | FunctionalComponent,
+  props?: HProps | ComponentProps,
   ...children: HChild[]
-): ElementNode {
+): ComponentNode {
+  // Componente funcional JSX: <Badge label="UI" /> → h(Badge, { label: 'UI' })
+  if (typeof tag === 'function') {
+    // Para componentes funcionales debemos PRESERVAR la forma original de props.children.
+    // Caso crítico: For/Show/Switch aceptan children como función; envolverla en [fn]
+    // rompe el contrato y termina en errores tipo "props.children is not a function".
+    const mergedProps = children.length > 0
+      ? {
+          ...(props ?? {}),
+          children: children.length === 1 ? children[0] : children,
+        }
+      : (props ?? {})
+
+    return tag(mergedProps as Record<string, unknown>)
+  }
+
+  // JSX (jsxs/jsx) passes children inside props.children, not as variadic args.
+  // When the variadic list is empty, fall back to props.children so both
+  // calling conventions produce the same normalized child array.
+  const rawChildren: HChild[] =
+    children.length > 0
+      ? children
+      : props?.children !== undefined
+        ? Array.isArray(props.children) ? props.children : [props.children as HChild]
+        : []
+
+  const elementProps = props as HProps | null | undefined
+
   return {
     type: 'element',
     tag,
-    key:      props?.key,
-    classes:  normalizeClasses(props?.class),
-    attrs:    extractAttrs(props),
-    on:       extractHandlers(props),
-    layout:   extractLayout(props),
-    style:    props?.style,
-    children: normalizeChildren(children),
+    key:      elementProps?.key,
+    classes:  normalizeClasses(elementProps?.class),
+    attrs:    extractAttrs(elementProps),
+    on:       extractHandlers(elementProps),
+    layout:   extractLayout(elementProps),
+    style:    elementProps?.style,
+    children: normalizeChildren(rawChildren),
   }
 }
 
@@ -71,8 +106,28 @@ export function t(content: string | number): TextNode {
 }
 
 // ─── fragment() ──────────────────────────────────────────────────────────────
-export function fragment(...children: HChild[]): FragmentNode {
-  return { type: 'fragment', children: normalizeChildren(children) }
+// Supports both the explicit API: fragment(child1, child2)
+// and the JSX Fragment call convention: Fragment({ children: [...] })
+export function fragment(
+  propsOrChild?: HProps | HChild,
+  ...rest: HChild[]
+): FragmentNode {
+  // JSX calls Fragment({ children: [...] }) — detect by checking if first arg
+  // is a plain object with a `children` key and no tag/type signature.
+  if (
+    propsOrChild !== null &&
+    typeof propsOrChild === 'object' &&
+    !Array.isArray(propsOrChild) &&
+    'children' in propsOrChild &&
+    !('type' in propsOrChild)
+  ) {
+    const { children } = propsOrChild as { children: HChild | HChild[] }
+    const raw = Array.isArray(children) ? children : [children]
+    return { type: 'fragment', children: normalizeChildren(raw) }
+  }
+  // Normal variadic call: fragment(child1, child2, ...)
+  const raw: HChild[] = propsOrChild !== undefined ? [propsOrChild as HChild, ...rest] : rest
+  return { type: 'fragment', children: normalizeChildren(raw) }
 }
 
 // ─── normalizeChildren — flatten controlado (C5) ─────────────────────────────
@@ -87,7 +142,7 @@ export function normalizeChildren(raw: HChild[]): ComponentNode[] {
 function flattenChildren(items: HChild[], out: ComponentNode[]): void {
   for (let i = 0; i < items.length; i++) {
     const child = items[i]
-    if (child == null || child === false) continue
+    if (child == null || typeof child === 'boolean') continue
     if (Array.isArray(child)) {
       flattenChildren(child, out)
       continue
@@ -144,6 +199,33 @@ function extractAttrs(props: HProps | null | undefined): Record<string, string> 
         hasAny = true
       }
       continue
+    }
+  }
+
+  const explicitAttrs = props.attrs
+  if (explicitAttrs !== undefined) {
+    for (const key in explicitAttrs) {
+      const value = explicitAttrs[key]
+      if (value === undefined || value === null) continue
+
+      if (key === 'data' && typeof value === 'object') {
+        for (const [dk, dv] of Object.entries(value as Record<string, string>)) {
+          result[`data-${dk}`] = String(dv)
+          hasAny = true
+        }
+        continue
+      }
+
+      if (key === 'aria' && typeof value === 'object') {
+        for (const [ak, av] of Object.entries(value as Record<string, unknown>)) {
+          result[`aria-${ak}`] = String(av)
+          hasAny = true
+        }
+        continue
+      }
+
+      result[key === 'htmlFor' ? 'for' : key] = String(value)
+      hasAny = true
     }
   }
 

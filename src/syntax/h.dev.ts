@@ -13,13 +13,26 @@
 
 import { h as hProd } from './h.js'
 import type { HProps, HChild } from './types.js'
-import type { ElementNode, LayoutProps } from '../core/types.js'
+import type { ComponentNode, ElementNode, LayoutProps } from '../core/types.js'
 
+// ─── Tipo para componentes funcionales JSX ────────────────────────────────────
+type FunctionalComponent<P = Record<string, unknown>> = (props: P) => ComponentNode
+type ComponentProps = Record<string, unknown> | null | undefined
+
+// Sobrecarga 1: tag string → ElementNode
+export function hDev(tag: string, props?: HProps | null, ...children: HChild[]): ElementNode
+// Sobrecarga 2: tag función → ComponentNode
+export function hDev(tag: FunctionalComponent<any>, props?: ComponentProps, ...children: HChild[]): ComponentNode
 export function hDev(
-  tag: string,
-  props?: HProps | null,
+  tag: string | FunctionalComponent,
+  props?: HProps | ComponentProps,
   ...children: HChild[]
-): ElementNode {
+): ComponentNode {
+  // Componentes funcionales: delegar directamente, no hay warnings aplicables
+  if (typeof tag === 'function') {
+    return hProd(tag, props, ...children)
+  }
+
   if (props) {
     warnLayoutConflict(tag, props)
     warnMissingKey(tag, children)
