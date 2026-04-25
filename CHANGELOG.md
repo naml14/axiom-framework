@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.2](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.1...axiom-framework-v0.9.2) (2026-04-25)
+
+
+### Features
+
+* **demo:** add Syntax v2 interactive showcase — h(), Layout DSL, flow control, events, benchmark ([a3e7fbe](https://github.com/naml14/axiom-framework/commit/a3e7fbebe2726b4d13b0f6c046b66e93ee524f62))
+* **demo:** showcase JSX syntax ([1b1bf00](https://github.com/naml14/axiom-framework/commit/1b1bf0060109ee908fef73c041f93fc1da7be070))
+* **syntax:** add syntax layer v2.0.0 — h(), Layout DSL, control flow, JSX runtime ([e93bfb2](https://github.com/naml14/axiom-framework/commit/e93bfb2baebaa869b91aeb349634a69464b57ead))
+* **syntax:** add Syntax v2 authoring layer and demo adoption ([139ebb4](https://github.com/naml14/axiom-framework/commit/139ebb4c51b40ad72041f296116b1782499ac806))
+* **syntax:** support JSX component runtime ([d09b0af](https://github.com/naml14/axiom-framework/commit/d09b0af263ceed57a113b5f0ca99f9c823142ec6))
+
+
+### Bug Fixes
+
+* **ci:** resolve PR workflow failures ([498cc3a](https://github.com/naml14/axiom-framework/commit/498cc3af11a9b11a09674af388d2426cbe5d1803))
+* **demo:** align build script with minified pipeline ([f55af54](https://github.com/naml14/axiom-framework/commit/f55af546a053a2ae35c960e8e89b3eaa1ce80f7f))
+* **demo:** minify browser bundle ([a783258](https://github.com/naml14/axiom-framework/commit/a78325856113c20cf47c1b77e07ec573ccee5dcb))
+* **syntax:** address review findings ([1eee0eb](https://github.com/naml14/axiom-framework/commit/1eee0ebd98b6493da6b6647de21b2c2078e2d2e4))
+
 ## [0.9.1](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.0...axiom-framework-v0.9.1) (2026-04-16)
 
 
