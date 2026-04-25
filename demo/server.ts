@@ -8,7 +8,7 @@
  *
  * Logic lives in purpose-built modules:
  *  - demo/build.ts    → framework build + watch utilities
- *  - demo/ssr-page.ts → SSR demo route handler
+ *  - demo/ssr-page.tsx → SSR demo route handler (JSX)
  */
 
 import { serve } from 'bun'
