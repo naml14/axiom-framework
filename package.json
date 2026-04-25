@@ -46,7 +46,7 @@
     "test:coverage": "bun run scripts/validate-coverage.ts",
     "validate:api": "bun run scripts/validate-api-stability.ts",
     "prepublishOnly": "bun run typecheck && bun test && bun run build",
-    "demo:build": "bun run build && bun build demo/app.ts --outfile demo/app.js --target browser",
+    "demo:build": "bun run demo/build.ts",
     "run:demo": "bun run demo/server.ts --no-build",
     "demo": "bun run demo:build && bun run run:demo",
     "demo:watch": "bun run demo/server.ts --watch"

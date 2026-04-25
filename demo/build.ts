@@ -26,6 +26,7 @@ type BunBuildRuntime = {
 }
 
 const ROOT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
+const isDirectRun = process.argv[1] === fileURLToPath(import.meta.url)
 
 function getBun(): BunBuildRuntime {
   const bun = (globalThis as { Bun?: unknown }).Bun as BunBuildRuntime | undefined
@@ -154,4 +155,9 @@ export function setupWatch(): void {
   }
 
   console.log('👀 Watching for changes...')
+}
+
+if (isDirectRun) {
+  const ok = await doBuild()
+  process.exit(ok ? 0 : 1)
 }
