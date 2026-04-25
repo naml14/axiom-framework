@@ -41,42 +41,146 @@ npm install axiom-framework
 ## Quick Start
 
 ```typescript
-import { signal, computed, defineComponent, createApp } from 'axiom-framework'
+import { signal, computed, defineComponent, createApp, stack, h } from 'axiom-framework'
 
 // --- Signals ---
 const count = signal(0)
 const label = computed(() => `Count: ${count.value}`)
 
 // --- Component ---
-const Counter = defineComponent(() => ({
-  type: 'element',
-  tag: 'div',
-  layout: { flexDirection: 'column', gap: 8, padding: 16 },
-  children: [
-    {
-      type: 'element',
-      tag: 'h1',
-      children: [{ type: 'text', content: label.value }],
-    },
-    {
-      type: 'element',
-      tag: 'button',
-      on: { click: () => { count.value++ } },  // declarative handler — lives in the tree
-      children: [{ type: 'text', content: 'Increment' }],
-    },
-  ],
-}))
+const Counter = defineComponent(() =>
+  stack({ gap: 8, padding: 16 },
+    h('h1', null, label.value),
+    h('button', { onClick: () => { count.value++ } }, 'Increment'),
+  )
+)
 
 // --- Mount ---
 const app = createApp(Counter, document.getElementById('app')!)
 app.mount()
 ```
 
-The `on` property wires event handlers **declaratively inside the tree** — no `getElementById`, no post-render `addEventListener`. When `count.value` changes, Axiom automatically re-runs `prepare → reflow → commit` in the next animation frame — batching any rapid updates into a single render.
+Event props such as `onClick`, `onInput`, and `onChange` wire handlers **declaratively inside the tree** — no `getElementById`, no post-render `addEventListener`. When `count.value` changes, Axiom automatically re-runs `prepare → reflow → commit` in the next animation frame — batching any rapid updates into a single render.
 
-> **Interaction model**: event handlers belong in the component tree via `on: { click, input, change, … }`.  
-> `addEventListener` on `window`, `document`, or external elements is an explicit escape hatch for  
+> **Interaction model**: when using the syntax layer, event handlers belong in the component tree via props such as `onClick`, `onInput`, `onChange`, …
+> The lower-level `ComponentNode` shape stores normalized handlers under `on`.
+> `addEventListener` on `window`, `document`, or external elements is an explicit escape hatch for
 > browser-level integration (routing, third-party widgets) — not the default pattern.
+
+---
+
+## Authoring Syntax
+
+Axiom's runtime tree is still `ComponentNode`. The syntax layer is only a safer, shorter way to produce that tree. This matters: JSX and helpers are NOT a second rendering model. They compile down to the same nodes consumed by `prepare → reflow → commit`.
+
+### `h()`, text children, and explicit DOM attrs
+
+```typescript
+import { h } from 'axiom-framework'
+
+const node = h('article', {
+  class: ['card', 'featured'],
+  flex: 'column',
+  gap: 8,
+  padding: 16,
+  attrs: {
+    title: 'DOM attribute escape hatch',
+    data: { track: 'hero-card' },
+  },
+},
+  h('h2', null, 'Hello'),
+  h('p', null, 'Strings and numbers become TextNode automatically'),
+)
+```
+
+Use `attrs` when you intentionally need raw DOM attributes that are not part of Axiom's typed prop whitelist. Do NOT reopen a catch-all index signature on props; that is how layout props accidentally leak into the DOM.
+
+### Layout helpers
+
+```typescript
+import { stack, row, grid, box } from 'axiom-framework'
+
+stack({ gap: 12, padding: 16 },
+  row({ gap: 8, align: 'center' },
+    box('strong', null, 'Status'),
+    box('span', null, 'Ready'),
+  ),
+  grid(3, { gap: 10 },
+    box({ class: 'tile' }, 'A'),
+    box({ class: 'tile' }, 'B'),
+    box({ class: 'tile' }, 'C'),
+  ),
+)
+```
+
+These helpers are semantic sugar over `h()`. They produce normal `ElementNode` values and add no extra lifecycle.
+
+### Flow helpers
+
+```typescript
+import { For, Show, h } from 'axiom-framework'
+
+const list = For({
+  each: products.value,
+  keyBy: (product) => product.id,
+  children: (product) => h('li', null, product.name),
+})
+
+const panel = Show({
+  when: user.value !== null,
+  fallback: h('a', { href: '/login' }, 'Sign in'),
+  children: () => h('span', null, `Hello, ${user.value!.name}`),
+})
+```
+
+`For`, `Show`, `Switch`, `Match`, and `Each` are pure functions. They do not subscribe to signals. The parent component reads signal values and re-executes; the helpers only build nodes.
+
+### JSX / TSX
+
+JSX is supported through the automatic runtime.
+
+```jsonc
+// tsconfig.json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "axiom-framework"
+  }
+}
+```
+
+Then enable Axiom's JSX types in TSX files or globally in your project:
+
+```tsx
+/// <reference types="axiom-framework/jsx-types" />
+
+import { defineComponent, createApp, signal, For, Show } from 'axiom-framework'
+
+const items = signal(['Alpha', 'Beta'])
+const visible = signal(true)
+
+function Badge(props: { label: string }) {
+  return <span class="badge" padding={4}>{props.label}</span>
+}
+
+const App = defineComponent(() => (
+  <main flex="column" gap={8} padding={16}>
+    <Badge label="JSX" />
+
+    <Show when={visible.value} fallback={<p>No items</p>}>
+      <For
+        each={items.value}
+        keyBy={(item) => item}
+        children={(item) => <p>{item}</p>}
+      />
+    </Show>
+  </main>
+))
+
+createApp(App, document.getElementById('app')!).mount()
+```
+
+Important detail: `keyBy` belongs to `For`. JSX `key` is accepted by the runtime as a special element attribute, but `For({ keyBy })` is the list-key API that Axiom uses to inject stable keys into generated element children.
 
 ---
 
@@ -372,19 +476,52 @@ If something goes wrong, see [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md
 
 ---
 
+## Build Outputs & Minification
+
+Axiom separates library output from final browser artifacts:
+
+```Text
+dist/ as npm library       → not minified
+final browser bundle       → minified
+static HTML/CSS generation → planned build-time responsibility
+renderToString()           → renders HTML, does not minify
+```
+
+That separation is deliberate. The npm package should remain modular and tree-shakeable for downstream bundlers. Final application bundles, however, should be optimized because they are served directly to users.
+
+The demo build follows that rule through `demo/build.ts`: it compiles the framework and bundles `demo/app.ts` to `demo/app.js` with `minify: true`.
+
+```bash
+bun run demo:build
+```
+
+Static site generation with a public `buildStatic()` API is not part of the public API yet. The current strategy and acceptance criteria are documented in [docs/STATIC-BUILD-MINIFICATION.md](./docs/STATIC-BUILD-MINIFICATION.md). Until that API exists, use your application bundler's production mode or configure Bun directly for final browser artifacts:
+
+```typescript
+await Bun.build({
+  entrypoints: ['./src/app.ts'],
+  outdir: './dist',
+  target: 'browser',
+  minify: true,
+})
+```
+
+---
+
 ## Limitations
 
-The following features are **not yet supported** in v0.9.0:
+The following features are **not yet supported** in v0.9.1:
 
 | Area | Status | Notes |
 | ------ | -------- | ----- |
+| Public static site generation API (`buildStatic`) | Proposed | Strategy documented in `docs/STATIC-BUILD-MINIFICATION.md`; not exported yet |
 | Streaming SSR (`renderToReadableStream`) | Under evaluation | Single-shot `renderToString` is fully supported |
 | Portal relocation to `document.body` at runtime | Under evaluation | CSS-managed portals are supported via `cssManaged` |
 | CSS-in-JS / styled components | Out of scope | Use `style` with the built-in token resolver |
 | Accessibility helpers (ARIA wiring, focus management) | Community contribution welcome | Framework primitives are available for external libs |
 | i18n / RTL support | Community contribution welcome | Layout engine remains deterministic across directions |
 
-### Now fully supported in v0.9.0
+### Now fully supported in v0.9.1
 
 - **Responsive design**: breakpoints (`minWidth`/`maxWidth`), viewport units (`vw`/`vh`), percentages
 - **CSS Grid layout (MVP)**: fixed columns, `repeat(...)`, auto-placement, `gridRowSpan`/`gridColumnSpan`
@@ -392,6 +529,7 @@ The following features are **not yet supported** in v0.9.0:
 - **SSR-safe router**: static + dynamic route matching with SSR-safe URL parsing
 - **Plugin system**: lifecycle hooks (`onMount`, `onUnmount`, `onUpdate`)
 - **SSR + hydration**: server rendering and client-side reuse with mismatch handling
+- **Syntax v2 authoring layer**: `h()`, text children, layout helpers, flow helpers, and JSX/TSX runtime exports
 
 axiom-framework is a **low-level layout + rendering engine**. Features that belong
 in application-level layers will not be added to the core package.
