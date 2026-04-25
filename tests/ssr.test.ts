@@ -1,5 +1,7 @@
 import { describe, test, expect } from 'bun:test'
 import { defineComponent, renderToString, createPortal } from '../src/index.js'
+import { jsxDEV } from '../src/jsx-dev-runtime.js'
+import { h } from '../src/syntax/h.js'
 
 describe('SSR: renderToString', () => {
   test('genera HTML base válido', async () => {
@@ -128,11 +130,52 @@ describe('SSR: renderToString', () => {
     expect(html).toContain('URL-safe SSR')
     expect(html).toContain('<div id="app">')
   })
+
+  test('serializa attrs.style anidado desde JSX/h() en SSR', () => {
+    const App = defineComponent(() => h('p', {
+      attrs: {
+        style: 'color:#a78bfa;font-weight:700;',
+        title: 'styled-copy',
+      },
+    }, 'Styled copy'))
+
+    const html = renderToString(App)
+
+    expect(html).toContain('Styled copy')
+    expect(html).toContain('title="styled-copy"')
+    expect(html).toContain('color:#a78bfa;font-weight:700;')
+  })
 })
 
 describe('SSR: export público', () => {
   test('renderToString está expuesto desde entrypoint público', () => {
     expect(typeof renderToString).toBe('function')
+  })
+
+  test('jsxDEV de desarrollo preserva props.children con firma de Bun/TypeScript', () => {
+    const App = defineComponent(() => jsxDEV(
+      'main',
+      {
+        flex: 'column',
+        gap: 12,
+        padding: 20,
+        children: [
+          jsxDEV('h1', { children: 'SSR Demo' }, undefined, false, undefined, undefined),
+          jsxDEV('p', { children: ['Hola ', 'Dev'] }, undefined, true, undefined, undefined),
+        ],
+      },
+      undefined,
+      true,
+      undefined,
+      undefined,
+    ))
+
+    const html = renderToString(App, { width: 960, height: 720 })
+
+    expect(html).toContain('<h1')
+    expect(html).toContain('SSR Demo')
+    expect(html).toContain('<p')
+    expect(html).toContain('Hola Dev')
   })
 })
 

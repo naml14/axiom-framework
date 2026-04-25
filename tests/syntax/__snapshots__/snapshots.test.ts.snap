@@ -1,0 +1,310 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`h() — snapshot Card 1`] = `
+{
+  "attrs": undefined,
+  "children": [
+    {
+      "attrs": undefined,
+      "children": [
+        {
+          "content": "Título",
+          "type": "text",
+        },
+      ],
+      "classes": undefined,
+      "key": undefined,
+      "layout": undefined,
+      "on": undefined,
+      "style": undefined,
+      "tag": "h3",
+      "type": "element",
+    },
+    {
+      "attrs": undefined,
+      "children": [
+        {
+          "content": "Cuerpo",
+          "type": "text",
+        },
+      ],
+      "classes": undefined,
+      "key": undefined,
+      "layout": undefined,
+      "on": undefined,
+      "style": undefined,
+      "tag": "p",
+      "type": "element",
+    },
+  ],
+  "classes": [
+    "card",
+  ],
+  "key": undefined,
+  "layout": {
+    "flexDirection": "column",
+    "gap": 8,
+  },
+  "on": undefined,
+  "style": undefined,
+  "tag": "article",
+  "type": "element",
+}
+`;
+
+exports[`h() — snapshot con attrs y eventos 1`] = `
+{
+  "attrs": {
+    "aria-label": "Enviar formulario",
+    "data-testid": "submit",
+    "disabled": "",
+    "id": "submit-btn",
+  },
+  "children": [
+    {
+      "content": "Enviar",
+      "type": "text",
+    },
+  ],
+  "classes": undefined,
+  "key": undefined,
+  "layout": undefined,
+  "on": [
+    "click",
+  ],
+  "style": undefined,
+  "tag": "button",
+  "type": "element",
+}
+`;
+
+exports[`h() — snapshot breakpoints (at) 1`] = `
+{
+  "attrs": undefined,
+  "children": [],
+  "classes": undefined,
+  "key": undefined,
+  "layout": {
+    "breakpoints": [
+      {
+        "layout": {
+          "flexDirection": "row",
+        },
+        "minWidth": 480,
+      },
+      {
+        "layout": {
+          "gap": 16,
+        },
+        "minWidth": 768,
+      },
+    ],
+    "flexDirection": "column",
+  },
+  "on": undefined,
+  "style": undefined,
+  "tag": "div",
+  "type": "element",
+}
+`;
+
+exports[`stack() — snapshot 1`] = `
+{
+  "attrs": undefined,
+  "children": [
+    {
+      "attrs": undefined,
+      "children": [
+        {
+          "content": "A",
+          "type": "text",
+        },
+      ],
+      "classes": undefined,
+      "key": undefined,
+      "layout": undefined,
+      "on": undefined,
+      "style": undefined,
+      "tag": "p",
+      "type": "element",
+    },
+    {
+      "attrs": undefined,
+      "children": [
+        {
+          "content": "B",
+          "type": "text",
+        },
+      ],
+      "classes": undefined,
+      "key": undefined,
+      "layout": undefined,
+      "on": undefined,
+      "style": undefined,
+      "tag": "p",
+      "type": "element",
+    },
+  ],
+  "classes": undefined,
+  "key": undefined,
+  "layout": {
+    "flexDirection": "column",
+    "gap": 16,
+    "padding": 24,
+  },
+  "on": undefined,
+  "style": undefined,
+  "tag": "div",
+  "type": "element",
+}
+`;
+
+exports[`row() — snapshot 1`] = `
+{
+  "attrs": undefined,
+  "children": [
+    {
+      "attrs": {
+        "alt": "Avatar",
+        "src": "/avatar.png",
+      },
+      "children": [],
+      "classes": undefined,
+      "key": undefined,
+      "layout": undefined,
+      "on": undefined,
+      "style": undefined,
+      "tag": "img",
+      "type": "element",
+    },
+    {
+      "attrs": undefined,
+      "children": [
+        {
+          "content": "Usuario",
+          "type": "text",
+        },
+      ],
+      "classes": undefined,
+      "key": undefined,
+      "layout": undefined,
+      "on": undefined,
+      "style": undefined,
+      "tag": "span",
+      "type": "element",
+    },
+  ],
+  "classes": undefined,
+  "key": undefined,
+  "layout": {
+    "alignItems": "center",
+    "flexDirection": "row",
+    "gap": 8,
+  },
+  "on": undefined,
+  "style": undefined,
+  "tag": "div",
+  "type": "element",
+}
+`;
+
+exports[`grid(3) — snapshot 1`] = `
+{
+  "attrs": undefined,
+  "children": [
+    {
+      "attrs": undefined,
+      "children": [
+        {
+          "content": "1",
+          "type": "text",
+        },
+      ],
+      "classes": undefined,
+      "key": undefined,
+      "layout": undefined,
+      "on": undefined,
+      "style": undefined,
+      "tag": "div",
+      "type": "element",
+    },
+    {
+      "attrs": undefined,
+      "children": [
+        {
+          "content": "2",
+          "type": "text",
+        },
+      ],
+      "classes": undefined,
+      "key": undefined,
+      "layout": undefined,
+      "on": undefined,
+      "style": undefined,
+      "tag": "div",
+      "type": "element",
+    },
+    {
+      "attrs": undefined,
+      "children": [
+        {
+          "content": "3",
+          "type": "text",
+        },
+      ],
+      "classes": undefined,
+      "key": undefined,
+      "layout": undefined,
+      "on": undefined,
+      "style": undefined,
+      "tag": "div",
+      "type": "element",
+    },
+  ],
+  "classes": undefined,
+  "key": undefined,
+  "layout": {
+    "display": "grid",
+    "gap": 8,
+    "gridTemplateColumns": "repeat(3, 1fr)",
+  },
+  "on": undefined,
+  "style": undefined,
+  "tag": "div",
+  "type": "element",
+}
+`;
+
+exports[`box() con tag semántico — snapshot 1`] = `
+{
+  "attrs": undefined,
+  "children": [
+    {
+      "attrs": undefined,
+      "children": [
+        {
+          "content": "Sección",
+          "type": "text",
+        },
+      ],
+      "classes": undefined,
+      "key": undefined,
+      "layout": undefined,
+      "on": undefined,
+      "style": undefined,
+      "tag": "h2",
+      "type": "element",
+    },
+  ],
+  "classes": undefined,
+  "key": undefined,
+  "layout": {
+    "flexDirection": "column",
+    "padding": 16,
+  },
+  "on": undefined,
+  "style": undefined,
+  "tag": "section",
+  "type": "element",
+}
+`;

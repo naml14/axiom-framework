@@ -6,11 +6,18 @@
     "module": "ESNext",
     "moduleDetection": "force",
     "jsx": "react-jsx",
+    "jsxImportSource": "axiom-framework",
     "allowJs": true,
     "types": ["bun", "node"],
 
     // Bundler mode
     "moduleResolution": "bundler",
+    "paths": {
+      "axiom-framework": ["./src/index.ts"],
+      "axiom-framework/jsx-runtime": ["./src/jsx-runtime.ts"],
+      "axiom-framework/jsx-dev-runtime": ["./src/jsx-dev-runtime.ts"],
+      "axiom-framework/jsx-types": ["./src/jsx.d.ts"]
+    },
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
@@ -33,6 +40,6 @@
     "sourceMap": true,
     "outDir": "dist"
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "demo/**/*.ts", "scripts/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "demo/**/*.ts", "demo/**/*.tsx", "scripts/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

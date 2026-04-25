@@ -21,10 +21,12 @@ type BunBuildRuntime = {
     entrypoints: string[]
     outdir: string
     target: 'browser'
+    minify?: boolean
   }) => Promise<{ success: boolean; logs: unknown[] }>
 }
 
 const ROOT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
+const isDirectRun = process.argv[1] === fileURLToPath(import.meta.url)
 
 function getBun(): BunBuildRuntime {
   const bun = (globalThis as { Bun?: unknown }).Bun as BunBuildRuntime | undefined
@@ -67,11 +69,14 @@ export async function doBuild(): Promise<boolean> {
 
   console.log('📦 Building demo bundle (app.js)...')
 
-  // Step 2 — bundle demo entry point for the browser using src/ as source
+  // Step 2 — bundle demo entry point for the browser using src/ as source.
+  // Minify is always on: this bundle is a final browser artifact that nobody
+  // re-processes downstream, so we ship it optimized.
   const result = await bun.build({
     entrypoints: [join(ROOT_DIR, 'demo', 'app.ts')],
     outdir: join(ROOT_DIR, 'demo'),
     target: 'browser',
+    minify: true,
   })
 
   if (!result.success) {
@@ -150,4 +155,9 @@ export function setupWatch(): void {
   }
 
   console.log('👀 Watching for changes...')
+}
+
+if (isDirectRun) {
+  const ok = await doBuild()
+  process.exit(ok ? 0 : 1)
 }

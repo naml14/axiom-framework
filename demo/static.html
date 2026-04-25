@@ -177,6 +177,107 @@
         <pre id="ruta-b-error-output" class="ruta-b-pre">Sin datos aún.</pre>
       </section>
 
+      <!-- ============================================================
+            Syntax v2 — Feature 1: h() vs API Literal
+          ============================================================ -->
+      <section class="sidebar-section syntax-section" aria-label="Syntax v2 — h()">
+        <h2 class="sidebar-section-title">✨ Syntax v2 — h() vs Literal</h2>
+        <p class="ruta-b-desc">
+          Comparativa en vivo: <code>h()</code> produce el mismo árbol que la API literal, con menos ruido.
+        </p>
+        <div class="syntax-side-by-side">
+          <div class="syntax-panel">
+            <div class="syntax-panel-label">API Literal</div>
+            <div id="syntax-h-literal-root"></div>
+          </div>
+          <div class="syntax-panel">
+            <div class="syntax-panel-label">h() — Syntax v2</div>
+            <div id="syntax-h-v2-root"></div>
+          </div>
+        </div>
+        <pre id="syntax-h-output" class="ruta-b-pre">Montando…</pre>
+      </section>
+
+      <!-- ============================================================
+            Syntax v2 — Feature 2: Layout DSL
+          ============================================================ -->
+      <section class="sidebar-section syntax-section" aria-label="Syntax v2 — Layout DSL">
+        <h2 class="sidebar-section-title">📐 Syntax v2 — Layout DSL</h2>
+        <p class="ruta-b-desc">
+          <code>stack()</code> · <code>row()</code> · <code>grid()</code> — shortcuts declarativos de layout.
+        </p>
+        <div class="ruta-b-actions">
+          <button id="syntax-layout-stack-btn"  class="btn-toggle active">stack</button>
+          <button id="syntax-layout-row-btn"    class="btn-toggle">row</button>
+          <button id="syntax-layout-grid-btn"   class="btn-toggle">grid</button>
+        </div>
+        <div id="syntax-layout-root" class="syntax-layout-preview"></div>
+        <pre id="syntax-layout-output" class="ruta-b-pre">—</pre>
+      </section>
+
+      <!-- ============================================================
+            Syntax v2 — Feature 3: Control de flujo
+          ============================================================ -->
+      <section class="sidebar-section syntax-section" aria-label="Syntax v2 — Flow">
+        <h2 class="sidebar-section-title">🔀 Syntax v2 — Control de Flujo</h2>
+        <p class="ruta-b-desc">
+          <code>Show</code> · <code>For</code> · <code>Switch</code> — control de flujo declarativo.
+        </p>
+        <div class="ruta-b-actions">
+          <button id="syntax-flow-toggle-btn"  class="btn-toggle active">Show: visible</button>
+          <button id="syntax-flow-add-btn"     class="btn-toggle">+ Item (For)</button>
+          <button id="syntax-flow-switch-btn"  class="btn-toggle">Switch →</button>
+        </div>
+        <div id="syntax-flow-root"></div>
+        <pre id="syntax-flow-output" class="ruta-b-pre">—</pre>
+      </section>
+
+      <!-- ============================================================
+            Syntax v2 — Feature 4: Eventos + Attrs inspector
+          ============================================================ -->
+      <section class="sidebar-section syntax-section" aria-label="Syntax v2 — Events">
+        <h2 class="sidebar-section-title">🎯 Syntax v2 — Eventos + Attrs</h2>
+        <p class="ruta-b-desc">
+          <code>onClick</code> · <code>onMouseEnter</code> para handlers · <code>aria:</code> · <code>data:</code> para HTML attributes — sin mezclar con layout.
+        </p>
+        <div id="syntax-events-root"></div>
+        <pre id="syntax-events-output" class="ruta-b-pre">Esperando interacción…</pre>
+      </section>
+
+      <!-- ============================================================
+            Syntax v2 — Feature 5: Benchmark live vs Golden
+          ============================================================ -->
+      <section class="sidebar-section syntax-section syntax-bench-section" aria-label="Syntax v2 — Benchmark">
+        <h2 class="sidebar-section-title">⚡ Syntax v2 — Benchmark</h2>
+        <p class="ruta-b-desc">
+          Mide <code>prepare()</code> con la nueva sintaxis. Compara vs Golden Standard (2.228ms / 5000 nodos).
+        </p>
+        <div class="ruta-b-actions">
+          <button id="syntax-bench-run-btn" class="btn-toggle active">▶ Ejecutar</button>
+        </div>
+        <div class="syntax-bench-bar-track">
+          <div id="syntax-bench-bar" class="syntax-bench-bar"></div>
+        </div>
+        <pre id="syntax-bench-output" class="ruta-b-pre">Listo para ejecutar.</pre>
+      </section>
+
+      <!-- ============================================================
+            Syntax v2 — Feature 6: JSX
+          ============================================================ -->
+      <section class="sidebar-section syntax-section" aria-label="Syntax v2 — JSX">
+        <h2 class="sidebar-section-title">⚛️ Syntax v2 — JSX</h2>
+        <p class="ruta-b-desc">
+          JSX compila a las mismas llamadas <code>h()</code> — mismo árbol, distinta escritura.
+          Componentes como funciones, props tipadas, control de flujo con <code>Show</code> + <code>For</code>.
+        </p>
+        <div class="ruta-b-actions">
+          <button id="syntax-jsx-toggle-btn" class="btn-toggle active">Show: visible</button>
+          <button id="syntax-jsx-add-btn" class="btn-toggle">+ Item</button>
+        </div>
+        <div id="syntax-jsx-root"></div>
+        <pre id="syntax-jsx-output" class="ruta-b-pre">—</pre>
+      </section>
+
     </aside>
 
     <!-- ========================================================
