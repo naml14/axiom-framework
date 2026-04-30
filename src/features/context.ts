@@ -41,7 +41,7 @@ const contextStack: Map<symbol, Signal<unknown>>[] = []
 // createContext
 // ============================================================
 
-export function createContext<T>(defaultValue: T): Context<T> {
+export function createContext<const T>(defaultValue: T): Context<T> {
   return {
     _id: Symbol('Context'),
     _defaultValue: defaultValue,
@@ -63,7 +63,7 @@ export function createContext<T>(defaultValue: T): Context<T> {
 
 export function withContext<T, R>(
   ctx: Context<T>,
-  value: Signal<T> | T,
+  value: Signal<NoInfer<T>> | NoInfer<T>,
   children: () => R
 ): R {
   const sig: Signal<T> = isSignal(value) ? value : signal(value as T)

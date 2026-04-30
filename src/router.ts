@@ -7,7 +7,7 @@ import { signal } from './reactivity/signals.js'
 
 export interface Route {
   path: string
-  component: ComponentDefinition<any>
+  component: ComponentDefinition<unknown>
   name?: string
 }
 

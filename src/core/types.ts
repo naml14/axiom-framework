@@ -17,6 +17,7 @@ export interface Signal<T> {
 
 export interface ComputedSignal<T> extends Signal<T> {
   // Computed signals are read-only; setter throws
+  readonly value: T
 }
 
 // --- Component Types ---
@@ -58,7 +59,7 @@ export interface PortalNode {
 
 export interface ComponentDefinition<Props = void> {
   _id: symbol
-  _fn: (props: Props) => ComponentNode
+  _fn(props: Props): ComponentNode
   displayName?: string
 }
 

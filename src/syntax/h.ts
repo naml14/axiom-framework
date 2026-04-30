@@ -19,8 +19,7 @@ import { BOOLEAN_HTML_ATTR_KEYS, HTML_ATTR_DOM_NAMES } from './types.js'
 import type { HProps, HChild, ResponsiveMap, LayoutShortcuts } from './types.js'
 
 // ─── Tipo para componentes funcionales JSX ────────────────────────────────────
-type FunctionalComponent<P = Record<string, unknown>> = (props: P) => ComponentNode
-type ComponentProps = Record<string, unknown> | null | undefined
+type PropsOf<C> = C extends (props: infer P) => ComponentNode ? P : never
 
 // ─── Mapa de eventos sintéticos (C4) ─────────────────────────────────────────
 // Eventos cuyo nombre DOM NO es simplemente camelCase → lowercase.
@@ -44,10 +43,10 @@ const SYNTHETIC_EVENT_MAP: Readonly<Record<string, string>> = {
 // Sobrecarga 1: tag string → siempre retorna ElementNode
 export function h(tag: string, props?: HProps | null, ...children: HChild[]): ElementNode
 // Sobrecarga 2: tag función → retorna ComponentNode (resultado del componente)
-export function h(tag: FunctionalComponent<any>, props?: ComponentProps, ...children: HChild[]): ComponentNode
+export function h<C extends (props: never) => ComponentNode>(tag: C, props?: PropsOf<C> | null, ...children: HChild[]): ComponentNode
 export function h(
-  tag: string | FunctionalComponent,
-  props?: HProps | ComponentProps,
+  tag: string | ((props: never) => ComponentNode),
+  props?: unknown,
   ...children: HChild[]
 ): ComponentNode {
   // Componente funcional JSX: <Badge label="UI" /> → h(Badge, { label: 'UI' })
@@ -62,7 +61,7 @@ export function h(
         }
       : (props ?? {})
 
-    return tag(mergedProps as Record<string, unknown>)
+    return (tag as (props: unknown) => ComponentNode)(mergedProps)
   }
 
   // JSX (jsxs/jsx) passes children inside props.children, not as variadic args.
@@ -71,8 +70,8 @@ export function h(
   const rawChildren: HChild[] =
     children.length > 0
       ? children
-      : props?.children !== undefined
-        ? Array.isArray(props.children) ? props.children : [props.children as HChild]
+      : (props as HProps | null | undefined)?.children !== undefined
+        ? Array.isArray((props as HProps).children) ? (props as HProps).children as HChild[] : [(props as HProps).children as HChild]
         : []
 
   const elementProps = props as HProps | null | undefined
