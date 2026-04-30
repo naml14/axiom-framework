@@ -24,11 +24,15 @@ import {
 // DOM Operation Types
 // ============================================================
 
-export interface DOMOperation {
-  type: 'insert' | 'remove' | 'update' | 'move'
+export interface DOMRemoveOp {
+  type: 'remove'
   index: number
   oldIndex?: number
-  // For insert
+}
+
+export interface DOMInsertOp {
+  type: 'insert'
+  index: number
   tag?: string
   textContent?: string
   classes?: string[]
@@ -36,11 +40,17 @@ export interface DOMOperation {
   on?: Record<string, EventListener>
   style?: import('../features/style.js').SafeStyleProps
   key?: string
-  /** When set, this insert targets a portal container instead of the app root */
+  x?: number
+  y?: number
+  width?: number
+  height?: number
   portalTarget?: HTMLElement
-  /** For portal children with cssManaged:false — framework manages layout styles */
   portalCssManaged?: boolean
-  // For update/move
+}
+
+export interface DOMUpdateOp {
+  type: 'update'
+  index: number
   x?: number
   y?: number
   width?: number
@@ -50,6 +60,18 @@ export interface DOMOperation {
   newStyle?: import('../features/style.js').SafeStyleProps
   newClasses?: string[]
 }
+
+export interface DOMMoveOp {
+  type: 'move'
+  index: number
+  oldIndex: number
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+}
+
+export type DOMOperation = DOMRemoveOp | DOMInsertOp | DOMUpdateOp | DOMMoveOp
 
 // ============================================================
 // Portal Map — maps every descendant node index to its portalTarget + cssManaged flag
@@ -139,7 +161,7 @@ export function fullDiff(
     const portalMap = buildPortalMap(newPrepared)
     forEachNode(newPrepared, (node) => {
       const idx = getNodeIndex(node)
-      const op: DOMOperation = { type: 'insert', index: idx }
+      const op: DOMInsertOp = { type: 'insert', index: idx }
 
       const nodeType = getNodeType(node)
       if (nodeType === 'element') {
@@ -215,7 +237,7 @@ export function fullDiff(
     allChanged.sort((a, b) => a - b)
 
     for (const idx of allChanged) {
-      const op: DOMOperation = {
+      const op: DOMUpdateOp = {
         type: 'update',
         index: idx,
       }
@@ -331,7 +353,7 @@ function fullTreeDiff(
 
           const oldNode = prevByIndex.get(oldIdx)
           if (oldNode !== undefined) {
-            const metadataUpdate: DOMOperation = { type: 'update', index: idx }
+            const metadataUpdate: DOMUpdateOp = { type: 'update', index: idx }
             let hasMetadataUpdate = false
 
             if (nodeType === 'text') {
@@ -373,7 +395,7 @@ function fullTreeDiff(
       }
 
       // True insert
-      const op: DOMOperation = { type: 'insert', index: idx }
+      const op: DOMInsertOp = { type: 'insert', index: idx }
       if (nodeType === 'element') {
         op.tag = getTag(node)
         op.classes = getClasses(node)

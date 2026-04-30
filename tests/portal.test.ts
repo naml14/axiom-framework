@@ -757,7 +757,7 @@ describe('Bug A3 — fullDiff insert ops for portal descendants carry portalTarg
     const ops = fullDiff(null, null, prepared, layout, [])
 
     // The insert op for the portal child (span) must have portalTarget set
-    const insertOps = ops.filter(op => op.type === 'insert' && op.tag === 'span')
+    const insertOps = ops.filter((op): op is import('../src/render/diff.js').DOMInsertOp => op.type === 'insert' && op.tag === 'span')
     expect(insertOps).toHaveLength(1)
     expect(insertOps[0]!.portalTarget).toBe(targetEl)
   })
