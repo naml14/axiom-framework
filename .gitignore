@@ -9,6 +9,10 @@ dist/
 # --- Dependencies ---
 node_modules/
 
+# --- Local agent tooling (skills, locks) ---
+.agents/
+skills-lock.json
+
 # --- Dev Scripts (internal exploration scripts, not part of public API) ---
 scripts/
 !scripts/
