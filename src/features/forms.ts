@@ -11,8 +11,16 @@ import type { Signal } from '../core/types.js'
 // Types
 // ============================================================
 
-export type SyncRule<T> = (value: T) => string | null
-export type AsyncRule<T> = (value: T) => Promise<string | null>
+export interface SyncRule<T> {
+  type: 'sync'
+  validate: (value: T) => string | null
+}
+
+export interface AsyncRule<T> {
+  type: 'async'
+  validate: (value: T) => Promise<string | null>
+}
+
 export type ValidationRule<T> = SyncRule<T> | AsyncRule<T>
 
 export interface ValidationResult {
@@ -71,46 +79,25 @@ export function bind(sig: Signal<string>, el: BindableElement): () => void {
 // ADR-6: debounce + generation counter for async rules
 // ============================================================
 
-// Descriptor built once per validate() call — avoids repeated probe calls per value change.
-interface RuleDescriptor<T> {
-  rule: ValidationRule<T>
-  isAsync: boolean
-}
-
-// AsyncFunction constructor — obtained via Object.getPrototypeOf so we don't rely on
-// the string `constructor.name` (which breaks under minification). Using `instanceof`
-// against this constructor correctly identifies `async function` declarations and
-// `async () => {}` arrow functions without ever calling the rule.
-// Edge case NOT covered: a regular (non-async) function that returns Promise.resolve().
-// For validation rules this is extremely rare and can be addressed by making the rule
-// explicitly async if async behavior is needed.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const AsyncFunctionConstructor: FunctionConstructor = Object.getPrototypeOf(async function () {})
-  .constructor as FunctionConstructor
-
-function buildDescriptors<T>(rules: ValidationRule<T>[]): RuleDescriptor<T>[] {
-  return rules.map((rule) => ({ rule, isAsync: rule instanceof AsyncFunctionConstructor }))
-}
-
-function runSyncRules<T>(value: T, descriptors: RuleDescriptor<T>[]): string[] {
+function runSyncRules<T>(value: T, rules: ValidationRule<T>[]): string[] {
   const errors: string[] = []
-  for (const { rule, isAsync } of descriptors) {
-    if (isAsync) continue // skip async rules in sync pass
-    const result = (rule as SyncRule<T>)(value)
+  for (const rule of rules) {
+    if (rule.type === 'async') continue
+    const result = rule.validate(value)
     if (result !== null) {
-      errors.push(result) // fail-fast: stop at first error
+      errors.push(result)
       return errors
     }
   }
   return errors
 }
 
-async function runAsyncRules<T>(value: T, descriptors: RuleDescriptor<T>[]): Promise<string[]> {
-  for (const { rule, isAsync } of descriptors) {
-    if (!isAsync) continue // skip sync rules in async pass
-    const result = await (rule as AsyncRule<T>)(value)
+async function runAsyncRules<T>(value: T, rules: ValidationRule<T>[]): Promise<string[]> {
+  for (const rule of rules) {
+    if (rule.type === 'sync') continue
+    const result = await rule.validate(value)
     if (result !== null) {
-      return [result] // fail-fast: stop at first async error
+      return [result]
     }
   }
   return []
@@ -131,16 +118,14 @@ export function validate<T>(
   let generation = 0
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-  // Pre-compute async/sync classification once — avoids repeated probing per value change
-  const descriptors = buildDescriptors(rules)
-  const hasAsyncRules = descriptors.some((d) => d.isAsync)
+  const hasAsyncRules = rules.some((r) => r.type === 'async')
 
   // effect() returns a dispose function — store it to prevent memory leaks
   const disposeEffect = effect(() => {
     const val = source.value // track dependency
 
     // Run sync rules first (fail-fast)
-    const syncErrors = runSyncRules(val, descriptors)
+    const syncErrors = runSyncRules(val, rules)
     if (syncErrors.length > 0) {
       // Cancel any pending async debounce
       if (debounceTimer !== null) {
@@ -177,7 +162,7 @@ export function validate<T>(
       // Stale check (generation counter — ADR-6)
       if (currentGen !== generation) return
 
-      const asyncErrors = await runAsyncRules(val, descriptors)
+      const asyncErrors = await runAsyncRules(val, rules)
 
       // Second stale check after await
       if (currentGen !== generation) return
@@ -207,24 +192,36 @@ export function validate<T>(
 // Built-in validation rule factories
 // ============================================================
 
-export const required: SyncRule<string> = (value: string) => {
-  return value.trim().length === 0 ? 'This field is required' : null
+export const required: SyncRule<string> = {
+  type: 'sync',
+  validate: (value: string) => {
+    return value.trim().length === 0 ? 'This field is required' : null
+  },
 }
 
 export function minLength(min: number): SyncRule<string> {
-  return (value: string) => {
-    return value.length < min ? `Must be at least ${min} characters` : null
+  return {
+    type: 'sync',
+    validate: (value: string) => {
+      return value.length < min ? `Must be at least ${min} characters` : null
+    },
   }
 }
 
 export function maxLength(max: number): SyncRule<string> {
-  return (value: string) => {
-    return value.length > max ? `Must be at most ${max} characters` : null
+  return {
+    type: 'sync',
+    validate: (value: string) => {
+      return value.length > max ? `Must be at most ${max} characters` : null
+    },
   }
 }
 
 export function pattern(regex: RegExp, message?: string): SyncRule<string> {
-  return (value: string) => {
-    return regex.test(value) ? null : (message ?? `Does not match required pattern`)
+  return {
+    type: 'sync',
+    validate: (value: string) => {
+      return regex.test(value) ? null : message ?? `Does not match required pattern`
+    },
   }
 }

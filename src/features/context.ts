@@ -10,6 +10,11 @@ import type { Signal } from '../core/types.js'
 // Types
 // ============================================================
 
+export function isSignal<T>(value: unknown): value is Signal<T> {
+  return value !== null && typeof value === 'object' && 'value' in (value as object)
+}
+
+
 export interface Context<T> {
   readonly _id: symbol
   readonly _defaultValue: T
@@ -61,16 +66,7 @@ export function withContext<T, R>(
   value: Signal<T> | T,
   children: () => R
 ): R {
-  // Normalize: wrap plain value in signal if needed.
-  // We check for the PRESENCE of a `.value` property (not its runtime type) to correctly
-  // handle Signal<T> where T = undefined. Using `typeof sig.value !== 'undefined'`
-  // would incorrectly re-wrap a valid Signal<undefined>.
-  const sig: Signal<T> =
-    value !== null &&
-    typeof value === 'object' &&
-    'value' in (value as object)
-      ? (value as Signal<T>)
-      : signal(value as T)
+  const sig: Signal<T> = isSignal(value) ? value : signal(value as T)
 
   const frame = new Map<symbol, Signal<unknown>>()
   frame.set(ctx._id, sig as Signal<unknown>)
