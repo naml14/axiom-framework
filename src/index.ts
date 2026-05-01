@@ -13,7 +13,7 @@
 // ============================================================
 
 // --- Reactivity ---
-export { signal, computed, effect } from './reactivity/signals.js'
+export { signal, computed, effect, isSignal } from './reactivity/signals.js'
 
 // --- Components ---
 export { defineComponent } from './render/component.js'
@@ -89,6 +89,8 @@ export type {
   ValidateOptions,
   SyncRule,
   AsyncRule,
+  SyncRuleFunction,
+  AsyncRuleFunction,
 } from './features/forms.js'
 
 // --- Syntax Layer (v2.0.0) ---

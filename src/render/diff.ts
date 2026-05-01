@@ -24,11 +24,15 @@ import {
 // DOM Operation Types
 // ============================================================
 
-export interface DOMOperation {
-  type: 'insert' | 'remove' | 'update' | 'move'
+export interface DOMRemoveOp {
+  type: 'remove'
   index: number
   oldIndex?: number
-  // For insert
+}
+
+export interface DOMInsertOp {
+  type: 'insert'
+  index: number
   tag?: string
   textContent?: string
   classes?: string[]
@@ -36,11 +40,17 @@ export interface DOMOperation {
   on?: Record<string, EventListener>
   style?: import('../features/style.js').SafeStyleProps
   key?: string
-  /** When set, this insert targets a portal container instead of the app root */
+  x?: number
+  y?: number
+  width?: number
+  height?: number
   portalTarget?: HTMLElement
-  /** For portal children with cssManaged:false — framework manages layout styles */
   portalCssManaged?: boolean
-  // For update/move
+}
+
+export interface DOMUpdateOp {
+  type: 'update'
+  index: number
   x?: number
   y?: number
   width?: number
@@ -49,7 +59,23 @@ export interface DOMOperation {
   newOn?: Record<string, EventListener>
   newStyle?: import('../features/style.js').SafeStyleProps
   newClasses?: string[]
+  portalTarget?: HTMLElement
+  portalCssManaged?: boolean
 }
+
+export interface DOMMoveOp {
+  type: 'move'
+  index: number
+  oldIndex: number
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  portalTarget?: HTMLElement
+  portalCssManaged?: boolean
+}
+
+export type DOMOperation = DOMRemoveOp | DOMInsertOp | DOMUpdateOp | DOMMoveOp
 
 // ============================================================
 // Portal Map — maps every descendant node index to its portalTarget + cssManaged flag
@@ -84,6 +110,17 @@ function buildPortalMap(prepared: PreparedComponent): Map<number, PortalMapEntry
   }
   walk(prepared)
   return map
+}
+
+function applyPortalMetadata(
+  op: DOMInsertOp | DOMUpdateOp | DOMMoveOp,
+  portalEntry: PortalMapEntry | undefined
+): void {
+  if (portalEntry === undefined) return
+  op.portalTarget = portalEntry.target
+  if (!portalEntry.cssManaged) {
+    op.portalCssManaged = false
+  }
 }
 
 // ============================================================
@@ -139,7 +176,7 @@ export function fullDiff(
     const portalMap = buildPortalMap(newPrepared)
     forEachNode(newPrepared, (node) => {
       const idx = getNodeIndex(node)
-      const op: DOMOperation = { type: 'insert', index: idx }
+      const op: DOMInsertOp = { type: 'insert', index: idx }
 
       const nodeType = getNodeType(node)
       if (nodeType === 'element') {
@@ -153,13 +190,7 @@ export function fullDiff(
         op.textContent = getTextContent(node)
       }
 
-      const portalEntry = portalMap.get(idx)
-      if (portalEntry !== undefined) {
-        op.portalTarget = portalEntry.target
-        if (!portalEntry.cssManaged) {
-          op.portalCssManaged = false
-        }
-      }
+      applyPortalMetadata(op, portalMap.get(idx))
 
       ops.push(op)
     })
@@ -170,6 +201,7 @@ export function fullDiff(
   if (prevLayout !== null && prevLayout.nodeCount === newLayout.nodeCount) {
     const prevByIndex = buildIndexMap(prevPrepared)
     const newByIndex = buildIndexMap(newPrepared)
+    const portalMap = buildPortalMap(newPrepared)
 
     const layoutChangedIndices = fastDiff(prevLayout, newLayout)
     const layoutChangedSet = new Set<number>(layoutChangedIndices)
@@ -215,10 +247,11 @@ export function fullDiff(
     allChanged.sort((a, b) => a - b)
 
     for (const idx of allChanged) {
-      const op: DOMOperation = {
+      const op: DOMUpdateOp = {
         type: 'update',
         index: idx,
       }
+      applyPortalMetadata(op, portalMap.get(idx))
 
       // Emit layout coords ONLY when layout actually changed.
       // Portal CSS-managed children must NOT receive position coords for metadata-only changes
@@ -319,7 +352,7 @@ function fullTreeDiff(
         const oldIdx = prevByKey.get(key)!
         if (domNodes[oldIdx]) {
           // Reuse DOM node — it's a move
-          ops.push({
+          const moveOp: DOMMoveOp = {
             type: 'move',
             index: idx,
             oldIndex: oldIdx,
@@ -327,11 +360,14 @@ function fullTreeDiff(
             y: newLayout.y[idx],
             width: newLayout.width[idx],
             height: newLayout.height[idx],
-          })
+          }
+          applyPortalMetadata(moveOp, portalMap.get(idx))
+          ops.push(moveOp)
 
           const oldNode = prevByIndex.get(oldIdx)
           if (oldNode !== undefined) {
-            const metadataUpdate: DOMOperation = { type: 'update', index: idx }
+            const metadataUpdate: DOMUpdateOp = { type: 'update', index: idx }
+            applyPortalMetadata(metadataUpdate, portalMap.get(idx))
             let hasMetadataUpdate = false
 
             if (nodeType === 'text') {
@@ -373,7 +409,7 @@ function fullTreeDiff(
       }
 
       // True insert
-      const op: DOMOperation = { type: 'insert', index: idx }
+      const op: DOMInsertOp = { type: 'insert', index: idx }
       if (nodeType === 'element') {
         op.tag = getTag(node)
         op.classes = getClasses(node)
@@ -385,12 +421,7 @@ function fullTreeDiff(
         op.textContent = getTextContent(node)
       }
       const portalEntry = portalMap.get(idx)
-      if (portalEntry !== undefined) {
-        op.portalTarget = portalEntry.target
-        if (!portalEntry.cssManaged) {
-          op.portalCssManaged = false
-        }
-      }
+      applyPortalMetadata(op, portalEntry)
       ops.push(op)
     } else {
       // Same index — check for updates
@@ -445,6 +476,7 @@ function fullTreeDiff(
           type: 'update',
           index: idx,
         }
+        applyPortalMetadata(op, portalMap.get(idx))
         if (layoutChanged) {
           op.x = newLayout.x[idx]
           op.y = newLayout.y[idx]

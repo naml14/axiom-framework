@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
 import { GlobalWindow } from 'happy-dom'
 import { signal } from '../src/reactivity/signals.js'
-import { bind, validate, required, minLength, maxLength, pattern } from '../src/features/forms.js'
+import { bind, validate, required, minLength, maxLength, pattern, type SyncRule, type AsyncRule } from '../src/features/forms.js'
 
 // Setup happy-dom globals for DOM tests.
 // We use GlobalWindow (extends Window) because it correctly sets [PropertySymbol.window]
@@ -183,6 +183,11 @@ describe('validate', () => {
     expect(result.value.errors).toEqual([])
   })
 
+  test('built-in required rule remains directly callable for backward compatibility', () => {
+    expect(required('')).toBe('This field is required')
+    expect(required('hello')).toBeNull()
+  })
+
   test('minLength rule fails when too short', () => {
     const sig = signal('ab')
     const result = validate(sig, [minLength(5)])
@@ -222,12 +227,23 @@ describe('validate', () => {
     expect(result.value.valid).toBe(true)
   })
 
+  test('supports function-style custom sync rules for backward compatibility', () => {
+    const sig = signal('ab')
+    const result = validate(sig, [(value: string) => value.length >= 3 ? null : 'too short'])
+
+    expect(result.value.valid).toBe(false)
+    expect(result.value.errors[0]).toBe('too short')
+  })
+
   test('fail-fast: stops at first failure', () => {
     const sig = signal('')
     let secondRuleCalled = false
-    const secondRule = (value: string) => {
-      secondRuleCalled = true
-      return value.length > 3 ? null : 'too short'
+    const secondRule: SyncRule<string> = {
+      type: 'sync',
+      validate: (value: string) => {
+        secondRuleCalled = true
+        return value.length > 3 ? null : 'too short'
+      }
     }
 
     validate(sig, [required, secondRule])
@@ -237,8 +253,11 @@ describe('validate', () => {
 
   test('async rule resolves validation', async () => {
     const sig = signal('test')
-    const asyncRule = async (value: string): Promise<string | null> => {
-      return value === 'taken' ? 'Already taken' : null
+    const asyncRule: AsyncRule<string> = {
+      type: 'async',
+      validate: async (value: string): Promise<string | null> => {
+        return value === 'taken' ? 'Already taken' : null
+      }
     }
     const result = validate(sig, [asyncRule], { debounceMs: 0 })
 
@@ -251,10 +270,24 @@ describe('validate', () => {
     expect(result.value.valid).toBe(true)
   })
 
+  test('supports async function-style custom rules for backward compatibility', async () => {
+    const sig = signal('taken')
+    const result = validate(sig, [async (value: string) => value === 'taken' ? 'Already taken' : null], { debounceMs: 0 })
+
+    expect(result.value.pending).toBe(true)
+    await new Promise(resolve => setTimeout(resolve, 50))
+    expect(result.value.pending).toBe(false)
+    expect(result.value.valid).toBe(false)
+    expect(result.value.errors[0]).toBe('Already taken')
+  })
+
   test('async rule fails when value triggers error', async () => {
     const sig = signal('taken')
-    const asyncRule = async (value: string): Promise<string | null> => {
-      return value === 'taken' ? 'Already taken' : null
+    const asyncRule: AsyncRule<string> = {
+      type: 'async',
+      validate: async (value: string): Promise<string | null> => {
+        return value === 'taken' ? 'Already taken' : null
+      }
     }
     const result = validate(sig, [asyncRule], { debounceMs: 0 })
 
@@ -267,10 +300,13 @@ describe('validate', () => {
   test('async debounce: only latest wins', async () => {
     const sig = signal('a')
     let asyncCallCount = 0
-    const asyncRule = async (_value: string): Promise<string | null> => {
-      asyncCallCount++
-      await new Promise(resolve => setTimeout(resolve, 20))
-      return null
+    const asyncRule: AsyncRule<string> = {
+      type: 'async',
+      validate: async (_value: string): Promise<string | null> => {
+        asyncCallCount++
+        await new Promise(resolve => setTimeout(resolve, 20))
+        return null
+      }
     }
     const result = validate(sig, [asyncRule], { debounceMs: 50 })
 
@@ -292,10 +328,13 @@ describe('validate', () => {
   test('async debounce: result corresponds to LAST value (not a stale earlier one)', async () => {
     const sig = signal('valid')
     // Rule: 'invalid' → error, anything else → null
-    const asyncRule = async (value: string): Promise<string | null> => {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 10))
-      return value === 'invalid' ? 'Value is invalid' : null
+    const asyncRule: AsyncRule<string> = {
+      type: 'async',
+      validate: async (value: string): Promise<string | null> => {
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 10))
+        return value === 'invalid' ? 'Value is invalid' : null
+      }
     }
     const result = validate(sig, [asyncRule], { debounceMs: 0 })
 
@@ -319,9 +358,12 @@ describe('validate', () => {
 
   test('validate dispose: cleans up effect and pending timer', async () => {
     const sig = signal('test')
-    const asyncRule = async (_value: string): Promise<string | null> => {
-      await new Promise(resolve => setTimeout(resolve, 50))
-      return null
+    const asyncRule: AsyncRule<string> = {
+      type: 'async',
+      validate: async (_value: string): Promise<string | null> => {
+        await new Promise(resolve => setTimeout(resolve, 50))
+        return null
+      }
     }
     const result = validate(sig, [asyncRule], { debounceMs: 0 })
 
@@ -352,9 +394,12 @@ describe('validate', () => {
     // and pending should remain false (no debounce started).
     const sig = signal('')
     let asyncRuleCalled = false
-    const asyncRule = async (_value: string): Promise<string | null> => {
-      asyncRuleCalled = true
-      return null
+    const asyncRule: AsyncRule<string> = {
+      type: 'async',
+      validate: async (_value: string): Promise<string | null> => {
+        asyncRuleCalled = true
+        return null
+      }
     }
 
     const result = validate(sig, [required, asyncRule], { debounceMs: 0 })

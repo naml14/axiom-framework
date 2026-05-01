@@ -16,31 +16,40 @@ import type { HProps, HChild } from './types.js'
 import type { ComponentNode, ElementNode, LayoutProps } from '../core/types.js'
 
 // ─── Tipo para componentes funcionales JSX ────────────────────────────────────
-type FunctionalComponent<P = Record<string, unknown>> = (props: P) => ComponentNode
+type PropsOf<C> = C extends (props: infer P) => ComponentNode ? P : never
+type RequiredKeys<T> = T extends object
+  ? { [K in keyof T]-?: Record<string, never> extends Pick<T, K> ? never : K }[keyof T]
+  : never
+type ComponentHArgs<C> = [PropsOf<C>] extends [void] | [undefined]
+  ? [props?: null | undefined, ...children: HChild[]]
+  : RequiredKeys<PropsOf<C>> extends never
+    ? [props?: PropsOf<C> | null, ...children: HChild[]]
+    : [props: PropsOf<C>, ...children: HChild[]]
 type ComponentProps = Record<string, unknown> | null | undefined
 
 // Sobrecarga 1: tag string → ElementNode
 export function hDev(tag: string, props?: HProps | null, ...children: HChild[]): ElementNode
 // Sobrecarga 2: tag función → ComponentNode
-export function hDev(tag: FunctionalComponent<any>, props?: ComponentProps, ...children: HChild[]): ComponentNode
+export function hDev<C extends (props: never) => ComponentNode>(tag: C, ...args: ComponentHArgs<C>): ComponentNode
 export function hDev(
-  tag: string | FunctionalComponent,
-  props?: HProps | ComponentProps,
+  tag: string | ((props: never) => ComponentNode),
+  props?: unknown,
   ...children: HChild[]
 ): ComponentNode {
   // Componentes funcionales: delegar directamente, no hay warnings aplicables
   if (typeof tag === 'function') {
-    return hProd(tag, props, ...children)
+    return hProd(tag, props as never, ...children)
   }
 
-  if (props) {
-    const rawChildren = getRawChildrenForWarnings(props, children)
-    warnLayoutConflict(tag, props)
+  const elementProps = props as HProps | null | undefined
+  if (elementProps) {
+    const rawChildren = getRawChildrenForWarnings(elementProps, children)
+    warnLayoutConflict(tag, elementProps)
     warnMissingKey(tag, rawChildren)
-    warnInvalidFlex(tag, props)
-    warnReservedProps(tag, props)
+    warnInvalidFlex(tag, elementProps)
+    warnReservedProps(tag, elementProps)
   }
-  return hProd(tag, props, ...children)
+  return hProd(tag, elementProps, ...children)
 }
 
 function getRawChildrenForWarnings(

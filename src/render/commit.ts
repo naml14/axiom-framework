@@ -48,7 +48,12 @@ export interface DOMState {
   portalRoots: Map<number, PortalEntry>  // _index → { target, nodes[] }
 }
 
-const MANAGED_STYLE_KEYS_PROP = '__axiomManagedStyleKeys'
+const MANAGED_STYLE_KEYS_PROP = '__axiomManagedStyleKeys' as const
+
+interface AxiomDOMElement extends HTMLElement {
+  _listeners?: Record<string, EventListener>
+  [MANAGED_STYLE_KEYS_PROP]?: string[]
+}
 
 export function commitFull(
   layout: LayoutResult,
@@ -201,7 +206,7 @@ export function commitHydrate(
 
     const listeners = getOn(node)
     if (listeners !== undefined) {
-      const oldListeners = (domEl as any)._listeners as Record<string, EventListener> | undefined
+      const oldListeners = (domEl as AxiomDOMElement)._listeners as Record<string, EventListener> | undefined
       if (oldListeners !== undefined) {
         for (const [evt, listener] of Object.entries(oldListeners)) {
           domEl.removeEventListener(evt, listener)
@@ -210,7 +215,7 @@ export function commitHydrate(
       for (const [evt, listener] of Object.entries(listeners)) {
         domEl.addEventListener(evt, listener)
       }
-      ;(domEl as any)._listeners = listeners
+      ;(domEl as AxiomDOMElement)._listeners = listeners
     }
 
     const children = getPreparedChildren(node)
@@ -259,7 +264,7 @@ export function commitHydrate(
 export function fireMountEvents(domNodes: Array<HTMLElement | Text | null>): void {
   for (const node of domNodes) {
     if (node instanceof HTMLElement) {
-      const listeners = (node as any)._listeners
+      const listeners = (node as AxiomDOMElement)._listeners
       if (listeners && listeners.mount) {
         listeners.mount({ type: 'mount', target: node } as unknown as Event)
       }
@@ -271,7 +276,7 @@ export function fireUnmountEvents(domNodes: Array<HTMLElement | Text | null>): v
   for (let i = domNodes.length - 1; i >= 0; i--) {
     const node = domNodes[i]
     if (node instanceof HTMLElement) {
-      const listeners = (node as any)._listeners
+      const listeners = (node as AxiomDOMElement)._listeners
       if (listeners && listeners.unmount) {
         listeners.unmount({ type: 'unmount', target: node } as unknown as Event)
       }
@@ -290,7 +295,7 @@ export function applyOps(
       const node = domNodes[op.index]
       if (node !== null && node !== undefined) {
         if (node instanceof HTMLElement) {
-          const listeners = (node as any)._listeners
+          const listeners = (node as AxiomDOMElement)._listeners
           if (listeners && listeners.unmount) {
             listeners.unmount({ type: 'unmount', target: node } as unknown as Event)
           }
@@ -311,7 +316,7 @@ export function applyOps(
 
       // Only apply layout to framework-managed nodes — skip portal children.
       if (op.x !== undefined && el instanceof HTMLElement) {
-        applyFrameworkLayout(el, { x: op.x, y: op.y, width: op.width, height: op.height }, op.portalTarget === undefined)
+        applyFrameworkLayout(el, { x: op.x, y: op.y, width: op.width, height: op.height }, isFrameworkManagedPortalOp(op))
       }
 
       if (op.newTextContent !== undefined && el instanceof Text) {
@@ -319,7 +324,7 @@ export function applyOps(
       }
 
       if (op.newOn !== undefined && el instanceof HTMLElement) {
-        const oldListeners = (el as any)._listeners
+        const oldListeners = (el as AxiomDOMElement)._listeners
         if (oldListeners) {
           for (const [evt, listener] of Object.entries(oldListeners)) {
             el.removeEventListener(evt, listener as EventListener)
@@ -328,7 +333,7 @@ export function applyOps(
         for (const [evt, listener] of Object.entries(op.newOn)) {
           el.addEventListener(evt, listener)
         }
-        ;(el as any)._listeners = op.newOn
+        ;(el as AxiomDOMElement)._listeners = op.newOn
       }
 
       if ('newStyle' in op && el instanceof HTMLElement) {
@@ -350,7 +355,7 @@ export function applyOps(
 
       // Update position — skip portal children (CSS-managed)
       if (op.x !== undefined && oldNode instanceof HTMLElement) {
-        applyFrameworkLayout(oldNode, { x: op.x, y: op.y, width: op.width, height: op.height }, op.portalTarget === undefined)
+        applyFrameworkLayout(oldNode, { x: op.x, y: op.y, width: op.width, height: op.height }, isFrameworkManagedPortalOp(op))
       }
 
       // Move to new position in domNodes
@@ -390,7 +395,7 @@ export function applyOps(
     if (op.type === 'insert') {
       const node = domNodes[op.index]
       if (node instanceof HTMLElement) {
-        const listeners = (node as any)._listeners
+        const listeners = (node as AxiomDOMElement)._listeners
         if (listeners && listeners.mount) {
           listeners.mount({ type: 'mount', target: node } as unknown as Event)
         }
@@ -422,6 +427,12 @@ function applyFrameworkLayout(
     el.style.width = `${width}px`
     el.style.height = `${height}px`
   }
+}
+
+function isFrameworkManagedPortalOp(
+  op: { portalTarget?: HTMLElement; portalCssManaged?: boolean }
+): boolean {
+  return op.portalTarget === undefined || op.portalCssManaged === false
 }
 
 function buildDOMTree(
@@ -508,7 +519,7 @@ function buildDOMTree(
     for (const [evt, listener] of Object.entries(on)) {
       el.addEventListener(evt, listener)
     }
-    (el as any)._listeners = on
+    (el as AxiomDOMElement)._listeners = on
   }
 
   // Apply style props (write-only, after layout)
@@ -526,7 +537,7 @@ function buildDOMTree(
   }
 }
 
-function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement | Text {
+function createDOMElement(op: import('./diff.js').DOMInsertOp, isPortalChild = false): HTMLElement | Text {
   if (op.textContent !== undefined && op.tag === undefined) {
     return document.createTextNode(op.textContent)
   }
@@ -559,7 +570,7 @@ function createDOMElement(op: DOMOperation, isPortalChild = false): HTMLElement 
     for (const [evt, listener] of Object.entries(op.on)) {
       el.addEventListener(evt, listener)
     }
-    (el as any)._listeners = op.on
+    (el as AxiomDOMElement)._listeners = op.on
   }
 
   // Apply style props (write-only)
@@ -615,11 +626,11 @@ function applyManagedStyleToElement(
   props: import('../features/style.js').SafeStyleProps
 ): void {
   applyStyleToElement(el, props)
-  ;(el as unknown as Record<string, unknown>)[MANAGED_STYLE_KEYS_PROP] = Object.keys(props)
+  ;(el as AxiomDOMElement)[MANAGED_STYLE_KEYS_PROP] = Object.keys(props)
 }
 
 function clearManagedStyleFromElement(el: HTMLElement): void {
-  const keys = (el as unknown as Record<string, unknown>)[MANAGED_STYLE_KEYS_PROP]
+  const keys = (el as AxiomDOMElement)[MANAGED_STYLE_KEYS_PROP]
   if (!Array.isArray(keys)) return
 
   for (const key of keys) {
@@ -628,5 +639,5 @@ function clearManagedStyleFromElement(el: HTMLElement): void {
     }
   }
 
-  ;(el as unknown as Record<string, unknown>)[MANAGED_STYLE_KEYS_PROP] = []
+  ;(el as AxiomDOMElement)[MANAGED_STYLE_KEYS_PROP] = []
 }

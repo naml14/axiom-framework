@@ -14,34 +14,38 @@ import type { SafeStyleProps } from '../features/style.js'
 // ─── Tipos de eventos estrictos (C10) ─────────────────────────────────────────
 // EventListener genérico reemplazado por tipos específicos del DOM.
 // Beneficio: el IDE autocompleta con el tipo correcto del evento.
+type DOMEventMap = {
+  click: MouseEvent
+  doubleClick: MouseEvent
+  mouseDown: MouseEvent
+  mouseUp: MouseEvent
+  mouseOver: MouseEvent
+  mouseOut: MouseEvent
+  mouseEnter: MouseEvent
+  mouseLeave: MouseEvent
+  contextMenu: MouseEvent
+  keyDown: KeyboardEvent
+  keyUp: KeyboardEvent
+  keyPress: KeyboardEvent
+  input: InputEvent
+  change: Event
+  focus: FocusEvent
+  blur: FocusEvent
+  submit: SubmitEvent
+  scroll: Event
+  wheel: WheelEvent
+  touchStart: TouchEvent
+  touchEnd: TouchEvent
+  touchMove: TouchEvent
+  pointerDown: PointerEvent
+  pointerUp: PointerEvent
+  pointerMove: PointerEvent
+  animationEnd: AnimationEvent
+  transitionEnd: TransitionEvent
+}
+
 export type AxiomEventHandlers = {
-  onClick?:          (e: MouseEvent)       => void
-  onDoubleClick?:    (e: MouseEvent)       => void
-  onMouseDown?:      (e: MouseEvent)       => void
-  onMouseUp?:        (e: MouseEvent)       => void
-  onMouseOver?:      (e: MouseEvent)       => void
-  onMouseOut?:       (e: MouseEvent)       => void
-  onMouseEnter?:     (e: MouseEvent)       => void
-  onMouseLeave?:     (e: MouseEvent)       => void
-  onContextMenu?:    (e: MouseEvent)       => void
-  onKeyDown?:        (e: KeyboardEvent)    => void
-  onKeyUp?:          (e: KeyboardEvent)    => void
-  onKeyPress?:       (e: KeyboardEvent)    => void
-  onInput?:          (e: InputEvent)       => void
-  onChange?:         (e: Event)            => void
-  onFocus?:          (e: FocusEvent)       => void
-  onBlur?:           (e: FocusEvent)       => void
-  onSubmit?:         (e: SubmitEvent)      => void
-  onScroll?:         (e: Event)            => void
-  onWheel?:          (e: WheelEvent)       => void
-  onTouchStart?:     (e: TouchEvent)       => void
-  onTouchEnd?:       (e: TouchEvent)       => void
-  onTouchMove?:      (e: TouchEvent)       => void
-  onPointerDown?:    (e: PointerEvent)     => void
-  onPointerUp?:      (e: PointerEvent)     => void
-  onPointerMove?:    (e: PointerEvent)     => void
-  onAnimationEnd?:   (e: AnimationEvent)   => void
-  onTransitionEnd?:  (e: TransitionEvent)  => void
+  [K in keyof DOMEventMap as `on${Capitalize<K>}`]?: (e: DOMEventMap[K]) => void
 }
 
 // ─── Shortcuts de layout ──────────────────────────────────────────────────────

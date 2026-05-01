@@ -93,6 +93,10 @@ export interface AnimationState {
   activeTransition: ActiveTransition | null
 }
 
+export interface TransitioningState extends AnimationState {
+  activeTransition: ActiveTransition
+}
+
 /**
  * Create a new isolated AnimationState for an element.
  * Each element that can be animated must have its own state instance.
@@ -108,7 +112,7 @@ export function createAnimationState(): AnimationState {
 /**
  * Returns true if there is an active (in-flight) transition on this state.
  */
-export function isTransitioning(state: AnimationState): boolean {
+export function isTransitioning(state: AnimationState): state is TransitioningState {
   return state.activeTransition !== null
 }
 

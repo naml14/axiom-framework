@@ -3,8 +3,10 @@
 // Built on top of signal() from signals.ts. Zero pipeline changes.
 // ============================================================
 
-import { signal } from '../reactivity/signals.js'
+import { signal, isSignal } from '../reactivity/signals.js'
 import type { Signal } from '../core/types.js'
+
+export { isSignal } from '../reactivity/signals.js'
 
 // ============================================================
 // Types
@@ -36,7 +38,7 @@ const contextStack: Map<symbol, Signal<unknown>>[] = []
 // createContext
 // ============================================================
 
-export function createContext<T>(defaultValue: T): Context<T> {
+export function createContext<const T>(defaultValue: T): Context<T> {
   return {
     _id: Symbol('Context'),
     _defaultValue: defaultValue,
@@ -58,19 +60,10 @@ export function createContext<T>(defaultValue: T): Context<T> {
 
 export function withContext<T, R>(
   ctx: Context<T>,
-  value: Signal<T> | T,
+  value: Signal<NoInfer<T>> | NoInfer<T>,
   children: () => R
 ): R {
-  // Normalize: wrap plain value in signal if needed.
-  // We check for the PRESENCE of a `.value` property (not its runtime type) to correctly
-  // handle Signal<T> where T = undefined. Using `typeof sig.value !== 'undefined'`
-  // would incorrectly re-wrap a valid Signal<undefined>.
-  const sig: Signal<T> =
-    value !== null &&
-    typeof value === 'object' &&
-    'value' in (value as object)
-      ? (value as Signal<T>)
-      : signal(value as T)
+  const sig: Signal<T> = isSignal(value) ? value : signal(value as T)
 
   const frame = new Map<symbol, Signal<unknown>>()
   frame.set(ctx._id, sig as Signal<unknown>)

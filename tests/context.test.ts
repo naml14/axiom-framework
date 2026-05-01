@@ -4,13 +4,13 @@ import { signal } from '../src/reactivity/signals.js'
 
 describe('createContext', () => {
   test('returns default value when no Provider present', () => {
-    const ctx = createContext('default')
+    const ctx = createContext<string>('default')
     const result = useContext(ctx)
     expect(result.value).toBe('default')
   })
 
   test('Provider injects value to useContext', () => {
-    const ctx = createContext('default')
+    const ctx = createContext<string>('default')
     const injected = signal('injected')
     let capturedValue: string | undefined
 
@@ -22,7 +22,7 @@ describe('createContext', () => {
   })
 
   test('nested Provider: innermost wins', () => {
-    const ctx = createContext('default')
+    const ctx = createContext<string>('default')
     const outer = signal('outer')
     const inner = signal('inner')
     let capturedOuter: string | undefined
@@ -40,7 +40,7 @@ describe('createContext', () => {
   })
 
   test('reactive update: when provider signal changes, useContext signal updates', () => {
-    const ctx = createContext(0)
+    const ctx = createContext<number>(0)
     const countSignal = signal(0)
     let capturedSignal: ReturnType<typeof useContext<number>> | undefined
 
@@ -60,6 +60,19 @@ describe('createContext', () => {
     const sig = useContext(ctx)
     expect(typeof sig.value).toBe('number')
     expect(sig.value).toBe(99)
+  })
+
+  test('withContext treats plain objects with a value property as values, not signals', () => {
+    const ctx = createContext<{ value: string }>({ value: 'default' })
+    const injected = { value: 'plain-object' }
+    let captured: { value: string } | undefined
+
+    withContext(ctx, injected, () => {
+      captured = useContext(ctx).value
+    })
+
+    expect(captured).toBe(injected)
+    expect(captured!.value).toBe('plain-object')
   })
 })
 

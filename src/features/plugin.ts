@@ -70,7 +70,7 @@ const _registry: AxiomPlugin[] = []
  *
  * @throws {Error} if `name` is an empty string
  */
-export function createPlugin(config: AxiomPlugin): AxiomPlugin {
+export function createPlugin<const T extends AxiomPlugin>(config: T): T & AxiomPlugin {
   if (!config.name || config.name.trim().length === 0) {
     throw new Error('Plugin name must be a non-empty string.')
   }
