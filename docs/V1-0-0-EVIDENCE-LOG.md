@@ -36,6 +36,40 @@ Plantilla:
 
 ## Entradas
 
+### 2026-05-01 — M3 — Validación integral de release v1.0.0
+
+- Issue: #30 (épica 1.0.0)
+- PR: TBD
+- Verificación:
+  - [x] `bun run validate:api` — 121 stable exports, 0 beta/experimental/untagged
+  - [x] `bun run test:coverage` — 96.95% line coverage >= threshold 85%
+  - [x] `bun test tests/ssr.test.ts tests/hydration.test.ts` — 20 pass / 0 fail
+  - [x] `bun test` — 540 pass / 2 skip / 0 fail
+  - [x] `bun run typecheck` — 0 errors
+- Evidencia:
+  - API stability: `docs/STABILITY.md` exists with contract v1.0.0
+  - Coverage gate: `scripts/validate-coverage.ts` parsed and passed
+  - SSR/hydration regression: `tests/ssr.test.ts` (100% lines), `tests/hydration.test.ts` (97.96% lines)
+  - archivos: `docs/V1-0-0-EVIDENCE-LOG.md`, `docs/V1-0-0-PLAN-TRAZABILIDAD.md`
+- Resultado: PASS
+- Notas: feat/v1-0-0-kickoff branch es obsoleto — main ya supera kickoff con strict-types-sprint + syntax-layer-v2. Release desde main.
+
+### 2026-05-01 — Implementado: Static Site Generation API (buildStatic)
+
+- Issue: #48
+- PR: TBD (rama local SDD `static-site-generation`)
+- Verificación:
+  - [x] `bun run typecheck` — 0 errores
+  - [x] `bun test tests/build.test.ts` — 9 pass / 0 fail
+- Evidencia:
+  - API pública `buildStatic()` en `src/build.ts` con interfaces `StaticRoute`, `BuildStaticOptions`, `BuildResult`
+  - Exportada desde `src/index.ts` como `@stable`
+  - Tests: filesystem output, HTML correctness, metadata injection, multiple routes, edge cases
+  - `demo/build.ts` refactorizado para usar `buildStatic()` internamente
+  - Script `build:static` añadido a `package.json`
+  - archivos: `src/build.ts`, `src/index.ts`, `tests/build.test.ts`, `demo/build.ts`, `docs/STATIC-BUILD-MINIFICATION.md`
+- Resultado: PASS
+
 ### 2026-04-16 — Fix P0: fast path no detecta cambios de clases CSS en re-render
 
 - Issue: #43

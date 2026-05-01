@@ -112,6 +112,18 @@ export type {
   GridProps,
 } from './syntax/index.js'
 
+// --- Streaming SSR (experimental) ---
+export { renderToReadableStream } from './ssr-stream.js'
+export type { StreamSSROptions } from './ssr-stream.js'
+
+// --- Server (experimental) ---
+export { createServer } from './server.js'
+export type { AxiomServer, AxiomServerOptions } from './server.js'
+
+// --- Static Site Generation ---
+export { buildStatic } from './build.js'
+export type { BuildStaticOptions, BuildResult, StaticRoute } from './build.js'
+
 // --- Types ---
 export type {
   AxiomDevHook,

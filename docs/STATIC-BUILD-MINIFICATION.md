@@ -1,8 +1,8 @@
 # Static Build Minification Strategy
 
-> Estado: propuesta técnica registrada  
+> Estado: **IMPLEMENTADA** — API `buildStatic()` disponible en `src/build.ts`  
 > Issue relacionada: [#48 — feat(build): static site generation con minificación por defecto](https://github.com/naml14/axiom-framework/issues/48)  
-> Fecha: 2026-04-24
+> Fecha: 2026-04-24 (propuesta) / 2026-05-01 (implementada)
 
 ---
 
