@@ -2,6 +2,10 @@
 
 > **"The DOM is just the output screen."**
 
+<p align="center">
+  <img src="./Images/axiom-logo.webp" alt="Axiom logo" width="220" />
+</p>
+
 A web framework with **two-phase rendering**. All calculations happen in memory. The hot path is pure arithmetic. Zero DOM reads.
 
 [![CI](https://github.com/naml14/axiom-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/naml14/axiom-framework/actions/workflows/ci.yml)
