@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.3](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.2...axiom-framework-v0.9.3) (2026-05-01)
+
+
+### Bug Fixes
+
+* **types:** address PR review feedback ([cafc8ff](https://github.com/naml14/axiom-framework/commit/cafc8ff376b1cadd56b7d6639636b27d5673cf64))
+* **types:** avoid unused router type test variable ([32bc1be](https://github.com/naml14/axiom-framework/commit/32bc1be22ba8b231e3a550afe5f7356aab51c1cb))
+
 ## [0.9.2](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.1...axiom-framework-v0.9.2) (2026-04-25)
 
 
