@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "bun run demo/server.ts --watch",
+    "dev": "bun --watch run dev-server.ts",
     "build": "bun run build-static.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit"

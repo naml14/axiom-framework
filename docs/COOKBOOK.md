@@ -237,29 +237,19 @@ const HomePage = defineComponent(() =>
   )
 )
 
-// renderToString devuelve HTML + metadata de hidratación
-const { html, metadata } = await renderToString(HomePage, {
-  meta: { title: 'Axiom SSR Demo', description: 'Server-side rendering con Axiom' },
+// renderToString devuelve el HTML completo; los metadatos se pasan en options.metadata
+const metadata = {
+  title: 'Axiom SSR Demo',
+  description: 'Server-side rendering con Axiom',
+}
+
+const html = renderToString(HomePage, {
+  metadata,
 })
 
 // Enviar al cliente
-const fullPage = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${metadata.title ?? 'App'}</title>
-</head>
-<body>
-  <div id="app">${html}</div>
-  <script type="module" src="/client.js"></script>
-</body>
-</html>
-`
-
-// Con Bun:
-// return new Response(fullPage, { headers: { 'Content-Type': 'text/html' } })
-console.log(fullPage)
+// html ya contiene <!DOCTYPE html>, <head> y <body>
+console.log(html)
 
 // ============================================================
 // client.ts — hidratación en el navegador
@@ -285,7 +275,7 @@ console.log(fullPage)
 
 **Conceptos clave**:
 - `renderToString(Component, options)` — renderiza un componente a HTML string sin DOM real.
-- Retorna `{ html, metadata }` — el HTML listo para insertar y la metadata de la ruta.
+- Retorna un `string` HTML completo; la metadata se envía vía `options.metadata`.
 - `createApp(Component, root, { hydrate: true })` — en el cliente, hidrata el HTML existente en vez de borrarlo y recrearlo.
 - El componente debe ser IDÉNTICO en servidor y cliente para que la hidratación sea correcta.
 

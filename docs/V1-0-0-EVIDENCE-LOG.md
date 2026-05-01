@@ -41,13 +41,14 @@ Plantilla:
 - Issue: #30 (épica 1.0.0)
 - PR: TBD
 - Verificación:
-  - [x] `bun run validate:api` — 121 stable exports, 0 beta/experimental/untagged
+  - [x] `bun run validate:api` — 125 stable exports, 5 experimental, 0 beta/untagged
   - [x] `bun run test:coverage` — 96.95% line coverage >= threshold 85%
   - [x] `bun test tests/ssr.test.ts tests/hydration.test.ts` — 20 pass / 0 fail
   - [x] `bun test` — 540 pass / 2 skip / 0 fail
   - [x] `bun run typecheck` — 0 errors
 - Evidencia:
   - API stability: `docs/STABILITY.md` exists with contract v1.0.0
+  - Experimental APIs documented for this release: `renderToReadableStream`, `StreamSSROptions`, `createServer`, `AxiomServer`, `AxiomServerOptions`
   - Coverage gate: `scripts/validate-coverage.ts` parsed and passed
   - SSR/hydration regression: `tests/ssr.test.ts` (100% lines), `tests/hydration.test.ts` (97.96% lines)
   - archivos: `docs/V1-0-0-EVIDENCE-LOG.md`, `docs/V1-0-0-PLAN-TRAZABILIDAD.md`

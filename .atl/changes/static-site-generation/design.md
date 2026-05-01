@@ -2,12 +2,12 @@
 
 ## Technical Approach
 
-API `buildStatic()` en `src/build.ts`. Recibe configuración de rutas, genera HTML con `renderToString()` por ruta, bundlea JS con `Bun.build({minify: true})`, y escribe a disco. Todo en un solo pipeline síncrono/await.
+API `buildStatic()` en `src/build.ts`. Recibe configuración de rutas, genera HTML con `renderToString()` por ruta, bundlea JS con `Bun.build({minify: true})`, y escribe a disco. La compactación de HTML/CSS sigue pendiente; por ahora la minificación por defecto aplica al bundle JS. Todo en un solo pipeline síncrono/await.
 
 ## Architecture Decisions
 
 ### Decision: API unificada buildStatic
-- **Choice**: `buildStatic({ routes, outDir, basePath, minify, assets })` exportada desde `src/index.ts`
+- **Choice**: `buildStatic({ routes, outDir, minify, assets })` exportada desde `src/index.ts`
 - **Alternatives considered**: CLI separado, plugin de Bun.build, script independiente
 - **Rationale**: API programática permite integración en CI/CD. CLI puede wrappearla después.
 
@@ -57,7 +57,6 @@ interface StaticRoute {
 interface BuildStaticOptions {
   routes: StaticRoute[]
   outDir: string
-  basePath?: string           // default '/'
   minify?: boolean            // default true
   assets?: {
     entrypoints: string[]     // JS entry points

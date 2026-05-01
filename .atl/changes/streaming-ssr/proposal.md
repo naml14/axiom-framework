@@ -47,7 +47,7 @@ Axiom soporta SSR con `renderToString()` pero es single-shot — envía todo el 
 | Risk | Likelihood | Mitigation |
 |------|------------|------------|
 | Streaming SSR es complejo de implementar correctamente | High | Marcar como @experimental en v1.x; release estable en v1.1+ |
-| Incompatibilidad con hydration actual | Medium | Streaming produce HTML diferente (con templates). Separar contractos |
+| Incompatibilidad con hydration actual | Medium | Streaming produce HTML diferente (con templates). Separar contratos |
 | Rendimiento: overhead de stream vs single-shot | Low | Stream es asíncrono por naturaleza; benchmark vs renderToString |
 
 ## Rollback Plan

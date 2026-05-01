@@ -9,19 +9,19 @@ import { renderToString, type SSRMetadata, type SSRRenderOptions } from './ssr.j
 // Types
 // ============================================================
 
-export interface StreamSSROptions extends SSRRenderOptions {
-  onBoundaryResolve?: (id: string) => void
-}
+export interface StreamSSROptions extends SSRRenderOptions {}
 
 // ============================================================
 // renderToReadableStream
 // ============================================================
 
 /**
- * Render a component to a ReadableStream of HTML chunks.
- * Supports async boundaries: nodes whose children return Promises
- * are emitted as `<template data-axiom-replace="id">` fallback,
- * then replaced when the Promise resolves.
+ * Render a component to a ReadableStream containing the HTML produced by
+ * `renderToString()`.
+ *
+ * The current implementation emits a single HTML chunk and then closes the
+ * stream. It does not currently support async boundary streaming or
+ * replacement updates.
  *
  * @experimental — API may change in minor versions
  */
@@ -29,8 +29,8 @@ export function renderToReadableStream(
   component: ComponentDefinition<void>,
   options?: StreamSSROptions
 ): ReadableStream<Uint8Array> {
-  // For the initial implementation, we wrap renderToString in a stream.
-  // Async boundary support will be added in a follow-up.
+  // Current implementation: wrap the full renderToString() result in a
+  // ReadableStream as a single chunk.
   const html = renderToString(component, options)
   const encoder = new TextEncoder()
 

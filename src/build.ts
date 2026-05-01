@@ -18,7 +18,7 @@
 // ============================================================
 
 import { mkdir, writeFile } from 'node:fs/promises'
-import { join, posix } from 'node:path'
+import { isAbsolute, join, posix, relative, resolve } from 'node:path'
 import type { ComponentDefinition } from './core/types.js'
 import type { SSRMetadata } from './ssr.js'
 import { renderToString } from './ssr.js'
@@ -36,9 +36,7 @@ export interface StaticRoute {
 export interface BuildStaticOptions {
   routes: StaticRoute[]
   outDir: string
-  /** URL prefix for all routes. Default: '/' */
-  basePath?: string
-  /** Minify JS bundle output. Default: true */
+  /** Minify bundled JS assets. Default: true */
   minify?: boolean
   assets?: {
     /** JS entry points to bundle for the browser. */
@@ -61,10 +59,44 @@ export interface BuildResult {
 
 /** Resolve a route path to a filesystem directory suitable for index.html. */
 function routeToDir(outDir: string, routePath: string): string {
-  // Normalise: strip leading slash, collapse '.' and '..'
-  const clean = posix.normalize(routePath.replace(/^\/+/, '') || '.')
-  if (clean === '.') return outDir
-  return join(outDir, ...clean.split('/'))
+  const rootDir = resolve(outDir)
+  const normalizedInput = routePath.replace(/\\/g, '/')
+  const clean = posix.normalize(normalizedInput.replace(/^\/+/, '') || '.')
+  const segments = clean === '.' ? [] : clean.split('/')
+
+  if (
+    clean.startsWith('/') ||
+    /^[A-Za-z]:/.test(segments[0] ?? '') ||
+    segments.some(segment => segment === '..')
+  ) {
+    throw new Error(`Invalid route path: ${routePath}`)
+  }
+
+  const dir = resolve(rootDir, ...segments)
+  if (!isPathInside(rootDir, dir)) {
+    throw new Error(`Invalid route path: ${routePath}`)
+  }
+
+  return dir
+}
+
+function isPathInside(baseDir: string, targetPath: string): boolean {
+  const rel = relative(baseDir, targetPath)
+  const topSegment = rel.split(/[\\/]/)[0]
+  return rel === '' || (!isAbsolute(rel) && topSegment !== '..')
+}
+
+function formatBuildLog(log: unknown): string {
+  if (typeof log === 'string') return log
+
+  if (log !== null && typeof log === 'object' && 'message' in log) {
+    const message = (log as { message?: unknown }).message
+    if (typeof message === 'string' && message.length > 0) {
+      return message
+    }
+  }
+
+  return String(log)
 }
 
 // ============================================================
@@ -109,10 +141,10 @@ export async function buildStatic(options: BuildStaticOptions): Promise<BuildRes
   const start = Date.now()
   const {
     routes,
-    outDir,
     minify = true,
     assets,
   } = options
+  const outDir = resolve(options.outDir)
 
   // Ensure outDir exists even when there are no routes.
   await mkdir(outDir, { recursive: true })
@@ -132,7 +164,7 @@ export async function buildStatic(options: BuildStaticOptions): Promise<BuildRes
 
   // ---- Phase 2: JS bundle (optional) ----
   if (assets !== undefined && assets.entrypoints.length > 0) {
-    const assetsOutDir = assets.outDir ?? join(outDir, 'assets')
+    const assetsOutDir = resolve(assets.outDir ?? join(outDir, 'assets'))
     await mkdir(assetsOutDir, { recursive: true })
 
     const bun = getBunRuntime()
@@ -144,17 +176,17 @@ export async function buildStatic(options: BuildStaticOptions): Promise<BuildRes
     })
 
     if (!result.success) {
-      const msgs = result.logs.map(l => String(l)).join('\n')
+      const msgs = result.logs.map(formatBuildLog).join('\n')
       throw new Error(`buildStatic: JS bundle failed.\n${msgs}`)
     }
 
     for (const output of result.outputs) {
-      writtenFiles.push(output.path)
+      writtenFiles.push(resolve(output.path))
     }
   }
 
   // ---- Phase 3: Asset manifest ----
-  const manifestPath = join(outDir, 'asset-manifest.json')
+  const manifestPath = resolve(outDir, 'asset-manifest.json')
   // Add manifest to the files list before writing so the manifest's own
   // `files` array is self-consistent with the returned BuildResult.
   writtenFiles.push(manifestPath)

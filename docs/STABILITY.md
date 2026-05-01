@@ -1,7 +1,7 @@
 # API Stability Contract
 
 Version: 1.0.0
-Last Updated: 2026-04-16
+Last Updated: 2026-05-01
 
 ## Public Surface
 
@@ -9,13 +9,14 @@ This contract applies to exports from src/index.ts and src/testing.ts.
 
 For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 
-## Stable APIs (95)
+## Stable APIs (125)
 
 | Export | Module | Since |
 |--------|--------|-------|
 | signal | ./reactivity/signals | v1.0.0 |
 | computed | ./reactivity/signals | v1.0.0 |
 | effect | ./reactivity/signals | v1.0.0 |
+| isSignal | ./reactivity/signals | v1.0.0 |
 | defineComponent | ./render/component | v1.0.0 |
 | createPortal | ./features/portal | v1.0.0 |
 | createApp | ./app | v1.0.0 |
@@ -88,6 +89,35 @@ For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 | ValidateOptions | ./features/forms | v1.0.0 |
 | SyncRule | ./features/forms | v1.0.0 |
 | AsyncRule | ./features/forms | v1.0.0 |
+| SyncRuleFunction | ./features/forms | v1.0.0 |
+| AsyncRuleFunction | ./features/forms | v1.0.0 |
+| h | ./syntax/h | v1.0.0 |
+| t | ./syntax/h | v1.0.0 |
+| fragment | ./syntax/h | v1.0.0 |
+| stack | ./syntax/layout | v1.0.0 |
+| vstack | ./syntax/layout | v1.0.0 |
+| row | ./syntax/layout | v1.0.0 |
+| grid | ./syntax/layout | v1.0.0 |
+| box | ./syntax/layout | v1.0.0 |
+| For | ./syntax/flow | v1.0.0 |
+| Show | ./syntax/flow | v1.0.0 |
+| Switch | ./syntax/flow | v1.0.0 |
+| Match | ./syntax/flow | v1.0.0 |
+| Each | ./syntax/flow | v1.0.0 |
+| SwitchCase | ./syntax/flow | v1.0.0 |
+| HProps | ./syntax/index | v1.0.0 |
+| HChild | ./syntax/index | v1.0.0 |
+| AxiomEventHandlers | ./syntax/index | v1.0.0 |
+| LayoutShortcuts | ./syntax/index | v1.0.0 |
+| HtmlAttrs | ./syntax/index | v1.0.0 |
+| ResponsiveMap | ./syntax/index | v1.0.0 |
+| StackProps | ./syntax/index | v1.0.0 |
+| RowProps | ./syntax/index | v1.0.0 |
+| GridProps | ./syntax/index | v1.0.0 |
+| buildStatic | ./build | v1.0.0 |
+| BuildStaticOptions | ./build | v1.0.0 |
+| BuildResult | ./build | v1.0.0 |
+| StaticRoute | ./build | v1.0.0 |
 | AxiomDevHook | ./core/types | v1.0.0 |
 | AxiomDevMetrics | ./core/types | v1.0.0 |
 | AxiomDevProfilingMetadata | ./core/types | v1.0.0 |
@@ -115,11 +145,15 @@ For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 |--------|--------|-------|
 | (none) | - | - |
 
-## Experimental APIs (0)
+## Experimental APIs (5)
 
 | Export | Module |
 |--------|--------|
-| (none) | - |
+| renderToReadableStream | ./ssr-stream |
+| StreamSSROptions | ./ssr-stream |
+| createServer | ./server |
+| AxiomServer | ./server |
+| AxiomServerOptions | ./server |
 
 ## Enforcement
 

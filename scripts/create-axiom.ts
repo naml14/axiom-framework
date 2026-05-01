@@ -31,16 +31,21 @@ async function main(): Promise<void> {
     ['package.json', 'package.json'],
     ['tsconfig.json', 'tsconfig.json'],
     ['build-static.ts', 'build-static.ts'],
+    ['dev-server.ts', 'dev-server.ts'],
     ['src/app.ts', 'src/app.ts'],
     ['index.html', 'index.html'],
   ]
 
   for (const [src, dest] of templates) {
     const content = await readFile(join(TEMPLATES_DIR, src), 'utf8')
-    // Replace placeholder project name in package.json
-    const final = src === 'package.json'
-      ? content.replace('"my-axiom-app"', JSON.stringify(projectName))
-      : content
+    let final = content
+
+    if (src === 'package.json') {
+      const pkg = JSON.parse(content) as { name?: string }
+      pkg.name = projectName
+      final = `${JSON.stringify(pkg, null, 2)}\n`
+    }
+
     await writeFile(join(projectDir, dest), final, 'utf8')
     console.log(`  Created ${dest}`)
   }

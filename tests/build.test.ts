@@ -1,7 +1,8 @@
 import { describe, test, expect, afterEach } from 'bun:test'
-import { rm, readFile, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { mkdtemp, rm, readFile, stat } from 'node:fs/promises'
+import { isAbsolute, join } from 'node:path'
 import { tmpdir } from 'node:os'
+import type { BuildConfig, BuildOutput } from 'bun'
 import { buildStatic } from '../src/build.js'
 import { defineComponent } from '../src/index.js'
 import { h } from '../src/syntax/h.js'
@@ -20,7 +21,7 @@ function makeComponent(content: string) {
 let testDir = ''
 
 async function freshDir(label: string): Promise<string> {
-  const dir = join(tmpdir(), `axiom-build-test-${label}-${Date.now()}`)
+  const dir = await mkdtemp(join(tmpdir(), `axiom-build-test-${label}-`))
   testDir = dir
   return dir
 }
@@ -38,6 +39,56 @@ afterEach(async () => {
 
 describe('buildStatic()', () => {
   // ---- Filesystem output ----
+
+  test('2.0 bundles assets with Bun.build defaults', async () => {
+    const outDir = await freshDir('assets-bundle')
+    const fakeOutputPathJs = join(outDir, 'assets', 'entry.js')
+    const fakeOutputPathCss = join(outDir, 'assets', 'entry.css')
+
+    const originalBuild = Bun.build
+    const buildMock = async (): Promise<BuildOutput> => ({
+      success: true,
+      logs: [],
+      outputs: [
+        { path: fakeOutputPathJs },
+        { path: fakeOutputPathCss },
+      ],
+    } as unknown as BuildOutput)
+    const calls: BuildConfig[] = []
+
+    Bun.build = async (options: BuildConfig): Promise<BuildOutput> => {
+      calls.push(options)
+      return buildMock()
+    }
+
+    try {
+      const result = await buildStatic({
+        routes: [{ path: '/', component: makeComponent('Home with assets') }],
+        outDir,
+        assets: {
+          entrypoints: ['fake-entry.ts'],
+        },
+      })
+
+      expect(calls).toHaveLength(1)
+      expect(calls[0]).toEqual({
+        entrypoints: ['fake-entry.ts'],
+        outdir: join(outDir, 'assets'),
+        target: 'browser',
+        minify: true,
+      })
+      expect(result.files).toEqual(
+        expect.arrayContaining([fakeOutputPathJs, fakeOutputPathCss]),
+      )
+
+      const manifest = JSON.parse(await readFile(join(outDir, 'asset-manifest.json'), 'utf8'))
+      expect(manifest.files).toEqual(
+        expect.arrayContaining([fakeOutputPathJs, fakeOutputPathCss]),
+      )
+    } finally {
+      Bun.build = originalBuild
+    }
+  })
 
   test('2.1 writes files to outDir', async () => {
     const outDir = await freshDir('basic')
@@ -128,6 +179,45 @@ describe('buildStatic()', () => {
 
   // ---- Edge cases ----
 
+  test('2.5 rejects route traversal outside outDir', async () => {
+    const outDir = await freshDir('invalid-route')
+
+    await expect(
+      buildStatic({
+        routes: [{ path: '/../outside', component: makeComponent('Escape') }],
+        outDir,
+      })
+    ).rejects.toThrow('Invalid route path: /../outside')
+  })
+
+  test('2.5 surfaces Bun.build logs on asset bundling failure', async () => {
+    const outDir = await freshDir('bundle-failure')
+    const originalBuild = Bun.build
+
+    Bun.build = async (): Promise<BuildOutput> => ({
+      success: false,
+      logs: [
+        { level: 'error', message: 'Failed to bundle entrypoint /index.ts' },
+        { level: 'error', message: 'ReferenceError: window is not defined' },
+      ],
+      outputs: [],
+    } as unknown as BuildOutput)
+
+    try {
+      await expect(
+        buildStatic({
+          routes: [{ path: '/', component: makeComponent('Home') }],
+          outDir,
+          assets: { entrypoints: ['fake-entry.ts'] },
+        })
+      ).rejects.toThrow(
+        'buildStatic: JS bundle failed.\nFailed to bundle entrypoint /index.ts\nReferenceError: window is not defined'
+      )
+    } finally {
+      Bun.build = originalBuild
+    }
+  })
+
   test('2.5 empty routes array produces only the manifest', async () => {
     const outDir = await freshDir('empty')
     const result = await buildStatic({
@@ -205,6 +295,7 @@ describe('buildStatic()', () => {
     expect(Array.isArray(result.files)).toBe(true)
     expect(typeof result.durationMs).toBe('number')
     expect(result.routes).toBe(2)
+    expect(result.files.every(file => isAbsolute(file))).toBe(true)
     // 2 HTML files + 1 manifest
     expect(result.files).toHaveLength(3)
   })

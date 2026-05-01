@@ -113,11 +113,15 @@ export type {
 } from './syntax/index.js'
 
 // --- Streaming SSR (experimental) ---
+/** @experimental */
 export { renderToReadableStream } from './ssr-stream.js'
+/** @experimental */
 export type { StreamSSROptions } from './ssr-stream.js'
 
 // --- Server (experimental) ---
+/** @experimental */
 export { createServer } from './server.js'
+/** @experimental */
 export type { AxiomServer, AxiomServerOptions } from './server.js'
 
 // --- Static Site Generation ---

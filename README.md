@@ -41,12 +41,12 @@ npm install axiom-framework
 ### Quick Start (CLI)
 
 ```bash
-bun run create-axiom my-app
+bunx --package axiom-framework create-axiom my-app
 cd my-app
 bun dev
 ```
 
-This scaffolds a complete project with TypeScript, JSX, and live reload. See [docs/COOKBOOK.md](./docs/COOKBOOK.md) for step-by-step recipes.
+This scaffolds a complete project with TypeScript, JSX, and a Bun-based dev server. See [docs/COOKBOOK.md](./docs/COOKBOOK.md) for step-by-step recipes.
 
 Or set up manually:
 
@@ -205,7 +205,7 @@ Important detail: `keyBy` belongs to `For`. JSX `key` is accepted by the runtime
 │                     PUBLIC API                               │
 │  signal()  computed()  effect()  defineComponent()  createApp() │
 │  buildStatic()  renderToReadableStream()  createServer()       │
-│  renderToString()  createRouter()  createAxiom CLI            │
+│  renderToString()  createRouter()  create-axiom               │
 └───────────────────────────┬─────────────────────────────────┘
                             │
          ┌──────────────────┼──────────────────┬─────────────────┐
@@ -496,7 +496,7 @@ If something goes wrong, see [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md
 
 ## Static Site Generation
 
-Axiom provides `buildStatic()` — a public API to generate complete static sites with minification by default.
+Axiom provides `buildStatic()` — a public API to generate complete static sites with bundled JS minification by default.
 
 ```typescript
 import { buildStatic, defineComponent, h } from 'axiom-framework'
@@ -516,7 +516,7 @@ const result = await buildStatic({
 })
 ```
 
-Each route generates an `index.html` with SSR'd content and per-route metadata. JS bundles are compiled via `Bun.build()` with `minify: true`. An `asset-manifest.json` is written for CDN deployment.
+Each route generates an `index.html` with SSR'd content and per-route metadata. JS bundles are compiled via `Bun.build()` with `minify: true` by default. An `asset-manifest.json` is written for CDN deployment.
 
 ```bash
 # Via CLI (uses buildStatic internally):
@@ -536,13 +536,13 @@ const stream = renderToReadableStream(MyComponent, {
 // Returns ReadableStream<Uint8Array> — compatible with Response
 ```
 
-For a complete server with routing and static file serving:
+For a complete server with routing, per-route metadata, and static file serving:
 
 ```typescript
 import { createServer, defineComponent, h } from 'axiom-framework'
 
 const server = createServer({
-  routes: [{ path: '/', component: MyPage }],
+  routes: [{ path: '/', component: MyPage, metadata: { title: 'Home' } }],
   staticDir: './public',
   port: 3000,
 })
@@ -569,7 +569,7 @@ The following features are **not yet supported**:
 
 ### Fully supported
 
-- **Static site generation**: `buildStatic()` API with minification by default (`@stable`)
+- **Static site generation**: `buildStatic()` API with bundled JS minification by default (`@stable`)
 - **Streaming SSR**: `renderToReadableStream()` via Web Streams API (`@experimental`)
 - **Server wrapper**: `createServer()` with Bun.serve, route matching, static files (`@experimental`)
 - **Responsive design**: breakpoints (`minWidth`/`maxWidth`), viewport units (`vw`/`vh`), percentages
@@ -601,7 +601,7 @@ bun run build            # emit dist/
 bun run demo:build       # build demo + static snapshot
 bun run demo             # SSR server at http://localhost:3000
 bun run build:static     # generate static site via buildStatic()
-bun run create-axiom my-app  # scaffold new project
+bunx --package axiom-framework create-axiom my-app  # scaffold new project
 ```
 
 Tests use [Bun's built-in test runner](https://bun.sh/docs/cli/test) and [Happy DOM](https://github.com/capricorn86/happy-dom) for DOM simulation. Coverage is gated at 85% line coverage (currently **96.5%**).

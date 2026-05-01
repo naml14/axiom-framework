@@ -13,8 +13,7 @@
  */
 
 import { existsSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { buildStatic, type BuildStaticOptions, type StaticRoute } from '../src/build.js'
 import { defineComponent, h } from '../src/index.js'
 
@@ -22,53 +21,26 @@ import { defineComponent, h } from '../src/index.js'
 // Parse CLI arguments
 // ============================================================
 
+type CliOptions = {
+  outDir?: string
+  entry?: string
+}
+
 const args = process.argv.slice(2)
-const outDir = extractArg(args, '--out-dir') ?? join(process.cwd(), 'dist', 'static')
-const entry = extractArg(args, '--entry') ?? join(process.cwd(), 'src', 'static-routes.ts')
+const cliOptions = parseArgs(args)
+const outDir = cliOptions.outDir ?? join(process.cwd(), 'dist', 'static')
+const entry = cliOptions.entry ?? join(process.cwd(), 'src', 'static-routes.ts')
 
 // ============================================================
 // Resolve routes
 // ============================================================
 
 async function resolveRoutes(): Promise<StaticRoute[]> {
-  // First, try to load a user-defined routes file
-  if (existsSync(entry)) {
-    try {
-      const userRoutes = await import(entry)
-      if (Array.isArray(userRoutes.default)) {
-        return userRoutes.default as StaticRoute[]
-      }
-      if (Array.isArray(userRoutes.routes)) {
-        return userRoutes.routes as StaticRoute[]
-      }
-    } catch (err) {
-      console.warn(`[build:static] Could not load routes from ${entry}, using fallback.`)
-    }
-  }
-
-  // Fallback: single-page build from src/app.ts
-  const appEntry = join(process.cwd(), 'src', 'app.ts')
-  if (existsSync(appEntry)) {
-    try {
-      const app = await import(appEntry)
-      const component = app.default ?? app.App ?? app.app
-      if (component) {
-        return [{ path: '/', component }]
-      }
-    } catch {
-      // fall through to demo fallback
-    }
-  }
-
-  // Last fallback: minimal placeholder component
-  console.warn('[build:static] No routes found. Generating placeholder page.')
-  const Placeholder = defineComponent(() =>
-    h('main', { style: { padding: '40px', fontFamily: 'sans-serif' } },
-      h('h1', null, 'Axiom Static Site'),
-      h('p', null, 'Define your routes in src/static-routes.ts'),
-    )
+  return (
+    await loadUserRoutes(entry) ??
+    await loadAppFallback() ??
+    createPlaceholderRoutes()
   )
-  return [{ path: '/', component: Placeholder }]
 }
 
 // ============================================================
@@ -108,16 +80,69 @@ main().catch((err) => {
 // Helpers
 // ============================================================
 
-function extractArg(args: string[], name: string): string | undefined {
-  const idx = args.indexOf(name)
-  if (idx >= 0 && idx + 1 < args.length) {
-    return args[idx + 1]
+async function loadUserRoutes(entryFile: string): Promise<StaticRoute[] | undefined> {
+  if (!existsSync(entryFile)) return undefined
+
+  try {
+    const userRoutes = await import(entryFile)
+    if (Array.isArray(userRoutes.default)) {
+      return userRoutes.default as StaticRoute[]
+    }
+    if (Array.isArray(userRoutes.routes)) {
+      return userRoutes.routes as StaticRoute[]
+    }
+  } catch {
+    console.warn(`[build:static] Could not load routes from ${entryFile}, using fallback.`)
   }
-  // Also support --name=value format
-  for (const arg of args) {
-    if (arg.startsWith(`${name}=`)) {
-      return arg.slice(name.length + 1)
+
+  return undefined
+}
+
+async function loadAppFallback(): Promise<StaticRoute[] | undefined> {
+  const appEntry = join(process.cwd(), 'src', 'app.ts')
+  if (!existsSync(appEntry)) return undefined
+
+  try {
+    const app = await import(appEntry)
+    const component = app.default ?? app.App ?? app.app
+    if (component) {
+      return [{ path: '/', component }]
+    }
+  } catch {
+    // fall through to placeholder fallback
+  }
+
+  return undefined
+}
+
+function createPlaceholderRoutes(): StaticRoute[] {
+  console.warn('[build:static] No routes found. Generating placeholder page.')
+  const Placeholder = defineComponent(() =>
+    h('main', { style: { padding: '40px', fontFamily: 'sans-serif' } },
+      h('h1', null, 'Axiom Static Site'),
+      h('p', null, 'Define your routes in src/static-routes.ts'),
+    )
+  )
+  return [{ path: '/', component: Placeholder }]
+}
+
+function parseArgs(argv: string[]): CliOptions {
+  const options: CliOptions = {}
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    if (arg === undefined) continue
+
+    if (arg === '--out-dir' && argv[i + 1]) {
+      options.outDir = argv[++i]
+    } else if (arg.startsWith('--out-dir=')) {
+      options.outDir = arg.slice('--out-dir='.length)
+    } else if (arg === '--entry' && argv[i + 1]) {
+      options.entry = argv[++i]
+    } else if (arg.startsWith('--entry=')) {
+      options.entry = arg.slice('--entry='.length)
     }
   }
-  return undefined
+
+  return options
 }

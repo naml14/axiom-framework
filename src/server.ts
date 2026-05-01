@@ -2,8 +2,9 @@
 // axiom-framework — Server Wrapper
 // ============================================================
 
+import { isAbsolute, relative, resolve } from 'node:path'
 import type { ComponentDefinition } from './core/types.js'
-import type { StreamSSROptions } from './ssr-stream.js'
+import type { StreamSSROptions, SSRMetadata } from './ssr-stream.js'
 import { renderToReadableStream } from './ssr-stream.js'
 
 // ============================================================
@@ -14,6 +15,7 @@ export interface AxiomServerOptions {
   routes: Array<{
     path: string
     component: ComponentDefinition<void>
+    metadata?: SSRMetadata
   }>
   staticDir?: string
   port?: number
@@ -53,6 +55,25 @@ function getBunRuntime(): BunServerRuntime {
   return bun
 }
 
+function isPathInside(baseDir: string, targetPath: string): boolean {
+  const rel = relative(baseDir, targetPath)
+  const topSegment = rel.split(/[\\/]/)[0]
+  return rel === '' || (!isAbsolute(rel) && topSegment !== '..')
+}
+
+function resolveStaticFilePath(staticDir: string, requestPath: string): string | null {
+  let decodedPath: string
+  try {
+    decodedPath = decodeURIComponent(requestPath)
+  } catch {
+    return null
+  }
+
+  const staticRoot = resolve(staticDir)
+  const candidate = resolve(staticRoot, decodedPath.replace(/^[/\\]+/, ''))
+  return isPathInside(staticRoot, candidate) ? candidate : null
+}
+
 // ============================================================
 // createServer
 // ============================================================
@@ -82,17 +103,22 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
 
           // Try static file first
           if (staticDir) {
-            const filePath = staticDir + url.pathname
-            const file = bun.file(filePath)
-            if (await file.exists()) {
-              return new Response(file)
+            const filePath = resolveStaticFilePath(staticDir, url.pathname)
+            if (filePath !== null) {
+              const file = bun.file(filePath)
+              if (await file.exists()) {
+                return new Response(file)
+              }
             }
           }
 
           // Try route match
           for (const route of routes) {
             if (matchRoute(url.pathname, route.path)) {
-              const stream = renderToReadableStream(route.component, ssr)
+              const stream = renderToReadableStream(route.component, {
+                ...ssr,
+                metadata: route.metadata ?? ssr?.metadata,
+              })
               return new Response(stream, {
                 headers: { 'Content-Type': 'text/html; charset=utf-8' },
               })
