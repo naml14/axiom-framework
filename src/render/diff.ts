@@ -59,6 +59,8 @@ export interface DOMUpdateOp {
   newOn?: Record<string, EventListener>
   newStyle?: import('../features/style.js').SafeStyleProps
   newClasses?: string[]
+  portalTarget?: HTMLElement
+  portalCssManaged?: boolean
 }
 
 export interface DOMMoveOp {
@@ -69,6 +71,8 @@ export interface DOMMoveOp {
   y?: number
   width?: number
   height?: number
+  portalTarget?: HTMLElement
+  portalCssManaged?: boolean
 }
 
 export type DOMOperation = DOMRemoveOp | DOMInsertOp | DOMUpdateOp | DOMMoveOp
@@ -106,6 +110,17 @@ function buildPortalMap(prepared: PreparedComponent): Map<number, PortalMapEntry
   }
   walk(prepared)
   return map
+}
+
+function applyPortalMetadata(
+  op: DOMInsertOp | DOMUpdateOp | DOMMoveOp,
+  portalEntry: PortalMapEntry | undefined
+): void {
+  if (portalEntry === undefined) return
+  op.portalTarget = portalEntry.target
+  if (!portalEntry.cssManaged) {
+    op.portalCssManaged = false
+  }
 }
 
 // ============================================================
@@ -175,13 +190,7 @@ export function fullDiff(
         op.textContent = getTextContent(node)
       }
 
-      const portalEntry = portalMap.get(idx)
-      if (portalEntry !== undefined) {
-        op.portalTarget = portalEntry.target
-        if (!portalEntry.cssManaged) {
-          op.portalCssManaged = false
-        }
-      }
+      applyPortalMetadata(op, portalMap.get(idx))
 
       ops.push(op)
     })
@@ -192,6 +201,7 @@ export function fullDiff(
   if (prevLayout !== null && prevLayout.nodeCount === newLayout.nodeCount) {
     const prevByIndex = buildIndexMap(prevPrepared)
     const newByIndex = buildIndexMap(newPrepared)
+    const portalMap = buildPortalMap(newPrepared)
 
     const layoutChangedIndices = fastDiff(prevLayout, newLayout)
     const layoutChangedSet = new Set<number>(layoutChangedIndices)
@@ -241,6 +251,7 @@ export function fullDiff(
         type: 'update',
         index: idx,
       }
+      applyPortalMetadata(op, portalMap.get(idx))
 
       // Emit layout coords ONLY when layout actually changed.
       // Portal CSS-managed children must NOT receive position coords for metadata-only changes
@@ -341,7 +352,7 @@ function fullTreeDiff(
         const oldIdx = prevByKey.get(key)!
         if (domNodes[oldIdx]) {
           // Reuse DOM node — it's a move
-          ops.push({
+          const moveOp: DOMMoveOp = {
             type: 'move',
             index: idx,
             oldIndex: oldIdx,
@@ -349,11 +360,14 @@ function fullTreeDiff(
             y: newLayout.y[idx],
             width: newLayout.width[idx],
             height: newLayout.height[idx],
-          })
+          }
+          applyPortalMetadata(moveOp, portalMap.get(idx))
+          ops.push(moveOp)
 
           const oldNode = prevByIndex.get(oldIdx)
           if (oldNode !== undefined) {
             const metadataUpdate: DOMUpdateOp = { type: 'update', index: idx }
+            applyPortalMetadata(metadataUpdate, portalMap.get(idx))
             let hasMetadataUpdate = false
 
             if (nodeType === 'text') {
@@ -407,12 +421,7 @@ function fullTreeDiff(
         op.textContent = getTextContent(node)
       }
       const portalEntry = portalMap.get(idx)
-      if (portalEntry !== undefined) {
-        op.portalTarget = portalEntry.target
-        if (!portalEntry.cssManaged) {
-          op.portalCssManaged = false
-        }
-      }
+      applyPortalMetadata(op, portalEntry)
       ops.push(op)
     } else {
       // Same index — check for updates
@@ -467,6 +476,7 @@ function fullTreeDiff(
           type: 'update',
           index: idx,
         }
+        applyPortalMetadata(op, portalMap.get(idx))
         if (layoutChanged) {
           op.x = newLayout.x[idx]
           op.y = newLayout.y[idx]

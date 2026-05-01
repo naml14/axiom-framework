@@ -183,6 +183,11 @@ describe('validate', () => {
     expect(result.value.errors).toEqual([])
   })
 
+  test('built-in required rule remains directly callable for backward compatibility', () => {
+    expect(required('')).toBe('This field is required')
+    expect(required('hello')).toBeNull()
+  })
+
   test('minLength rule fails when too short', () => {
     const sig = signal('ab')
     const result = validate(sig, [minLength(5)])
@@ -222,6 +227,14 @@ describe('validate', () => {
     expect(result.value.valid).toBe(true)
   })
 
+  test('supports function-style custom sync rules for backward compatibility', () => {
+    const sig = signal('ab')
+    const result = validate(sig, [(value: string) => value.length >= 3 ? null : 'too short'])
+
+    expect(result.value.valid).toBe(false)
+    expect(result.value.errors[0]).toBe('too short')
+  })
+
   test('fail-fast: stops at first failure', () => {
     const sig = signal('')
     let secondRuleCalled = false
@@ -255,6 +268,17 @@ describe('validate', () => {
     await new Promise(resolve => setTimeout(resolve, 50))
     expect(result.value.pending).toBe(false)
     expect(result.value.valid).toBe(true)
+  })
+
+  test('supports async function-style custom rules for backward compatibility', async () => {
+    const sig = signal('taken')
+    const result = validate(sig, [async (value: string) => value === 'taken' ? 'Already taken' : null], { debounceMs: 0 })
+
+    expect(result.value.pending).toBe(true)
+    await new Promise(resolve => setTimeout(resolve, 50))
+    expect(result.value.pending).toBe(false)
+    expect(result.value.valid).toBe(false)
+    expect(result.value.errors[0]).toBe('Already taken')
   })
 
   test('async rule fails when value triggers error', async () => {

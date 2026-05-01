@@ -20,6 +20,14 @@ import type { HProps, HChild, ResponsiveMap, LayoutShortcuts } from './types.js'
 
 // ─── Tipo para componentes funcionales JSX ────────────────────────────────────
 type PropsOf<C> = C extends (props: infer P) => ComponentNode ? P : never
+type RequiredKeys<T> = T extends object
+  ? { [K in keyof T]-?: Record<string, never> extends Pick<T, K> ? never : K }[keyof T]
+  : never
+type ComponentHArgs<C> = [PropsOf<C>] extends [void] | [undefined]
+  ? [props?: null | undefined, ...children: HChild[]]
+  : RequiredKeys<PropsOf<C>> extends never
+    ? [props?: PropsOf<C> | null, ...children: HChild[]]
+    : [props: PropsOf<C>, ...children: HChild[]]
 
 // ─── Mapa de eventos sintéticos (C4) ─────────────────────────────────────────
 // Eventos cuyo nombre DOM NO es simplemente camelCase → lowercase.
@@ -43,7 +51,7 @@ const SYNTHETIC_EVENT_MAP: Readonly<Record<string, string>> = {
 // Sobrecarga 1: tag string → siempre retorna ElementNode
 export function h(tag: string, props?: HProps | null, ...children: HChild[]): ElementNode
 // Sobrecarga 2: tag función → retorna ComponentNode (resultado del componente)
-export function h<C extends (props: never) => ComponentNode>(tag: C, props?: PropsOf<C> | null, ...children: HChild[]): ComponentNode
+export function h<C extends (props: never) => ComponentNode>(tag: C, ...args: ComponentHArgs<C>): ComponentNode
 export function h(
   tag: string | ((props: never) => ComponentNode),
   props?: unknown,

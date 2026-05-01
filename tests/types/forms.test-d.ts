@@ -7,23 +7,30 @@ import {
   required,
   validate,
   type AsyncRule,
+  type AsyncRuleFunction,
   type SyncRule,
+  type SyncRuleFunction,
   type ValidationResult,
   type ValidationRule,
 } from '../../src/features/forms.js'
 import type { Signal } from '../../src/core/types.js'
 
-expectTypeOf(required).toEqualTypeOf<SyncRule<string>>()
-expectTypeOf(minLength(3)).toEqualTypeOf<SyncRule<string>>()
-expectTypeOf(maxLength(12)).toEqualTypeOf<SyncRule<string>>()
-expectTypeOf(pattern(/a/)).toEqualTypeOf<SyncRule<string>>()
+expectTypeOf(required).toEqualTypeOf<SyncRuleFunction<string>>()
+expectTypeOf(required('')).toEqualTypeOf<string | null>()
+expectTypeOf(minLength(3)).toEqualTypeOf<SyncRuleFunction<string>>()
+expectTypeOf(maxLength(12)).toEqualTypeOf<SyncRuleFunction<string>>()
+expectTypeOf(pattern(/a/)).toEqualTypeOf<SyncRuleFunction<string>>()
 
 const syncRule: SyncRule<string> = { type: 'sync', validate: (value) => value ? null : 'empty' }
 const asyncRule: AsyncRule<string> = { type: 'async', validate: async (value) => value ? null : 'empty' }
+const syncRuleFn: SyncRuleFunction<string> = (value) => value ? null : 'empty'
+const asyncRuleFn: AsyncRuleFunction<string> = async (value) => value ? null : 'empty'
 expectTypeOf(syncRule).toExtend<ValidationRule<string>>()
 expectTypeOf(asyncRule).toExtend<ValidationRule<string>>()
+expectTypeOf(syncRuleFn).toExtend<ValidationRule<string>>()
+expectTypeOf(asyncRuleFn).toExtend<ValidationRule<string>>()
 
-const result = validate(signal('value'), [required, syncRule, asyncRule], { debounceMs: 0 })
+const result = validate(signal('value'), [required, syncRule, asyncRule, syncRuleFn, asyncRuleFn], { debounceMs: 0 })
 expectTypeOf(result).toEqualTypeOf<Signal<ValidationResult> & { dispose: () => void }>()
 expectTypeOf(result.dispose).toEqualTypeOf<() => void>()
 

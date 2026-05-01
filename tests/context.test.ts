@@ -61,6 +61,19 @@ describe('createContext', () => {
     expect(typeof sig.value).toBe('number')
     expect(sig.value).toBe(99)
   })
+
+  test('withContext treats plain objects with a value property as values, not signals', () => {
+    const ctx = createContext<{ value: string }>({ value: 'default' })
+    const injected = { value: 'plain-object' }
+    let captured: { value: string } | undefined
+
+    withContext(ctx, injected, () => {
+      captured = useContext(ctx).value
+    })
+
+    expect(captured).toBe(injected)
+    expect(captured!.value).toBe('plain-object')
+  })
 })
 
 describe('createStore', () => {

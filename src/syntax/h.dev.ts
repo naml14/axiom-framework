@@ -17,12 +17,20 @@ import type { ComponentNode, ElementNode, LayoutProps } from '../core/types.js'
 
 // ─── Tipo para componentes funcionales JSX ────────────────────────────────────
 type PropsOf<C> = C extends (props: infer P) => ComponentNode ? P : never
+type RequiredKeys<T> = T extends object
+  ? { [K in keyof T]-?: Record<string, never> extends Pick<T, K> ? never : K }[keyof T]
+  : never
+type ComponentHArgs<C> = [PropsOf<C>] extends [void] | [undefined]
+  ? [props?: null | undefined, ...children: HChild[]]
+  : RequiredKeys<PropsOf<C>> extends never
+    ? [props?: PropsOf<C> | null, ...children: HChild[]]
+    : [props: PropsOf<C>, ...children: HChild[]]
 type ComponentProps = Record<string, unknown> | null | undefined
 
 // Sobrecarga 1: tag string → ElementNode
 export function hDev(tag: string, props?: HProps | null, ...children: HChild[]): ElementNode
 // Sobrecarga 2: tag función → ComponentNode
-export function hDev<C extends (props: never) => ComponentNode>(tag: C, props?: PropsOf<C> | null, ...children: HChild[]): ComponentNode
+export function hDev<C extends (props: never) => ComponentNode>(tag: C, ...args: ComponentHArgs<C>): ComponentNode
 export function hDev(
   tag: string | ((props: never) => ComponentNode),
   props?: unknown,

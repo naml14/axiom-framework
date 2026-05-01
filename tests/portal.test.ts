@@ -761,6 +761,39 @@ describe('Bug A3 — fullDiff insert ops for portal descendants carry portalTarg
     expect(insertOps).toHaveLength(1)
     expect(insertOps[0]!.portalTarget).toBe(targetEl)
   })
+
+  test('fullDiff update path carries portal metadata for cssManaged:false portal children', () => {
+    resetIndexCounter()
+    const targetEl = document.createElement('section')
+    let width = 100
+
+    const component = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [
+        createPortal(
+          [{ type: 'element' as const, tag: 'span', layout: { width, height: 20 }, children: [] }],
+          targetEl,
+          { cssManaged: false }
+        ),
+      ],
+    }))
+
+    const prevPrepared = prepare(component, undefined)
+    const prevLayout = reflow(prevPrepared, { maxWidth: 800, maxHeight: 600 })
+    width = 120
+    const nextPrepared = prepare(component, undefined)
+    const nextLayout = reflow(nextPrepared, { maxWidth: 800, maxHeight: 600 })
+    const ops = fullDiff(prevPrepared, prevLayout, nextPrepared, nextLayout, [
+      document.createElement('div'),
+      document.createElement('span'),
+    ])
+
+    const updateOps = ops.filter((op): op is import('../src/render/diff.js').DOMUpdateOp => op.type === 'update' && op.portalTarget === targetEl)
+    expect(updateOps).toHaveLength(1)
+    expect(updateOps[0]!.portalTarget).toBe(targetEl)
+    expect(updateOps[0]!.portalCssManaged).toBe(false)
+  })
 })
 
 describe('portal reactivity — signal update inside portal', () => {

@@ -48,11 +48,11 @@ export interface DOMState {
   portalRoots: Map<number, PortalEntry>  // _index → { target, nodes[] }
 }
 
-const MANAGED_STYLE_KEYS_PROP = '__axiomManagedStyleKeys'
+const MANAGED_STYLE_KEYS_PROP = '__axiomManagedStyleKeys' as const
 
 interface AxiomDOMElement extends HTMLElement {
   _listeners?: Record<string, EventListener>
-  __axiomManagedStyleKeys?: string[]
+  [MANAGED_STYLE_KEYS_PROP]?: string[]
 }
 
 export function commitFull(
@@ -316,7 +316,7 @@ export function applyOps(
 
       // Only apply layout to framework-managed nodes — skip portal children.
       if (op.x !== undefined && el instanceof HTMLElement) {
-        applyFrameworkLayout(el, { x: op.x, y: op.y, width: op.width, height: op.height }, true)
+        applyFrameworkLayout(el, { x: op.x, y: op.y, width: op.width, height: op.height }, isFrameworkManagedPortalOp(op))
       }
 
       if (op.newTextContent !== undefined && el instanceof Text) {
@@ -355,7 +355,7 @@ export function applyOps(
 
       // Update position — skip portal children (CSS-managed)
       if (op.x !== undefined && oldNode instanceof HTMLElement) {
-        applyFrameworkLayout(oldNode, { x: op.x, y: op.y, width: op.width, height: op.height }, true)
+        applyFrameworkLayout(oldNode, { x: op.x, y: op.y, width: op.width, height: op.height }, isFrameworkManagedPortalOp(op))
       }
 
       // Move to new position in domNodes
@@ -427,6 +427,12 @@ function applyFrameworkLayout(
     el.style.width = `${width}px`
     el.style.height = `${height}px`
   }
+}
+
+function isFrameworkManagedPortalOp(
+  op: { portalTarget?: HTMLElement; portalCssManaged?: boolean }
+): boolean {
+  return op.portalTarget === undefined || op.portalCssManaged === false
 }
 
 function buildDOMTree(
@@ -620,11 +626,11 @@ function applyManagedStyleToElement(
   props: import('../features/style.js').SafeStyleProps
 ): void {
   applyStyleToElement(el, props)
-  ;(el as AxiomDOMElement).__axiomManagedStyleKeys = Object.keys(props)
+  ;(el as AxiomDOMElement)[MANAGED_STYLE_KEYS_PROP] = Object.keys(props)
 }
 
 function clearManagedStyleFromElement(el: HTMLElement): void {
-  const keys = (el as AxiomDOMElement).__axiomManagedStyleKeys
+  const keys = (el as AxiomDOMElement)[MANAGED_STYLE_KEYS_PROP]
   if (!Array.isArray(keys)) return
 
   for (const key of keys) {
@@ -633,5 +639,5 @@ function clearManagedStyleFromElement(el: HTMLElement): void {
     }
   }
 
-  ;(el as AxiomDOMElement).__axiomManagedStyleKeys = []
+  ;(el as AxiomDOMElement)[MANAGED_STYLE_KEYS_PROP] = []
 }

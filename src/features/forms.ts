@@ -21,7 +21,9 @@ export interface AsyncRule<T> {
   validate: (value: T) => Promise<string | null>
 }
 
-export type ValidationRule<T> = SyncRule<T> | AsyncRule<T>
+export type SyncRuleFunction<T> = (value: T) => string | null
+export type AsyncRuleFunction<T> = (value: T) => Promise<string | null>
+export type ValidationRule<T> = SyncRule<T> | AsyncRule<T> | SyncRuleFunction<T> | AsyncRuleFunction<T>
 
 export interface ValidationResult {
   valid: boolean
@@ -34,6 +36,20 @@ export interface ValidateOptions {
 }
 
 type BindableElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+
+const AsyncFunctionConstructor = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor
+
+function isAsyncFunctionRule<T>(rule: ValidationRule<T>): rule is AsyncRuleFunction<T> {
+  return typeof rule === 'function' && rule instanceof AsyncFunctionConstructor
+}
+
+function isSyncRuleDescriptor<T>(rule: ValidationRule<T>): rule is SyncRule<T> {
+  return typeof rule !== 'function' && rule.type === 'sync'
+}
+
+function isAsyncRuleDescriptor<T>(rule: ValidationRule<T>): rule is AsyncRule<T> {
+  return typeof rule !== 'function' && rule.type === 'async'
+}
 
 // ============================================================
 // ADR-4: bind() — effect for signal→DOM, addEventListener for DOM→signal
@@ -82,8 +98,8 @@ export function bind(sig: Signal<string>, el: BindableElement): () => void {
 function runSyncRules<T>(value: T, rules: ValidationRule<T>[]): string[] {
   const errors: string[] = []
   for (const rule of rules) {
-    if (rule.type === 'async') continue
-    const result = rule.validate(value)
+    if (isAsyncRuleDescriptor(rule) || isAsyncFunctionRule(rule)) continue
+    const result = typeof rule === 'function' ? rule(value) : rule.validate(value)
     if (result !== null) {
       errors.push(result)
       return errors
@@ -94,8 +110,8 @@ function runSyncRules<T>(value: T, rules: ValidationRule<T>[]): string[] {
 
 async function runAsyncRules<T>(value: T, rules: ValidationRule<T>[]): Promise<string[]> {
   for (const rule of rules) {
-    if (rule.type === 'sync') continue
-    const result = await rule.validate(value)
+    if (isSyncRuleDescriptor(rule) || (typeof rule === 'function' && !isAsyncFunctionRule(rule))) continue
+    const result = await (typeof rule === 'function' ? rule(value) : rule.validate(value))
     if (result !== null) {
       return [result]
     }
@@ -118,7 +134,7 @@ export function validate<T>(
   let generation = 0
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-  const hasAsyncRules = rules.some((r) => r.type === 'async')
+  const hasAsyncRules = rules.some((r) => isAsyncRuleDescriptor(r) || isAsyncFunctionRule(r))
 
   // effect() returns a dispose function — store it to prevent memory leaks
   const disposeEffect = effect(() => {
@@ -192,36 +208,24 @@ export function validate<T>(
 // Built-in validation rule factories
 // ============================================================
 
-export const required: SyncRule<string> = {
-  type: 'sync',
-  validate: (value: string) => {
-    return value.trim().length === 0 ? 'This field is required' : null
-  },
+export const required: SyncRuleFunction<string> = (value: string) => {
+  return value.trim().length === 0 ? 'This field is required' : null
 }
 
-export function minLength(min: number): SyncRule<string> {
-  return {
-    type: 'sync',
-    validate: (value: string) => {
-      return value.length < min ? `Must be at least ${min} characters` : null
-    },
+export function minLength(min: number): SyncRuleFunction<string> {
+  return (value: string) => {
+    return value.length < min ? `Must be at least ${min} characters` : null
   }
 }
 
-export function maxLength(max: number): SyncRule<string> {
-  return {
-    type: 'sync',
-    validate: (value: string) => {
-      return value.length > max ? `Must be at most ${max} characters` : null
-    },
+export function maxLength(max: number): SyncRuleFunction<string> {
+  return (value: string) => {
+    return value.length > max ? `Must be at most ${max} characters` : null
   }
 }
 
-export function pattern(regex: RegExp, message?: string): SyncRule<string> {
-  return {
-    type: 'sync',
-    validate: (value: string) => {
-      return regex.test(value) ? null : message ?? `Does not match required pattern`
-    },
+export function pattern(regex: RegExp, message?: string): SyncRuleFunction<string> {
+  return (value: string) => {
+    return regex.test(value) ? null : message ?? `Does not match required pattern`
   }
 }

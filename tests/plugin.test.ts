@@ -47,7 +47,7 @@ describe('createPlugin', () => {
     const onMount = () => {}
     const plugin = createPlugin({ name: 'partial-plugin', onMount })
     expect(plugin.onMount).toBe(onMount)
-    expect((plugin as AxiomPlugin).onUnmount).toBeUndefined()
+    expect(plugin.onUnmount).toBeUndefined()
   })
 })
 

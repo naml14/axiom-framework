@@ -22,4 +22,3 @@ expectTypeOf(AsyncPage).toEqualTypeOf<ComponentDefinition<void>>()
 
 // @ts-expect-error route component must be an Axiom component definition
 const invalidRoute: Route = { path: '/bad', component: {} }
-invalidRoute

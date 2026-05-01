@@ -20,5 +20,9 @@ expectTypeOf(cardNode).toExtend<ComponentNode>()
 h(Card, { title: 'Axiom', unknownProp: true })
 // @ts-expect-error h() must require component props
 h(Card, {})
+// @ts-expect-error h() must reject null props when component has required props
+h(Card, null)
+// @ts-expect-error h() must require props when component has required props
+h(Card)
 // @ts-expect-error string tag props still reject reserved props
 h('div', { ref: 'reserved' })

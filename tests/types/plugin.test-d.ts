@@ -8,11 +8,12 @@ expectTypeOf(plugin).toExtend<AxiomPlugin>()
 const pluginWithHooks = createPlugin({
   name: 'full-plugin',
   onMount(ctx: PluginContext) {
-    ctx.appId
+    expectTypeOf(ctx.appId).toEqualTypeOf<string>()
   },
 })
 expectTypeOf(pluginWithHooks.name).toEqualTypeOf<'full-plugin'>()
 expectTypeOf(pluginWithHooks.onMount).toEqualTypeOf<(ctx: PluginContext) => void>()
+expectTypeOf(pluginWithHooks.onUnmount).toEqualTypeOf<((ctx: PluginContext) => void) | undefined>()
 
 declare function pluginKey<const T extends AxiomPlugin>(plugin: T): T['name']
 const key = pluginKey(plugin)
@@ -28,4 +29,4 @@ expectTypeOf(registry['full-plugin'].name).toEqualTypeOf<'full-plugin'>()
 // @ts-expect-error plugin name is required
 createPlugin({})
 // @ts-expect-error hook context must be compatible with PluginContext
-createPlugin({ name: 'bad-hook', onMount(ctx: { appId: number }) { ctx.appId } })
+createPlugin({ name: 'bad-hook', onMount(ctx: { appId: number }) { return ctx.appId } })

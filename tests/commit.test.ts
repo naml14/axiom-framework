@@ -85,6 +85,65 @@ describe('applyOps', () => {
     expect(child.style.height).toBe('100px')
   })
 
+  test('updates skip framework layout for CSS-managed portal children', () => {
+    const root = document.createElement('div')
+    const portalTarget = document.createElement('section')
+    const child = document.createElement('div')
+    portalTarget.appendChild(child)
+
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+
+    const ops: DOMOperation[] = [
+      { type: 'update', index: 0, x: 100, y: 50, width: 200, height: 100, portalTarget },
+    ]
+
+    applyOps(ops, root, domNodes)
+
+    expect(child.style.position).toBe('')
+    expect(child.style.transform).toBe('')
+    expect(child.style.width).toBe('')
+    expect(child.style.height).toBe('')
+  })
+
+  test('moves skip framework layout for CSS-managed portal children', () => {
+    const root = document.createElement('div')
+    const portalTarget = document.createElement('section')
+    const child = document.createElement('div')
+    portalTarget.appendChild(child)
+
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+
+    const ops: DOMOperation[] = [
+      { type: 'move', oldIndex: 0, index: 1, x: 20, y: 30, width: 40, height: 50, portalTarget },
+    ]
+
+    applyOps(ops, root, domNodes)
+
+    expect(child.style.position).toBe('')
+    expect(child.style.transform).toBe('')
+    expect(domNodes[1]).toBe(child)
+  })
+
+  test('updates apply framework layout for cssManaged:false portal children', () => {
+    const root = document.createElement('div')
+    const portalTarget = document.createElement('section')
+    const child = document.createElement('div')
+    portalTarget.appendChild(child)
+
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+
+    const ops: DOMOperation[] = [
+      { type: 'update', index: 0, x: 10, y: 20, width: 30, height: 40, portalTarget, portalCssManaged: false },
+    ]
+
+    applyOps(ops, root, domNodes)
+
+    expect(child.style.position).toBe('absolute')
+    expect(child.style.transform).toBe('translate(10px,20px)')
+    expect(child.style.width).toBe('30px')
+    expect(child.style.height).toBe('40px')
+  })
+
   test('updates text content', () => {
     const root = document.createElement('div')
     const textNode = document.createTextNode('Hello')

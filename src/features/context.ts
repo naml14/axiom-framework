@@ -3,17 +3,14 @@
 // Built on top of signal() from signals.ts. Zero pipeline changes.
 // ============================================================
 
-import { signal } from '../reactivity/signals.js'
+import { signal, isSignal } from '../reactivity/signals.js'
 import type { Signal } from '../core/types.js'
+
+export { isSignal } from '../reactivity/signals.js'
 
 // ============================================================
 // Types
 // ============================================================
-
-export function isSignal<T>(value: unknown): value is Signal<T> {
-  return value !== null && typeof value === 'object' && 'value' in (value as object)
-}
-
 
 export interface Context<T> {
   readonly _id: symbol

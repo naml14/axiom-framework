@@ -1,5 +1,9 @@
 import type { Signal, SignalOptions, SignalKind, ComputedSignal } from '../core/types.js'
 
+const SIGNAL_BRAND = Symbol('axiom.signal')
+
+type BrandedSignal<T> = Signal<T> & { readonly [SIGNAL_BRAND]: true }
+
 // ============================================================
 // Internal data structures
 // ============================================================
@@ -46,6 +50,10 @@ const MAX_DEPTH = 100
 // Signal
 // ============================================================
 
+export function isSignal<T>(value: unknown): value is Signal<T> {
+  return value !== null && typeof value === 'object' && (value as Partial<BrandedSignal<T>>)[SIGNAL_BRAND] === true
+}
+
 export function signal<T>(initialValue: T, options?: SignalOptions): Signal<T> {
   const internal: SignalInternal<T> = {
     _value: initialValue,
@@ -54,7 +62,8 @@ export function signal<T>(initialValue: T, options?: SignalOptions): Signal<T> {
     _kind: options?.kind ?? 'shape',
   }
 
-  return {
+  const sig: BrandedSignal<T> = {
+    [SIGNAL_BRAND]: true,
     get value(): T {
       trackDependency(internal)
       return internal._value
@@ -66,6 +75,8 @@ export function signal<T>(initialValue: T, options?: SignalOptions): Signal<T> {
       notifySubscribers(internal)
     },
   }
+
+  return sig
 }
 
 // ============================================================
@@ -101,7 +112,8 @@ export function computed<T>(fn: () => T): ComputedSignal<T> {
     _computing: false,
   }
 
-  return {
+  const sig: ComputedSignal<T> & { readonly [SIGNAL_BRAND]: true } = {
+    [SIGNAL_BRAND]: true,
     get value(): T {
       if (isStale(internal) || internal._value === undefined) {
         evaluateComputed(internal)
@@ -113,6 +125,8 @@ export function computed<T>(fn: () => T): ComputedSignal<T> {
       throw new Error('Cannot set value of a computed signal')
     },
   }
+
+  return sig
 }
 
 // ============================================================

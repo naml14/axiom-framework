@@ -12,7 +12,14 @@ import type { ComponentNode } from './core/types.js'
 
 // ─── Tipo para componentes funcionales JSX ────────────────────────────────────
 type PropsOf<C> = C extends (props: infer P) => ComponentNode ? P : never
-type ComponentProps = Record<string, unknown> | null | undefined
+type RequiredKeys<T> = T extends object
+  ? { [K in keyof T]-?: Record<string, never> extends Pick<T, K> ? never : K }[keyof T]
+  : never
+type ComponentJsxDevArgs<C> = [PropsOf<C>] extends [void] | [undefined]
+  ? [props?: null | undefined, key?: string, _isStaticChildren?: boolean, _source?: unknown, _self?: unknown]
+  : RequiredKeys<PropsOf<C>> extends never
+    ? [props?: PropsOf<C> | null, key?: string, _isStaticChildren?: boolean, _source?: unknown, _self?: unknown]
+    : [props: PropsOf<C>, key?: string, _isStaticChildren?: boolean, _source?: unknown, _self?: unknown]
 
 export const jsx = hDev
 export const jsxs = hDev
@@ -21,7 +28,7 @@ export const jsxs = hDev
 // No podemos reexportar hDev directamente porque esos argumentos extra terminan entrando como
 // children variádicos falsos y hacen que props.children se ignore por completo.
 export function jsxDEV(tag: string, props?: Record<string, unknown> | null, key?: string, _isStaticChildren?: boolean, _source?: unknown, _self?: unknown): ComponentNode
-export function jsxDEV<C extends (props: never) => ComponentNode>(tag: C, props?: PropsOf<C> | null, key?: string, _isStaticChildren?: boolean, _source?: unknown, _self?: unknown): ComponentNode
+export function jsxDEV<C extends (props: never) => ComponentNode>(tag: C, ...args: ComponentJsxDevArgs<C>): ComponentNode
 export function jsxDEV(
 	tag: string | ((props: never) => ComponentNode),
 	props?: unknown,
