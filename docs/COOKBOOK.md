@@ -404,3 +404,59 @@ createApp(TodoApp, document.getElementById('app')!).mount()
 - `Show(condition, node)` — renderiza `node` solo si `condition` es verdadero. Alternativa declarativa a `condition ? node : null`.
 - El patrón recomendado para listas mutables es reemplazar el array completo (`tasks.value = [...tasks.value, newItem]`) — los signals comparan por referencia.
 - `computed()` para derivar la lista filtrada garantiza que el filtrado solo corre cuando cambian sus dependencias, no en cada render.
+
+---
+
+## 6. Theming y Estilos Seguros
+
+**Problema**: Necesitas aplicar estilos dinámicos respetando un sistema de diseño (tokens) sin romper el determinismo de la fase de render.
+
+```typescript
+import {
+  defineComponent, createApp, h, stack,
+  createTheme, resolveStyleTokens
+} from 'axiom-framework'
+
+// 1. Definir tokens
+const theme = createTheme({
+  color: {
+    primary: '#3b82f6',
+    surface: '#f3f4f6',
+    text: '#1f2937'
+  },
+  spacing: {
+    sm: '8px',
+    md: '16px',
+    lg: '24px'
+  },
+  radius: { default: '8px' },
+  typography: { size: { base: '16px' }, weight: { bold: '700' } }
+})
+
+// 2. Componente que usa tokens
+const Card = defineComponent(() => {
+  // style: las props CSS seguras se resuelven antes de inyectar en el DOM.
+  // '$color.surface' y '$spacing.md' apuntan a theme.
+  return stack({ gap: 16 },
+    h('div', {
+      style: {
+        backgroundColor: '$color.surface',
+        padding: '$spacing.lg',
+        borderRadius: '$radius.default',
+        color: '$color.text'
+      }
+    },
+      h('h2', { style: { color: '$color.primary' } }, 'Theme Card'),
+      h('p', null, 'This card is styled using the theme tokens.')
+    )
+  )
+})
+
+createApp(Card, document.getElementById('app')!).mount()
+```
+
+**Conceptos clave**:
+- `createTheme(tokens)` define tu sistema de diseño.
+- Se usan prefijos `$` para referenciar tokens en propiedades de `style` permitidas.
+- No se permiten keys de layout directas como `position` o `display` en los estilos; usa los primitivos `stack`, `row`, `grid` en su lugar.
+
