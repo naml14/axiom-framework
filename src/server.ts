@@ -26,6 +26,33 @@ export interface AxiomServer {
   port: number
 }
 
+interface BunFileLike extends Blob {
+  exists(): Promise<boolean>
+}
+
+interface BunServerInstance {
+  port: number
+  stop(): void
+}
+
+interface BunServerRuntime {
+  file(path: string): BunFileLike
+  serve(options: {
+    port: number
+    fetch(req: Request): Response | Promise<Response>
+  }): BunServerInstance
+}
+
+function getBunRuntime(): BunServerRuntime {
+  const bun = (globalThis as { Bun?: unknown }).Bun as BunServerRuntime | undefined
+  if (!bun) {
+    throw new Error(
+      'createServer() requires the Bun runtime. Run this server with `bun run`.'
+    )
+  }
+  return bun
+}
+
 // ============================================================
 // createServer
 // ============================================================
@@ -39,7 +66,8 @@ export interface AxiomServer {
 export function createServer(options: AxiomServerOptions): AxiomServer {
   const { routes, staticDir, ssr } = options
   const configuredPort = options.port ?? 3000
-  let server: ReturnType<typeof Bun.serve> | null = null
+  let server: BunServerInstance | null = null
+  const bun = getBunRuntime()
 
   // Track actual port (Bun may assign a random one if port is 0).
   let actualPort = configuredPort
@@ -47,15 +75,15 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
   const api: AxiomServer = {
     get port() { return actualPort },
     serve() {
-      server = Bun.serve({
+      server = bun.serve({
         port: configuredPort,
-        async fetch(req) {
+        async fetch(req: Request) {
           const url = new URL(req.url)
 
           // Try static file first
           if (staticDir) {
             const filePath = staticDir + url.pathname
-            const file = Bun.file(filePath)
+            const file = bun.file(filePath)
             if (await file.exists()) {
               return new Response(file)
             }
@@ -75,7 +103,7 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
           return new Response('Not Found', { status: 404 })
         },
       })
-      actualPort = server!.port as number
+      actualPort = server.port
     },
     stop() {
       server?.stop()
