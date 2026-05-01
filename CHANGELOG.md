@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.4](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.3...axiom-framework-v0.9.4) (2026-05-01)
+
+
+### Features
+
+* **adoption:** add starter kit, static build, and experimental streaming SSR ([aea9c44](https://github.com/naml14/axiom-framework/commit/aea9c44b8cdc1b065fc91dba152593ab6931cc22))
+* **adoption:** add starter kit, static build, and experimental streaming SSR ([dd8c879](https://github.com/naml14/axiom-framework/commit/dd8c8790171b272f77ed0e2ba0187e6de2c379a7))
+
+
+### Bug Fixes
+
+* **build:** restore library build types for node and Bun wrappers ([6ae4ee1](https://github.com/naml14/axiom-framework/commit/6ae4ee116ea76fb58646aff75c45ff62384599ef))
+* **review:** harden static build and starter workflow ([fbde5bf](https://github.com/naml14/axiom-framework/commit/fbde5bf3776e9829e7e8892ec62f64e163605206))
+
 ## [0.9.3](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.2...axiom-framework-v0.9.3) (2026-05-01)
 
 
