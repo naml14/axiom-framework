@@ -1,14 +1,16 @@
 # Static Build Minification Strategy
 
-> Estado: propuesta técnica registrada  
+> Estado: **PARCIALMENTE IMPLEMENTADA** — API `buildStatic()` disponible en `src/build.ts` y bundle JS minificado por defecto; la compactación de HTML/CSS sigue pendiente  
 > Issue relacionada: [#48 — feat(build): static site generation con minificación por defecto](https://github.com/naml14/axiom-framework/issues/48)  
-> Fecha: 2026-04-24
+> Fecha: 2026-04-24 (propuesta) / 2026-05-01 (implementada)
 
 ---
 
 ## 1. Resumen ejecutivo
 
 Axiom necesita tratar la minificación como una responsabilidad explícita del **pipeline de build estático**, no del runtime general ni del paquete npm de la librería.
+
+**Estado actual del código**: `buildStatic()` ya aplica `minify: true` al bundle JS de navegador cuando usa `Bun.build()`, pero todavía NO compacta el HTML final ni `metadata.inlineStyles`. Hasta completar esa fase, la documentación pública debe hablar de minificación de JS bundlado por defecto, no de minificación total de HTML/CSS.
 
 La regla arquitectónica queda así:
 
@@ -496,6 +498,8 @@ Desventajas:
 - Debe diseñarse cuidadosamente para no acoplar demasiado el core a Bun.
 
 Conclusión: mejor primer paso serio.
+
+> Nota de implementación actual: `buildStatic()` ya minifica el bundle JS de navegador por defecto cuando usa `Bun.build()`, pero la compactación de HTML final y CSS inline sigue pendiente. La documentación del API debe reflejar esa diferencia hasta que el pipeline complete esa fase.
 
 ### Opción D: CLI `axiom build`
 

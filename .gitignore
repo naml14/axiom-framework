@@ -17,8 +17,9 @@ skills-lock.json
 scripts/
 !scripts/
 scripts/*
-!scripts/validate-api-stability.ts
-!scripts/validate-coverage.ts
+!scripts/*.ts
+!scripts/templates/
+!scripts/templates/**/*
 
 # --- Editor / IDE ---
 .vscode/

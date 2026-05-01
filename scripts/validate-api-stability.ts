@@ -158,11 +158,16 @@ function getExportsFromFile(project: Project, filePath: string): ExportInfo[] {
     const moduleSpecifier = exportDecl.getModuleSpecifierValue()
     if (!moduleSpecifier) return
 
+    const exportDeclJsDoc = exportDecl.getLeadingCommentRanges()
+      .map(range => sourceFile.getFullText().substring(range.getPos(), range.getEnd()))
+      .join('\n')
+
     exportDecl.getNamedExports().forEach(namedExport => {
       const name = namedExport.getName()
-      const jsDoc = namedExport.getLeadingCommentRanges()
+      const namedJsDoc = namedExport.getLeadingCommentRanges()
         .map(range => sourceFile.getFullText().substring(range.getPos(), range.getEnd()))
         .join('\n')
+      const jsDoc = namedJsDoc.length > 0 ? namedJsDoc : exportDeclJsDoc
 
       let { stability, hasMultiple, since, deprecated, deprecationMessage } = extractStabilityTag(jsDoc)
 
@@ -190,9 +195,7 @@ function getExportsFromFile(project: Project, filePath: string): ExportInfo[] {
     const namespaceExport = exportDecl.getNamespaceExport?.()
     if (namespaceExport) {
       const name = namespaceExport.getName()
-      const jsDoc = exportDecl.getLeadingCommentRanges()
-        .map(range => sourceFile.getFullText().substring(range.getPos(), range.getEnd()))
-        .join('\n')
+      const jsDoc = exportDeclJsDoc
 
       let { stability, hasMultiple, since, deprecated, deprecationMessage } = extractStabilityTag(jsDoc)
 

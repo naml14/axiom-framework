@@ -2,6 +2,8 @@
 
 > **"The DOM is just the output screen."**
 
+![Axiom logo](./Images/axiom-logo.webp)
+
 A web framework with **two-phase rendering**. All calculations happen in memory. The hot path is pure arithmetic. Zero DOM reads.
 
 [![CI](https://github.com/naml14/axiom-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/naml14/axiom-framework/actions/workflows/ci.yml)
@@ -36,9 +38,17 @@ bun add axiom-framework
 npm install axiom-framework
 ```
 
----
+### Quick Start (CLI)
 
-## Quick Start
+```bash
+bunx --package axiom-framework create-axiom my-app
+cd my-app
+bun dev
+```
+
+This scaffolds a complete project with TypeScript, JSX, and a Bun-based dev server. See [docs/COOKBOOK.md](./docs/COOKBOOK.md) for step-by-step recipes.
+
+Or set up manually:
 
 ```typescript
 import { signal, computed, defineComponent, createApp, stack, h } from 'axiom-framework'
@@ -194,19 +204,27 @@ Important detail: `keyBy` belongs to `For`. JSX `key` is accepted by the runtime
 ┌─────────────────────────────────────────────────────────────┐
 │                     PUBLIC API                               │
 │  signal()  computed()  effect()  defineComponent()  createApp() │
+│  buildStatic()  renderToReadableStream()  createServer()       │
+│  renderToString()  createRouter()  create-axiom               │
 └───────────────────────────┬─────────────────────────────────┘
                             │
-         ┌──────────────────┼──────────────────┐
-         ▼                  ▼                  ▼
-         reactivity/signals.ts  render/component.ts  app.ts
-         Reactive core          Component def         Mount + update loop
-         Push + pull            Callable defs         Scheduler integration
+         ┌──────────────────┼──────────────────┬─────────────────┐
+         ▼                  ▼                  ▼                 ▼
+     reactivity/       render/           app.ts            build.ts
+     signals.ts        component.ts      Mount + update     Static site
+     Reactive core     Component def     loop + scheduler   generation
+     Push + pull       Callable defs     integration        Bun.build()
          │                  │                  │
          ▼                  ▼                  ▼
-         render/prepare.ts  render/reflow.ts   render/commit.ts
-         Tree analysis      Layout arithmetic   DOM batch writes
-         Metrics cache      Fast paths          Diff + apply
-                Flex engine + grid
+     render/prepare.ts  render/reflow.ts   render/commit.ts
+     Tree analysis      Layout arithmetic   DOM batch writes
+     Metrics cache      Fast paths          Diff + apply
+            Flex engine + grid
+                            │
+                            ▼
+                     ssr-stream.ts     server.ts
+                     Streaming SSR     Server wrapper
+                     (ReadableStream)  (Bun.serve)
 ```
 
 ### The Update Cycle
@@ -434,7 +452,7 @@ All positions (`x`, `y`) are **relative to the direct parent** — not absolute 
 | Bundle size | **~12KB min / ~4KB gzip** | ~40KB | ~34KB | ~2KB |
 | TypeScript | **First-class** | Yes | Yes | Yes |
 
-> **Note**: axiom-framework is a low-level layout engine, not a full-stack application framework. It excels at compute-heavy layouts where precise control over positioning is needed. Bundle size claims not currently verified in CI. Run `bun run build && wc -c dist/index.js` to measure locally.
+> **Note**: Axiom started as a low-level layout engine and now supports static site generation, server-side rendering (block + streaming), and a server wrapper. It excels at compute-heavy layouts where precise control over positioning is needed. Bundle size claims not currently verified in CI. Run `bun run build && wc -c dist/index.js` to measure locally.
 
 ---
 
@@ -476,53 +494,84 @@ If something goes wrong, see [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md
 
 ---
 
-## Build Outputs & Minification
+## Static Site Generation
 
-Axiom separates library output from final browser artifacts:
-
-```Text
-dist/ as npm library       → not minified
-final browser bundle       → minified
-static HTML/CSS generation → planned build-time responsibility
-renderToString()           → renders HTML, does not minify
-```
-
-That separation is deliberate. The npm package should remain modular and tree-shakeable for downstream bundlers. Final application bundles, however, should be optimized because they are served directly to users.
-
-The demo build follows that rule through `demo/build.ts`: it compiles the framework and bundles `demo/app.ts` to `demo/app.js` with `minify: true`.
-
-```bash
-bun run demo:build
-```
-
-Static site generation with a public `buildStatic()` API is not part of the public API yet. The current strategy and acceptance criteria are documented in [docs/STATIC-BUILD-MINIFICATION.md](./docs/STATIC-BUILD-MINIFICATION.md). Until that API exists, use your application bundler's production mode or configure Bun directly for final browser artifacts:
+Axiom provides `buildStatic()` — a public API to generate complete static sites with bundled JS minification by default.
 
 ```typescript
-await Bun.build({
-  entrypoints: ['./src/app.ts'],
-  outdir: './dist',
-  target: 'browser',
-  minify: true,
+import { buildStatic, defineComponent, h } from 'axiom-framework'
+
+const Home = defineComponent(() => h('main', null, h('h1', null, 'Hello Static')))
+
+const result = await buildStatic({
+  routes: [
+    { path: '/', component: Home, metadata: { title: 'My Site' } },
+    { path: '/about', component: About, metadata: { title: 'About' } },
+  ],
+  outDir: './dist',
+  minify: true,                      // enabled by default
+  assets: {
+    entrypoints: ['./src/app.ts'],   // optional JS bundle
+  },
 })
 ```
+
+Each route generates an `index.html` with SSR'd content and per-route metadata. JS bundles are compiled via `Bun.build()` with `minify: true` by default. An `asset-manifest.json` is written for CDN deployment.
+
+```bash
+# Via CLI (uses buildStatic internally):
+bun run build:static
+```
+
+## Streaming SSR (experimental)
+
+Axiom supports streaming server-side rendering via Web Streams API.
+
+```typescript
+import { renderToReadableStream } from 'axiom-framework'
+
+const stream = renderToReadableStream(MyComponent, {
+  metadata: { title: 'Streaming' },
+})
+// Returns ReadableStream<Uint8Array> — compatible with Response
+```
+
+For a complete server with routing, per-route metadata, and static file serving:
+
+```typescript
+import { createServer, defineComponent, h } from 'axiom-framework'
+
+const server = createServer({
+  routes: [{ path: '/', component: MyPage, metadata: { title: 'Home' } }],
+  staticDir: './public',
+  port: 3000,
+})
+server.serve()
+// → http://localhost:3000 serves SSR pages + static files
+```
+
+> **Note**: Both `renderToReadableStream` and `createServer` are marked `@experimental`. The API may evolve in minor versions before stabilizing in v1.1. Async boundary support (Suspense-like) is planned for a follow-up release.
 
 ---
 
 ## Limitations
 
-The following features are **not yet supported** in v0.9.1:
+The following features are **not yet supported**:
 
 | Area | Status | Notes |
 | ------ | -------- | ----- |
-| Public static site generation API (`buildStatic`) | Proposed | Strategy documented in `docs/STATIC-BUILD-MINIFICATION.md`; not exported yet |
-| Streaming SSR (`renderToReadableStream`) | Under evaluation | Single-shot `renderToString` is fully supported |
+| Async boundaries in streaming SSR | Planned | Synchronous streaming is supported (`@experimental`); Suspense-like boundaries deferred |
+| Server wrapper stabilization (`createServer`) | Experimental | Will graduate to `@stable` in v1.1 after community feedback |
 | Portal relocation to `document.body` at runtime | Under evaluation | CSS-managed portals are supported via `cssManaged` |
 | CSS-in-JS / styled components | Out of scope | Use `style` with the built-in token resolver |
 | Accessibility helpers (ARIA wiring, focus management) | Community contribution welcome | Framework primitives are available for external libs |
 | i18n / RTL support | Community contribution welcome | Layout engine remains deterministic across directions |
 
-### Now fully supported in v0.9.1
+### Fully supported
 
+- **Static site generation**: `buildStatic()` API with bundled JS minification by default (`@stable`)
+- **Streaming SSR**: `renderToReadableStream()` via Web Streams API (`@experimental`)
+- **Server wrapper**: `createServer()` with Bun.serve, route matching, static files (`@experimental`)
 - **Responsive design**: breakpoints (`minWidth`/`maxWidth`), viewport units (`vw`/`vh`), percentages
 - **CSS Grid layout (MVP)**: fixed columns, `repeat(...)`, auto-placement, `gridRowSpan`/`gridColumnSpan`
 - **Transitions & animations**: per-property transitions coordinated by scheduler
@@ -546,16 +595,18 @@ git clone https://github.com/naml14/axiom-framework.git
 cd axiom-framework
 bun install
 
-bun test           # run tests
-bun run typecheck  # type check
-bun run build      # emit dist/
-bun run demo:build # build demo/app.js
-bun run demo       # launcher + SSR server at http://localhost:3000
-# static-only demo: open demo/static.html directly (file://) or via any static server
-# SSR demo: http://localhost:3000/ssr?name=Dev&width=960&root=ssr-root
+bun test                 # run tests (555+ passing)
+bun run typecheck        # type check (zero errors)
+bun run build            # emit dist/
+bun run demo:build       # build demo + static snapshot
+bun run demo             # SSR server at http://localhost:3000
+bun run build:static     # generate static site via buildStatic()
+bunx --package axiom-framework create-axiom my-app  # scaffold new project
 ```
 
-Tests use [Bun's built-in test runner](https://bun.sh/docs/cli/test) and [Happy DOM](https://github.com/capricorn86/happy-dom) for DOM simulation.
+Tests use [Bun's built-in test runner](https://bun.sh/docs/cli/test) and [Happy DOM](https://github.com/capricorn86/happy-dom) for DOM simulation. Coverage is gated at 85% line coverage (currently **96.5%**).
+
+For practical examples see [docs/COOKBOOK.md](./docs/COOKBOOK.md) (signals, layout, forms, SSR, control flow).
 
 ---
 

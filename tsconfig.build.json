@@ -1,9 +1,11 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    // Override: do NOT inject bun-types into emitted .d.ts files.
-    // Consumers use Node.js or bundlers — they don't have bun-types installed.
-    // The base tsconfig.json keeps bun-types for IDE support in src/ and tests/.
+    // Override: keep Bun ambient types OUT of emitted .d.ts files.
+    // Consumers use Node.js or bundlers — they should not need Bun globals
+    // just to consume the library. Node types remain enabled because some
+    // build-time APIs use `node:*` modules internally, but those types do
+    // not leak through the public declarations.
     "rootDir": "src",
     "outDir": "dist",
     "noEmit": false,
@@ -11,7 +13,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "allowImportingTsExtensions": false,
-    "types": []
+    "types": ["node"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["node_modules", "dist", "tests", "demo"]
