@@ -21,4 +21,4 @@ const AsyncPage = defineAsyncComponent(() => Promise.resolve({ default: Home }))
 expectTypeOf(AsyncPage).toEqualTypeOf<ComponentDefinition<void>>()
 
 // @ts-expect-error route component must be an Axiom component definition
-const invalidRoute: Route = { path: '/bad', component: {} }
+expectTypeOf({ path: '/bad', component: {} }).toMatchTypeOf<Route>()
