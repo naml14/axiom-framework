@@ -80,10 +80,14 @@ export function renderToString(
   )
 
   const rootId = escapeHtml(options?.rootId ?? 'app')
-  const bodyHtml = renderNode(prepared, layout)
-  const headHtml = renderHead(options?.metadata)
-
-  releaseLayoutResult(layout)
+  let bodyHtml = ''
+  let headHtml = ''
+  try {
+    bodyHtml = renderNode(prepared, layout)
+    headHtml = renderHead(options?.metadata)
+  } finally {
+    releaseLayoutResult(layout)
+  }
 
   // bodyStyle is opt-in — only emit style attribute when the caller provides it
   // so that the bare <body> contract expected by tests is preserved by default.

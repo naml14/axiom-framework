@@ -59,6 +59,32 @@ describe('LayoutResult Memory Pool', () => {
     expect(result2.x.length).toBe(20)
   })
 
+  test('acquireLayoutResult can reuse a suitable buffer deeper in pool', () => {
+    const small = acquireLayoutResult(4)
+    const large = acquireLayoutResult(12)
+
+    releaseLayoutResult(large)
+    releaseLayoutResult(small)
+
+    const reused = acquireLayoutResult(10)
+    expect(reused).toBe(large)
+    expect(reused.x.length).toBe(12)
+  })
+
+  test('releaseLayoutResult rejects double release in dev/test env', () => {
+    const result = acquireLayoutResult(8)
+    releaseLayoutResult(result)
+    expect(() => releaseLayoutResult(result)).toThrow('LayoutResult already released to pool')
+  })
+
+  test('releaseLayoutResult does not keep oversized buffers', () => {
+    const huge = acquireLayoutResult(20000)
+    releaseLayoutResult(huge)
+
+    const acquired = acquireLayoutResult(20000)
+    expect(acquired).not.toBe(huge)
+  })
+
   test('clearLayoutPool empties the pool', () => {
     const result1 = acquireLayoutResult(10)
     releaseLayoutResult(result1)

@@ -135,6 +135,10 @@ export interface LayoutProps extends ResponsiveLayoutProps {
 }
 
 export interface LayoutResult {
+  /**
+   * Backing buffers may have a capacity greater than `nodeCount` when reused from pool.
+   * Consumers must treat `nodeCount` as the authoritative valid range.
+   */
   x: Float32Array
   y: Float32Array
   width: Float32Array

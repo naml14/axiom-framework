@@ -368,6 +368,7 @@ export function createApp(
          root.style.height = `${rootHeight}px`
       }
     } catch (err) {
+      releaseLayoutResult(layout)
       reportError(err, resolveContextFromPrepared('commit', cycle, prepared))
       throw err
     }
@@ -448,6 +449,7 @@ export function createApp(
           commitFull(layout, prepared, root, state.domState)
         }
       } catch (err) {
+        releaseLayoutResult(layout)
         // Only report if this is NOT a hydration error that was already reported
         if (options?.hydrate !== true) {
           reportError(err, resolveContextFromPrepared('commit', cycle, prepared))
