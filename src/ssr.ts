@@ -13,6 +13,7 @@ import {
 } from './render/prepare.js'
 import { reflow } from './render/reflow.js'
 import { sanitizeAttrs, isValidAttrName } from './core/attrs.js'
+import { releaseLayoutResult } from './render/pool.js'
 
 export interface SSRMetadata {
   title?: string
@@ -81,6 +82,8 @@ export function renderToString(
   const rootId = escapeHtml(options?.rootId ?? 'app')
   const bodyHtml = renderNode(prepared, layout)
   const headHtml = renderHead(options?.metadata)
+
+  releaseLayoutResult(layout)
 
   // bodyStyle is opt-in — only emit style attribute when the caller provides it
   // so that the bare <body> contract expected by tests is preserved by default.
