@@ -21,6 +21,7 @@ import { measureSimple } from './engines/fast-path.js'
 import { measureFlex } from './engines/flex.js'
 import { measureGrid } from './engines/grid.js'
 import { resolveResponsiveLayout } from './strategy/responsive.js'
+import { acquireLayoutResult } from './pool.js'
 
 // ============================================================
 // Public API
@@ -32,13 +33,7 @@ export interface ReflowOptions {
 
 export function createLayoutResult(prepared: PreparedComponent): LayoutResult {
   const count = countNodes(prepared)
-  return {
-    x: new Float32Array(count),
-    y: new Float32Array(count),
-    width: new Float32Array(count),
-    height: new Float32Array(count),
-    nodeCount: count,
-  }
+  return acquireLayoutResult(count)
 }
 
 export function reflow(

@@ -23,6 +23,7 @@ import { getNodeType, getTag, getChildren, getDebugDisplayName, getDebugRoute } 
 import { resolveComponentDisplayName } from './render/component.js'
 import { applyPluginHook } from './features/plugin.js'
 import type { PluginContext } from './features/plugin.js'
+import { releaseLayoutResult } from './render/pool.js'
 
 // ============================================================
 // Internal helpers
@@ -367,6 +368,7 @@ export function createApp(
          root.style.height = `${rootHeight}px`
       }
     } catch (err) {
+      releaseLayoutResult(layout)
       reportError(err, resolveContextFromPrepared('commit', cycle, prepared))
       throw err
     }
@@ -382,6 +384,10 @@ export function createApp(
     state.metrics.commitMs = performance.now() - t2
     emitProfile(cycle, 'commit', state.metrics.commitMs)
     emitProfile(cycle, 'total', performance.now() - cycleStart)
+
+    if (state.prevLayout !== null && state.prevLayout !== layout) {
+      releaseLayoutResult(state.prevLayout)
+    }
 
     state.prevPrepared = prepared
     state.prevLayout = layout
@@ -443,6 +449,7 @@ export function createApp(
           commitFull(layout, prepared, root, state.domState)
         }
       } catch (err) {
+        releaseLayoutResult(layout)
         // Only report if this is NOT a hydration error that was already reported
         if (options?.hydrate !== true) {
           reportError(err, resolveContextFromPrepared('commit', cycle, prepared))
@@ -452,6 +459,10 @@ export function createApp(
       state.metrics.commitMs = performance.now() - t2
       emitProfile(cycle, 'commit', state.metrics.commitMs)
       emitProfile(cycle, 'total', performance.now() - cycleStart)
+
+      if (state.prevLayout !== null && state.prevLayout !== layout) {
+        releaseLayoutResult(state.prevLayout)
+      }
 
       state.prevPrepared = prepared
       state.prevLayout = layout
@@ -483,6 +494,9 @@ export function createApp(
       root.innerHTML = ''
       state.mounted = false
       state.prevPrepared = null
+      if (state.prevLayout !== null) {
+        releaseLayoutResult(state.prevLayout)
+      }
       state.prevLayout = null
       // Replace the array reference (not just fill) to release all DOM node references
       // and allow the GC to collect them, preventing memory leaks in long-lived apps.

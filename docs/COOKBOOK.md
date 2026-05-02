@@ -53,6 +53,7 @@ createApp(Counter, document.getElementById('app')!).mount()
 ```
 
 **Conceptos clave**:
+
 - `signal(value)` — crea un valor reactivo. Lee con `.value`, escribe asignando a `.value`.
 - `computed(() => expr)` — derivado de uno o más signals. Se recalcula automáticamente.
 - `effect(() => ...)` — efecto secundario que se ejecuta cuando cambian sus dependencias. Retorna un `cleanup`.
@@ -123,6 +124,7 @@ createApp(Dashboard, document.getElementById('app')!).mount()
 ```
 
 **Conceptos clave**:
+
 - `stack(props, ...children)` — apila elementos en columna (flex-direction: column).
 - `row(props, ...children)` — alinea elementos en fila (flex-direction: row).
 - `grid(props, ...children)` — grid de columnas fijas. La prop `columns` acepta número o mapa responsivo.
@@ -211,6 +213,7 @@ createApp(LoginForm, document.getElementById('app')!).mount()
 ```
 
 **Conceptos clave**:
+
 - `bind(signal, element)` — vincula un signal a un elemento de formulario. Retorna cleanup.
 - `validate(value, rules)` — retorna `{ valid, errors, pending }`. Es síncrono si todas las reglas son síncronas.
 - `required()`, `minLength(n, msg)`, `maxLength(n, msg)`, `pattern(regex, msg)` — reglas predefinidas.
@@ -274,6 +277,7 @@ console.log(html)
 ```
 
 **Conceptos clave**:
+
 - `renderToString(Component, options)` — renderiza un componente a HTML string sin DOM real.
 - Retorna un `string` HTML completo; la metadata se envía vía `options.metadata`.
 - `createApp(Component, root, { hydrate: true })` — en el cliente, hidrata el HTML existente en vez de borrarlo y recrearlo.
@@ -400,6 +404,7 @@ createApp(TodoApp, document.getElementById('app')!).mount()
 ```
 
 **Conceptos clave**:
+
 - `For(items, keyFn, renderFn)` — itera sobre un array. `keyFn` provee una clave estable para reconciliación eficiente (como `key` en React). Sin key correcta, el DOM se destruye y recrea en cada cambio.
 - `Show(condition, node)` — renderiza `node` solo si `condition` es verdadero. Alternativa declarativa a `condition ? node : null`.
 - El patrón recomendado para listas mutables es reemplazar el array completo (`tasks.value = [...tasks.value, newItem]`) — los signals comparan por referencia.
@@ -460,7 +465,7 @@ createApp(Card, document.getElementById('app')!).mount()
 ```
 
 **Conceptos clave**:
+
 - `createTheme(tokens)` define tu sistema de diseño.
 - Usa `resolveStyleTokens(style, theme)` para convertir referencias `$...` a valores CSS antes de pasar `style` al nodo.
 - No se permiten keys de layout directas como `position` o `display` en los estilos; usa los primitivos `stack`, `row`, `grid` en su lugar.
-

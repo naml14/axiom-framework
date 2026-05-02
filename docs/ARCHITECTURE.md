@@ -33,6 +33,16 @@ to avoid type duplication during the current refactor stage.
 | `features/` | `core/`, `reactivity/`, `render/` (public contracts only) |
 | Root files | anywhere as needed |
 
+### Memory Pooling (Zero-Allocation Hot Path)
+
+To guarantee consistent 60fps rendering during continuous updates, Axiom enforces a **zero-allocation policy** during the `reflow -> commit` hot path.
+
+- `LayoutResult` arrays (`x, y, width, height` backed by `Float32Array`) are recycled via `src/render/pool.ts`.
+- `LayoutResult` buffers may be larger than the active tree size when reused; `nodeCount` is the authoritative valid range.
+- The `reflow` function requests buffers using `acquireLayoutResult(count)`.
+- The `app.ts` scheduler releases previous/current buffers via `releaseLayoutResult(result)` across success and error paths.
+- The pool is bounded (entry count and max retained capacity) to avoid unbounded steady-state memory growth in long-lived server processes.
+
 ### Type-only boundary notes
 
 - `src/core/types.ts` currently references `SafeStyleProps` as a type-only import from `src/features/style.ts`.
@@ -88,7 +98,5 @@ use `on: {}` instead.
 
 ### Rule summary
 
-| Element belongs to Axiom tree? | Pattern |
-| ------------------------------ | ------- |
-| Yes                            | `on: { click: () => { signal.value++ } }` |
-| No (browser / external)        | `addEventListener` as explicit escape hatch |
+- **Element belongs to Axiom tree: yes** → `on: { click: () => { signal.value++ } }`
+- **Element belongs to Axiom tree: no (browser/external)** → `addEventListener` as explicit escape hatch

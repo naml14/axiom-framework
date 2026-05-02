@@ -1,4 +1,5 @@
 import type { App } from '../src/index.ts'
+import { getLayoutPoolSize } from '../src/index.ts'
 
 interface ControlsDeps {
   containerWidth: { value: number }
@@ -19,6 +20,7 @@ export function initControls(deps: ControlsDeps) {
   const mCommit = document.getElementById('m-commit')!
   const mTotal = document.getElementById('m-total')!
   const mFps = document.getElementById('m-fps')!
+  const mPool = document.getElementById('m-pool')!
 
   let frameCount = 0
   let lastFpsTime = performance.now()
@@ -30,6 +32,7 @@ export function initControls(deps: ControlsDeps) {
     mReflow.textContent = `${m.reflowMs.toFixed(2)}ms`
     mCommit.textContent = `${m.commitMs.toFixed(2)}ms`
     mTotal.textContent = `${(m.prepareMs + m.reflowMs + m.commitMs).toFixed(2)}ms`
+    mPool.textContent = String(getLayoutPoolSize())
 
     frameCount++
     const now = performance.now()
