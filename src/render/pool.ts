@@ -41,3 +41,11 @@ export function releaseLayoutResult(result: LayoutResult): void {
 export function clearLayoutPool(): void {
   pool.length = 0
 }
+
+/**
+ * Returns the current number of cached buffers in the pool.
+ * Useful for metrics and debugging.
+ */
+export function getLayoutPoolSize(): number {
+  return pool.length
+}

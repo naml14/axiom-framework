@@ -33,6 +33,14 @@ to avoid type duplication during the current refactor stage.
 | `features/` | `core/`, `reactivity/`, `render/` (public contracts only) |
 | Root files | anywhere as needed |
 
+### Memory Pooling (Zero-Allocation Hot Path)
+
+To guarantee consistent 60fps rendering during continuous updates, Axiom enforces a **zero-allocation policy** during the `reflow -> commit` hot path.
+- `LayoutResult` arrays (`x, y, width, height` backed by `Float32Array`) are recycled via `src/render/pool.ts`.
+- The `reflow` function requests buffers using `acquireLayoutResult(count)`.
+- The `app.ts` scheduler explicitly releases them via `releaseLayoutResult(result)` immediately after `commit` finishes.
+- Buffers grow to the high-water mark and are never shrunk, ensuring steady memory footprint and avoiding GC pauses.
+
 ### Type-only boundary notes
 
 - `src/core/types.ts` currently references `SafeStyleProps` as a type-only import from `src/features/style.ts`.

@@ -38,6 +38,7 @@ export type { Route, RouteState, Router } from './router.js'
 // --- Layout (advanced — for custom rendering pipelines) ---
 export { prepare } from './render/prepare.js'
 export { reflow } from './render/reflow.js'
+export { getLayoutPoolSize } from './render/pool.js'
 
 // --- Responsive + Grid (Ruta B, Fase 1-2) ---
 export { resolveResponsiveLayout, resolveLayoutDimension, matchesBreakpoint } from './render/strategy/responsive.js'
