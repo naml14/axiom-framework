@@ -435,18 +435,22 @@ const theme = createTheme({
 
 // 2. Componente que usa tokens
 const Card = defineComponent(() => {
-  // style: las props CSS seguras se resuelven antes de inyectar en el DOM.
-  // '$color.surface' y '$spacing.md' apuntan a theme.
+  const cardStyle = resolveStyleTokens({
+    backgroundColor: '$color.surface',
+    padding: '$spacing.lg',
+    borderRadius: '$radius.default',
+    color: '$color.text'
+  }, theme)
+
+  const titleStyle = resolveStyleTokens({
+    color: '$color.primary'
+  }, theme)
+
   return stack({ gap: 16 },
     h('div', {
-      style: {
-        backgroundColor: '$color.surface',
-        padding: '$spacing.lg',
-        borderRadius: '$radius.default',
-        color: '$color.text'
-      }
+      style: cardStyle
     },
-      h('h2', { style: { color: '$color.primary' } }, 'Theme Card'),
+      h('h2', { style: titleStyle }, 'Theme Card'),
       h('p', null, 'This card is styled using the theme tokens.')
     )
   )
@@ -457,6 +461,6 @@ createApp(Card, document.getElementById('app')!).mount()
 
 **Conceptos clave**:
 - `createTheme(tokens)` define tu sistema de diseño.
-- Se usan prefijos `$` para referenciar tokens en propiedades de `style` permitidas.
+- Usa `resolveStyleTokens(style, theme)` para convertir referencias `$...` a valores CSS antes de pasar `style` al nodo.
 - No se permiten keys de layout directas como `position` o `display` en los estilos; usa los primitivos `stack`, `row`, `grid` en su lugar.
 
