@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.6](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.5...axiom-framework-v0.9.6) (2026-05-02)
+
+
+### Features
+
+* **demo:** expose memory pool size in DX metrics and document architecture invariant ([3d5ff3f](https://github.com/naml14/axiom-framework/commit/3d5ff3fe5807e4c96e188b0dc524b58e2b6810aa))
+* **memory-pooling:** completar implementación de la piscina de memoria y agregar pruebas de validación ([c82f1e5](https://github.com/naml14/axiom-framework/commit/c82f1e5102d35a185b9df36b25c2950819aca5de))
+* **render:** implement Float32Array memory pooling for reflow hot path ([3022527](https://github.com/naml14/axiom-framework/commit/30225273d43ee8f400fa40818b599709622ac83e))
+* **render:** memory pooling for layout engine ([2fc8cdd](https://github.com/naml14/axiom-framework/commit/2fc8cdddfe90e486df4f9e5a96910f12fb39b8e5))
+
 ## [0.9.5](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.4...axiom-framework-v0.9.5) (2026-05-02)
 
 
