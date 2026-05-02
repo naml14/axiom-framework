@@ -414,7 +414,7 @@ createApp(TodoApp, document.getElementById('app')!).mount()
 ```typescript
 import {
   defineComponent, createApp, h, stack,
-  createTheme
+  createTheme, resolveStyleTokens
 } from 'axiom-framework'
 
 // 1. Definir tokens
