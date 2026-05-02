@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.5](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.4...axiom-framework-v0.9.5) (2026-05-02)
+
+
+### Bug Fixes
+
+* **dev-server:** address PR56 review findings ([3b8b884](https://github.com/naml14/axiom-framework/commit/3b8b8845ee5e37b9df25be1a166f6812309cad7f))
+* **templates:** resolve build config and undefined output type errors in starter server ([9a078c3](https://github.com/naml14/axiom-framework/commit/9a078c334cf8018411acdb166fbbfe10df23d298))
+
 ## [0.9.4](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.3...axiom-framework-v0.9.4) (2026-05-01)
 
 
