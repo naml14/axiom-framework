@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { cp, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -82,10 +82,29 @@ async function startStarterDevServer(projectDir: string): Promise<number> {
 async function installLocalFrameworkFixture(projectDir: string): Promise<void> {
 	const packageDir = join(projectDir, "node_modules", "axiom-framework");
 	await mkdir(packageDir, { recursive: true });
-	await cp(join(repoRoot, "package.json"), join(packageDir, "package.json"));
-	await cp(join(repoRoot, "dist"), join(packageDir, "dist"), {
+	await cp(join(repoRoot, "src"), join(packageDir, "src"), {
 		recursive: true,
 	});
+	await writeFile(
+		join(packageDir, "package.json"),
+		`${JSON.stringify(
+			{
+				name: "axiom-framework",
+				version: "0.0.0-test",
+				type: "module",
+				main: "./src/index.ts",
+				module: "./src/index.ts",
+				exports: {
+					".": {
+						import: "./src/index.ts",
+					},
+				},
+			},
+			null,
+			2,
+		)}\n`,
+		"utf8",
+	);
 }
 
 afterEach(async () => {
