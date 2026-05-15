@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, symlink } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -79,14 +79,13 @@ async function startStarterDevServer(projectDir: string): Promise<number> {
 	return port;
 }
 
-async function linkStarterToLocalFramework(projectDir: string): Promise<void> {
-	const nodeModulesDir = join(projectDir, "node_modules");
-	await mkdir(nodeModulesDir, { recursive: true });
-	await symlink(
-		repoRoot,
-		join(nodeModulesDir, "axiom-framework"),
-		process.platform === "win32" ? "junction" : "dir",
-	);
+async function installLocalFrameworkFixture(projectDir: string): Promise<void> {
+	const packageDir = join(projectDir, "node_modules", "axiom-framework");
+	await mkdir(packageDir, { recursive: true });
+	await cp(join(repoRoot, "package.json"), join(packageDir, "package.json"));
+	await cp(join(repoRoot, "dist"), join(packageDir, "dist"), {
+		recursive: true,
+	});
 }
 
 afterEach(async () => {
@@ -120,7 +119,7 @@ describe("create-axiom starter", () => {
 
 	test("generated static build inlines the starter stylesheet into dist HTML", async () => {
 		const projectDir = await scaffoldStarterProject("static-build");
-		await linkStarterToLocalFramework(projectDir);
+		await installLocalFrameworkFixture(projectDir);
 
 		const build = Bun.spawnSync(["bun", "run", "build-static.ts"], {
 			cwd: projectDir,
