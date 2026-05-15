@@ -10,6 +10,19 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = join(__dirname, "templates");
+const ROOT_PACKAGE_JSON_PATH = join(__dirname, "..", "package.json");
+
+async function getCurrentFrameworkVersion(): Promise<string> {
+	const rootPackage = JSON.parse(
+		await readFile(ROOT_PACKAGE_JSON_PATH, "utf8"),
+	) as { version?: string };
+
+	if (!rootPackage.version) {
+		throw new Error("Could not determine the current axiom-framework version");
+	}
+
+	return rootPackage.version;
+}
 
 export const TEMPLATE_FILES: Array<[string, string]> = [
 	["package.json", "package.json"],
@@ -27,14 +40,22 @@ export async function scaffoldProject(
 ): Promise<void> {
 	await mkdir(projectDir, { recursive: true });
 	await mkdir(join(projectDir, "src"), { recursive: true });
+	const frameworkVersion = await getCurrentFrameworkVersion();
 
 	for (const [src, dest] of TEMPLATE_FILES) {
 		const content = await readFile(join(TEMPLATES_DIR, src), "utf8");
 		let final = content;
 
 		if (src === "package.json") {
-			const pkg = JSON.parse(content) as { name?: string };
+			const pkg = JSON.parse(content) as {
+				name?: string;
+				dependencies?: Record<string, string>;
+			};
 			pkg.name = projectName;
+			pkg.dependencies = {
+				...(pkg.dependencies ?? {}),
+				"axiom-framework": frameworkVersion,
+			};
 			final = `${JSON.stringify(pkg, null, 2)}\n`;
 		}
 

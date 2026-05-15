@@ -123,6 +123,12 @@ describe("create-axiom starter", () => {
 		const projectDir = await scaffoldStarterProject("scaffold");
 
 		const indexHtml = await readFile(join(projectDir, "index.html"), "utf8");
+		const generatedPackage = JSON.parse(
+			await readFile(join(projectDir, "package.json"), "utf8"),
+		) as { dependencies?: Record<string, string> };
+		const rootPackage = JSON.parse(
+			await readFile(join(repoRoot, "package.json"), "utf8"),
+		) as { version: string };
 		const starterStyles = await readFile(
 			join(projectDir, "src", "styles.css"),
 			"utf8",
@@ -132,6 +138,9 @@ describe("create-axiom starter", () => {
 			/<link\s+rel="stylesheet"\s+href="\/src\/styles\.css"\s*\/?>/,
 		);
 		expect(indexHtml).toContain('src="/src/app.ts"');
+		expect(generatedPackage.dependencies?.["axiom-framework"]).toBe(
+			rootPackage.version,
+		);
 		expect(starterStyles).toContain("h1,");
 		expect(starterStyles).toContain("button {");
 	});

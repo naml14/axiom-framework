@@ -9,7 +9,7 @@
     "typecheck": "bunx tsc --noEmit"
   },
   "dependencies": {
-    "axiom-framework": "^0.9.0"
+    "axiom-framework": "__AXIOM_FRAMEWORK_VERSION__"
   },
   "devDependencies": {
     "@types/bun": "latest",
