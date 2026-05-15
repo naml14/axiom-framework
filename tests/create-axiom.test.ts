@@ -136,7 +136,10 @@ describe("create-axiom starter", () => {
 			);
 		}
 
-		const distHtml = await readFile(join(projectDir, "dist", "index.html"), "utf8");
+		const distHtml = await readFile(
+			join(projectDir, "dist", "index.html"),
+			"utf8",
+		);
 		expect(distHtml).toContain("<style>");
 		expect(distHtml).toContain("button {");
 		expect(distHtml).toContain("radial-gradient");
