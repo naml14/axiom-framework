@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
 
-import { existsSync, readFileSync, statSync } from "node:fs";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
 
 const rootDir = import.meta.dir;
@@ -18,12 +17,21 @@ const publicAssetExtensions = new Set([
 	".ico",
 	".avif",
 ]);
-const port = Number(process.env.PORT ?? "3000");
+
+function resolvePort(value: string | undefined): number {
+	const parsed = Number(value);
+	if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) {
+		return parsed;
+	}
+	return 3000;
+}
+
+const port = resolvePort(process.env.PORT);
 
 let cachedBundle: { code: string; mtimeMs: number } | null = null;
 
 async function buildAppBundle(): Promise<string> {
-	const mtimeMs = statSync(appEntry).mtimeMs;
+	const mtimeMs = (await Bun.file(appEntry).stat()).mtimeMs;
 	if (cachedBundle && cachedBundle.mtimeMs === mtimeMs) {
 		return cachedBundle.code;
 	}
@@ -37,7 +45,9 @@ async function buildAppBundle(): Promise<string> {
 
 	if (!result.success || result.outputs.length === 0) {
 		const logs = result.logs
-			.map((log) => String((log as { message?: unknown }).message ?? log))
+			.map((log: unknown) =>
+				String((log as { message?: unknown }).message ?? log),
+			)
 			.join("\n");
 		console.error("Axiom starter build failed:\n", logs);
 		throw new Error(`Failed to build src/app.ts${logs ? `\n${logs}` : ""}`);
@@ -53,15 +63,29 @@ async function buildAppBundle(): Promise<string> {
 	return code;
 }
 
-function resolvePublicAsset(pathname: string): string | null {
-	const relativePath = decodeURIComponent(pathname).replace(/^\/+/, "");
-	if (!relativePath.startsWith("src/")) return null;
+function decodePathname(pathname: string): string | null {
+	try {
+		return decodeURIComponent(pathname).replace(/^\/+/, "");
+	} catch {
+		return null;
+	}
+}
+
+async function resolvePublicAsset(pathname: string): Promise<string | null> {
+	const relativePath = decodePathname(pathname);
+	if (relativePath === null || !relativePath.startsWith("src/")) return null;
 
 	const filePath = resolve(rootDir, relativePath);
 	const rel = relative(publicAssetDir, filePath);
 	if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return null;
 	if (!publicAssetExtensions.has(extname(filePath).toLowerCase())) return null;
-	if (!existsSync(filePath) || !statSync(filePath).isFile()) return null;
+
+	try {
+		const stat = await Bun.file(filePath).stat();
+		if (!stat.isFile()) return null;
+	} catch {
+		return null;
+	}
 
 	return filePath;
 }
@@ -77,11 +101,10 @@ function serveStaticFile(filePath: string): Response {
 
 const server = Bun.serve({
 	port,
-	async fetch(req) {
+	async fetch(req: Request) {
 		const url = new URL(req.url);
 		if (url.pathname === "/") {
-			const html = readFileSync(indexHtmlPath, "utf8");
-			return new Response(html, {
+			return new Response(Bun.file(indexHtmlPath), {
 				headers: { "Content-Type": "text/html; charset=utf-8" },
 			});
 		}
@@ -106,7 +129,7 @@ const server = Bun.serve({
 			}
 		}
 
-		const publicAsset = resolvePublicAsset(url.pathname);
+		const publicAsset = await resolvePublicAsset(url.pathname);
 		if (publicAsset !== null) {
 			return serveStaticFile(publicAsset);
 		}

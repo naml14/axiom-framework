@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { scaffoldProject } from "../scripts/create-axiom.ts";
 
+const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const tempDirs: string[] = [];
 const runningProcesses: Array<ReturnType<typeof Bun.spawn>> = [];
 
@@ -12,6 +14,13 @@ async function freshDir(label: string): Promise<string> {
 	const dir = await mkdtemp(join(tmpdir(), `axiom-create-${label}-`));
 	tempDirs.push(dir);
 	return dir;
+}
+
+async function scaffoldStarterProject(label: string): Promise<string> {
+	const workspace = await freshDir(label);
+	const projectDir = join(workspace, "my-app");
+	await scaffoldProject(projectDir, "my-app");
+	return projectDir;
 }
 
 async function getAvailablePort(): Promise<number> {
@@ -53,6 +62,33 @@ async function waitForServer(url: string): Promise<void> {
 	throw new Error(`Timed out waiting for starter dev server: ${url}`);
 }
 
+async function startStarterDevServer(projectDir: string): Promise<number> {
+	const port = await getAvailablePort();
+	const proc = Bun.spawn(["bun", "run", "dev-server.ts"], {
+		cwd: projectDir,
+		env: {
+			...process.env,
+			PORT: String(port),
+		},
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+	runningProcesses.push(proc);
+
+	await waitForServer(`http://127.0.0.1:${port}/`);
+	return port;
+}
+
+async function linkStarterToLocalFramework(projectDir: string): Promise<void> {
+	const nodeModulesDir = join(projectDir, "node_modules");
+	await mkdir(nodeModulesDir, { recursive: true });
+	await symlink(
+		repoRoot,
+		join(nodeModulesDir, "axiom-framework"),
+		process.platform === "win32" ? "junction" : "dir",
+	);
+}
+
 afterEach(async () => {
 	for (const proc of runningProcesses.splice(0)) {
 		proc.kill();
@@ -66,16 +102,9 @@ afterEach(async () => {
 
 describe("create-axiom starter", () => {
 	test("scaffoldProject writes a starter stylesheet and links it from index.html", async () => {
-		const workspace = await freshDir("scaffold");
-		const projectDir = join(workspace, "my-app");
-
-		await scaffoldProject(projectDir, "my-app");
+		const projectDir = await scaffoldStarterProject("scaffold");
 
 		const indexHtml = await readFile(join(projectDir, "index.html"), "utf8");
-		const buildScript = await readFile(
-			join(projectDir, "build-static.ts"),
-			"utf8",
-		);
 		const starterStyles = await readFile(
 			join(projectDir, "src", "styles.css"),
 			"utf8",
@@ -85,32 +114,37 @@ describe("create-axiom starter", () => {
 			/<link\s+rel="stylesheet"\s+href="\/src\/styles\.css"\s*\/?>/,
 		);
 		expect(indexHtml).toContain('src="/src/app.ts"');
-		expect(buildScript).toContain('const starterStyles = await readFile');
-		expect(buildScript).toContain('new URL("./src/styles.css", import.meta.url)');
-		expect(buildScript).toContain("inlineStyles: starterStyles");
 		expect(starterStyles).toContain("h1,");
 		expect(starterStyles).toContain("button {");
 	});
 
-	test("generated dev server serves the starter stylesheet over HTTP", async () => {
-		const workspace = await freshDir("dev-server");
-		const projectDir = join(workspace, "my-app");
+	test("generated static build inlines the starter stylesheet into dist HTML", async () => {
+		const projectDir = await scaffoldStarterProject("static-build");
+		await linkStarterToLocalFramework(projectDir);
 
-		await scaffoldProject(projectDir, "my-app");
-
-		const port = await getAvailablePort();
-		const proc = Bun.spawn(["bun", "run", "dev-server.ts"], {
+		const build = Bun.spawnSync(["bun", "run", "build-static.ts"], {
 			cwd: projectDir,
-			env: {
-				...process.env,
-				PORT: String(port),
-			},
-			stdout: "ignore",
-			stderr: "ignore",
+			stdout: "pipe",
+			stderr: "pipe",
 		});
-		runningProcesses.push(proc);
 
-		await waitForServer(`http://127.0.0.1:${port}/`);
+		if (build.exitCode !== 0) {
+			const stdout = new TextDecoder().decode(build.stdout);
+			const stderr = new TextDecoder().decode(build.stderr);
+			throw new Error(
+				`build-static.ts failed with exit code ${build.exitCode}\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`,
+			);
+		}
+
+		const distHtml = await readFile(join(projectDir, "dist", "index.html"), "utf8");
+		expect(distHtml).toContain("<style>");
+		expect(distHtml).toContain("button {");
+		expect(distHtml).toContain("radial-gradient");
+	});
+
+	test("generated dev server serves the starter stylesheet over HTTP", async () => {
+		const projectDir = await scaffoldStarterProject("dev-server");
+		const port = await startStarterDevServer(projectDir);
 
 		const htmlResponse = await fetch(`http://127.0.0.1:${port}/`);
 		expect(htmlResponse.status).toBe(200);
@@ -125,25 +159,19 @@ describe("create-axiom starter", () => {
 		expect(css).toContain("radial-gradient");
 	});
 
+	test("generated dev server returns 404 for malformed encoded asset paths", async () => {
+		const projectDir = await scaffoldStarterProject("malformed-path");
+		const port = await startStarterDevServer(projectDir);
+
+		const malformedResponse = await fetch(
+			`http://127.0.0.1:${port}/src/%ZZ.css`,
+		);
+		expect(malformedResponse.status).toBe(404);
+	});
+
 	test("generated dev server does not expose non-public project files", async () => {
-		const workspace = await freshDir("private-files");
-		const projectDir = join(workspace, "my-app");
-
-		await scaffoldProject(projectDir, "my-app");
-
-		const port = await getAvailablePort();
-		const proc = Bun.spawn(["bun", "run", "dev-server.ts"], {
-			cwd: projectDir,
-			env: {
-				...process.env,
-				PORT: String(port),
-			},
-			stdout: "ignore",
-			stderr: "ignore",
-		});
-		runningProcesses.push(proc);
-
-		await waitForServer(`http://127.0.0.1:${port}/`);
+		const projectDir = await scaffoldStarterProject("private-files");
+		const port = await startStarterDevServer(projectDir);
 
 		const packageResponse = await fetch(
 			`http://127.0.0.1:${port}/package.json`,
