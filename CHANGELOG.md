@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug Fixes
 
-* **create-axiom:** load starter css in quick start ([#61](https://github.com/naml14/axiom-framework/issues/61)) ([839177b](https://github.com/naml14/axiom-framework/commit/839177b4760a357ea43520c970ed3b04aa5b2799))
+* **create-axiom:** load starter CSS in quick start ([#61](https://github.com/naml14/axiom-framework/issues/61)) ([839177b](https://github.com/naml14/axiom-framework/commit/839177b4760a357ea43520c970ed3b04aa5b2799))
 
 ## [0.9.6](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.5...axiom-framework-v0.9.6) (2026-05-02)
 
