@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.8](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.7...axiom-framework-v0.9.8) (2026-05-15)
+
+
+### Bug Fixes
+
+* **create-axiom:** pin starter dependency version ([#64](https://github.com/naml14/axiom-framework/issues/64)) ([5496531](https://github.com/naml14/axiom-framework/commit/5496531fe0468c9d2d1e63b79ff6ce12d1388be2))
+
 ## [0.9.7](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.6...axiom-framework-v0.9.7) (2026-05-15)
 
 
