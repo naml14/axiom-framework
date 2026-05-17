@@ -202,7 +202,29 @@ export function commitHydrate(
       return
     }
 
-    sanitizeHydratedElementAttrs(domEl, getAttrs(node))
+    // Apply framework layout resets first (same as commitFull).
+    // This ensures box-model resets are present even when hydrating SSR HTML.
+    applyFrameworkLayout(domEl, {
+      x: layout.x[idx], y: layout.y[idx],
+      width: layout.width[idx], height: layout.height[idx],
+    }, true)
+
+    // Sanitize and apply user attributes, but merge style instead of replacing.
+    // Replacing domEl.style would wipe out the layout resets applied above.
+    const userAttrs = getAttrs(node)
+    const userStyle = userAttrs?.style
+    const attrsWithoutStyle = userAttrs
+      ? Object.fromEntries(Object.entries(userAttrs).filter(([k]) => k !== 'style'))
+      : undefined
+    sanitizeHydratedElementAttrs(domEl, attrsWithoutStyle)
+    // Merge user inline style on top of existing layout styles
+    if (typeof userStyle === 'string' && userStyle.length > 0) {
+      const existing = domEl.getAttribute('style') ?? ''
+      const merged = existing.endsWith(';') || existing.length === 0
+        ? `${existing}${userStyle}`
+        : `${existing};${userStyle}`
+      domEl.setAttribute('style', merged)
+    }
 
     const listeners = getOn(node)
     if (listeners !== undefined) {
