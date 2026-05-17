@@ -18,6 +18,7 @@ import {
 import { resolveResponsiveLayout } from '../strategy/responsive.js'
 import { measureSimple } from './fast-path.js'
 import { measureFlex } from './flex.js'
+import { measureTextChild as measureTextDimensions } from './text-measure.js'
 
 // ============================================================
 // Grid MVP (Fase 2, slice 1)
@@ -669,10 +670,8 @@ function measureTextChild(
   }
 
   if (text !== undefined && text.length > 0) {
-    const charWidth = 8
-    const charsPerLine = Math.max(1, Math.floor(availableWidth / charWidth))
-    const lineCount = Math.max(1, Math.ceil((text.length / charsPerLine) * 1.4))
-    result.height[idx] = lineCount * lineHeight
-    result.width[idx] = availableWidth
+    const dimensions = measureTextDimensions(text, { availableWidth, lineHeight }, true)
+    result.height[idx] = dimensions.height
+    result.width[idx] = dimensions.width
   }
 }

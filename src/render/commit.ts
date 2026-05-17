@@ -202,6 +202,13 @@ export function commitHydrate(
       return
     }
 
+    // Apply framework layout resets to hydrated elements (closes SSR/hydration drift).
+    // Portal elements already returned above; only framework-managed elements reach this point.
+    applyFrameworkLayout(domEl, {
+      x: layout.x[idx], y: layout.y[idx],
+      width: layout.width[idx], height: layout.height[idx],
+    }, true)
+
     sanitizeHydratedElementAttrs(domEl, getAttrs(node))
 
     const listeners = getOn(node)
@@ -419,6 +426,9 @@ function applyFrameworkLayout(
 ): void {
   if (!managedByFramework) return
   el.style.position = 'absolute'
+  el.style.boxSizing = 'border-box'
+  el.style.margin = '0'
+  el.style.padding = '0'
   const { x, y, width, height } = layoutInfo
   if (x !== undefined && y !== undefined) {
     el.style.transform = `translate(${x}px,${y}px)`

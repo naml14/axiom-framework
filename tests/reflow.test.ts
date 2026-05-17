@@ -3,6 +3,8 @@ import { defineComponent } from '../src/render/component.js'
 import { prepare } from '../src/render/prepare.js'
 import { reflow, createLayoutResult } from '../src/render/reflow.js'
 import type { PreparedComponent } from '../src/core/types.js'
+import { measureTextChild } from '../src/render/engines/text-measure.js'
+import type { FontData } from '../src/render/engines/text-measure.js'
 
 // ============================================================
 // Fake text layout engine
@@ -232,6 +234,65 @@ describe('reflow — flex layout', () => {
     const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     // Cross axis center: (100 - 40) / 2 = 30
+    expect(result.y[1]).toBe(30)
+  })
+
+  test('justifyContent: space-around distributes items with half-size edge gaps', () => {
+    // 2 items of height 50 in a column container of height 200
+    // freeSpace = 200 - (50+50) = 100, space-around: each item gets 25 on each side
+    // item[0].y = 25, item[1].y = 25 + 50 + 50 = 125
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'column', height: 200, justifyContent: 'space-around' },
+      children: [
+        { type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 } },
+      ]
+    }))
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+
+    expect(result.y[1]).toBe(25)   // first item: edge gap = freeSpace/(2*n) = 100/4 = 25
+    expect(result.y[2]).toBe(125)  // second item: 25 + 50 + 50 = 125
+  })
+
+  test('justifyContent: space-around with three items', () => {
+    // 3 items of height 30 in column of height 210 → total items = 90, free = 120
+    // space-around: each item gets 120/3 = 40 total, so 20 on each side
+    // item[0].y = 20, item[1].y = 20+30+40 = 90, item[2].y = 90+30+40 = 160
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'column', height: 210, justifyContent: 'space-around' },
+      children: [
+        { type: 'element' as const, tag: 'div', layout: { width: 50, height: 30 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 50, height: 30 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 50, height: 30 } },
+      ]
+    }))
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+
+    expect(result.y[1]).toBe(20)
+    expect(result.y[2]).toBe(90)
+    expect(result.y[3]).toBe(160)
+  })
+
+  test('alignItems: baseline behaves like center in row', () => {
+    // baseline ≈ center per design decision
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'row', alignItems: 'baseline', height: 100 },
+      children: [
+        { type: 'element' as const, tag: 'div', layout: { width: 50, height: 40 } }
+      ]
+    }))
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+
+    // Same as center: (100 - 40) / 2 = 30
     expect(result.y[1]).toBe(30)
   })
 
@@ -2002,5 +2063,180 @@ describe('grid row-height reconciliation — múltiples spans normalizados sobre
 
     // Contenedor = 20 + 12 = 32
     expect(result.height[0]).toBe(32)
+  })
+})
+
+// ============================================================
+// measureTextChild helper — unit tests (Tasks 1.1 / 1.3)
+// ============================================================
+
+describe('measureTextChild helper — unit', () => {
+  test('returns availableWidth as width', () => {
+    const font: FontData = { availableWidth: 200, lineHeight: 20 }
+    const result = measureTextChild('Hello', font, false)
+    expect(result.width).toBe(200)
+  })
+
+  test('single line when text fits without wrapping', () => {
+    // "Hello" = 5 chars, charWidth=8, charsPerLine = floor(400/8) = 50 → fits in 1 line
+    const font: FontData = { availableWidth: 400, lineHeight: 20 }
+    const result = measureTextChild('Hello', font, true)
+    // lineCount = ceil((5/50) * 1.4) = ceil(0.14) = 1
+    expect(result.height).toBe(20)
+  })
+
+  test('wrapped text height uses charWidth=8 and wordWrapFactor=1.4', () => {
+    // "Hello World" = 11 chars, availableWidth=30, charWidth=8
+    // charsPerLine = floor(30/8) = 3
+    // lineCount = ceil((11/3) * 1.4) = ceil(5.133) = 6
+    const font: FontData = { availableWidth: 30, lineHeight: 20 }
+    const result = measureTextChild('Hello World', font, true)
+    expect(result.height).toBe(120) // 6 * 20
+  })
+
+  test('wordWrap=false does NOT apply the 1.4 factor', () => {
+    // 11 chars, charsPerLine=floor(30/8)=3, lineCount=ceil(11/3)=4 (no factor)
+    const font: FontData = { availableWidth: 30, lineHeight: 20 }
+    const result = measureTextChild('Hello World', font, false)
+    expect(result.height).toBe(80) // 4 * 20
+  })
+
+  test('minimum one line even for very wide containers', () => {
+    const font: FontData = { availableWidth: 10000, lineHeight: 20 }
+    const result = measureTextChild('Hi', font, true)
+    expect(result.height).toBe(20)
+    expect(result.height).toBeGreaterThan(0)
+  })
+
+  test('minimum one char per line when availableWidth is very small', () => {
+    // charsPerLine = max(1, floor(1/8)) = 1, 5 chars, lineCount = ceil((5/1)*1.4) = 7
+    const font: FontData = { availableWidth: 1, lineHeight: 20 }
+    const result = measureTextChild('Hello', font, true)
+    expect(result.height).toBe(140) // 7 * 20
+  })
+
+  test('lineHeight is factored into height correctly', () => {
+    const font: FontData = { availableWidth: 400, lineHeight: 16 }
+    const result = measureTextChild('Hello', font, true)
+    // 1 line * 16
+    expect(result.height).toBe(16)
+  })
+})
+
+// ============================================================
+// Cross-engine text height consistency (Tasks 3.1)
+// ============================================================
+
+describe('cross-engine text height consistency', () => {
+  const TEXT = 'Hello World this is a longer piece of text to force wrapping'
+  const WIDTH = 120
+  const LINE_HEIGHT = 20
+
+  function buildFlexComp(text: string) {
+    return defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'column' },
+      children: [{ type: 'text' as const, content: text }],
+    }))
+  }
+
+  function buildGridComp(text: string) {
+    return defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { display: 'grid', gridTemplateColumns: 1 } as any,
+      children: [{ type: 'text' as const, content: text }],
+    }))
+  }
+
+  function buildStackComp(text: string) {
+    return defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: text }],
+    }))
+  }
+
+  test('stack and flex produce equal text height for wrapped text', () => {
+    const stackPrepared = prepare(buildStackComp(TEXT), undefined, { textEngine: fakeTextEngine })
+    const flexPrepared = prepare(buildFlexComp(TEXT), undefined, { textEngine: fakeTextEngine })
+
+    const stackResult = reflow(stackPrepared, { maxWidth: WIDTH, maxHeight: 1000 }, { lineHeight: LINE_HEIGHT })
+    const flexResult = reflow(flexPrepared, { maxWidth: WIDTH, maxHeight: 1000 }, { lineHeight: LINE_HEIGHT })
+
+    // Text node is idx=1 in both trees
+    expect(stackResult.height[1]).toBe(flexResult.height[1])
+    expect(stackResult.height[1]).toBeGreaterThan(LINE_HEIGHT) // must actually wrap
+  })
+
+  test('flex and grid produce equal text height for wrapped text', () => {
+    const flexPrepared = prepare(buildFlexComp(TEXT), undefined, { textEngine: fakeTextEngine })
+    const gridPrepared = prepare(buildGridComp(TEXT), undefined, { textEngine: fakeTextEngine })
+
+    const flexResult = reflow(flexPrepared, { maxWidth: WIDTH, maxHeight: 1000 }, { lineHeight: LINE_HEIGHT })
+    const gridResult = reflow(gridPrepared, { maxWidth: WIDTH, maxHeight: 1000 }, { lineHeight: LINE_HEIGHT })
+
+    expect(flexResult.height[1]).toBe(gridResult.height[1])
+  })
+
+  test('stack and grid produce equal text height for wrapped text', () => {
+    const stackPrepared = prepare(buildStackComp(TEXT), undefined, { textEngine: fakeTextEngine })
+    const gridPrepared = prepare(buildGridComp(TEXT), undefined, { textEngine: fakeTextEngine })
+
+    const stackResult = reflow(stackPrepared, { maxWidth: WIDTH, maxHeight: 1000 }, { lineHeight: LINE_HEIGHT })
+    const gridResult = reflow(gridPrepared, { maxWidth: WIDTH, maxHeight: 1000 }, { lineHeight: LINE_HEIGHT })
+
+    expect(stackResult.height[1]).toBe(gridResult.height[1])
+  })
+
+  test('non-text layout positions are not affected by unified text measurement', () => {
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'row', gap: 10 },
+      children: [
+        { type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 } },
+      ],
+    }))
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: LINE_HEIGHT })
+
+    expect(result.x[1]).toBe(0)
+    expect(result.x[2]).toBe(110) // 100 + 10 gap — non-text layout unchanged
+  })
+})
+
+// ============================================================
+// layoutText (reflow.ts leaf text path) — approval test (Task 2.1)
+// ============================================================
+// layoutText is called when layoutNode receives a text node as the root.
+// Before the fix: charWidth=6, no wordWrap factor.
+// After the fix: uses measureTextChild (charWidth=8, wordWrapFactor=1.4).
+// These tests document the NEW (correct) behavior.
+// ============================================================
+
+describe('reflow — leaf text node (layoutText path)', () => {
+  function prepareText(content: string) {
+    const comp = defineComponent(() => ({ type: 'text' as const, content }))
+    return prepare(comp, undefined, { textEngine: fakeTextEngine })
+  }
+
+  test('root text node: single line when text fits (charWidth=8)', () => {
+    // "Hello" = 5 chars, availableWidth=400, charWidth=8, charsPerLine=50 → 1 line
+    const prepared = prepareText('Hello')
+    const result = reflow(prepared, { maxWidth: 400, maxHeight: 1000 }, { lineHeight: 20 })
+    expect(result.height[0]).toBe(20)
+    expect(result.width[0]).toBe(400)
+  })
+
+  test('root text node: wrapped text uses charWidth=8 and 1.4x factor', () => {
+    // "Hello World" = 11 chars, maxWidth=30, charWidth=8
+    // charsPerLine = floor(30/8) = 3
+    // lineCount = ceil((11/3) * 1.4) = ceil(5.13) = 6
+    const prepared = prepareText('Hello World')
+    const result = reflow(prepared, { maxWidth: 30, maxHeight: 1000 }, { lineHeight: 20 })
+    expect(result.height[0]).toBe(120) // 6 lines * 20
   })
 })
