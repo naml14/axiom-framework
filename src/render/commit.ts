@@ -3,6 +3,7 @@ import type {
   LayoutResult,
   HydrationOptions,
   HydrationResult,
+  CommitOptions,
 } from '../core/types.js'
 
 import type { DOMOperation } from './diff.js'
@@ -50,16 +51,21 @@ export interface DOMState {
 
 const MANAGED_STYLE_KEYS_PROP = '__axiomManagedStyleKeys' as const
 
+/** Private symbol tracking the last transform string written by Axiom. */
+const AXIOM_TRANSFORM_OWNED: unique symbol = Symbol('axiomTransformOwned')
+
 interface AxiomDOMElement extends HTMLElement {
   _listeners?: Record<string, EventListener>
   [MANAGED_STYLE_KEYS_PROP]?: string[]
+  [AXIOM_TRANSFORM_OWNED]?: string
 }
 
 export function commitFull(
   layout: LayoutResult,
   prepared: PreparedComponent,
   root: HTMLElement,
-  state: DOMState
+  state: DOMState,
+  opts?: CommitOptions
 ): void {
   // Setup root container
   root.style.position = 'relative'
@@ -72,7 +78,7 @@ export function commitFull(
     state.domNodes.push(null)
   }
 
-  buildDOMTree(prepared, layout, root, state)
+  buildDOMTree(prepared, layout, root, state, false, opts)
   fireMountEvents(state.domNodes)
 }
 
@@ -81,7 +87,8 @@ export function commitHydrate(
   prepared: PreparedComponent,
   root: HTMLElement,
   state: DOMState,
-  options?: HydrationOptions
+  options?: HydrationOptions,
+  commitOpts?: CommitOptions
 ): HydrationResult {
   const result: HydrationResult = {
     mismatchCount: 0,
@@ -207,7 +214,7 @@ export function commitHydrate(
     applyFrameworkLayout(domEl, {
       x: layout.x[idx], y: layout.y[idx],
       width: layout.width[idx], height: layout.height[idx],
-    }, true)
+    }, true, commitOpts)
 
     // Sanitize and apply user attributes, but merge style instead of replacing.
     // Replacing domEl.style would wipe out the layout resets applied above.
@@ -309,7 +316,8 @@ export function fireUnmountEvents(domNodes: Array<HTMLElement | Text | null>): v
 export function applyOps(
   ops: DOMOperation[],
   root: HTMLElement,
-  domNodes: Array<HTMLElement | Text | null>
+  domNodes: Array<HTMLElement | Text | null>,
+  opts?: CommitOptions
 ): void {
   // Phase 1: Removes — free up DOM nodes
   for (const op of ops) {
@@ -338,7 +346,7 @@ export function applyOps(
 
       // Only apply layout to framework-managed nodes — skip portal children.
       if (op.x !== undefined && el instanceof HTMLElement) {
-        applyFrameworkLayout(el, { x: op.x, y: op.y, width: op.width, height: op.height }, isFrameworkManagedPortalOp(op))
+        applyFrameworkLayout(el, { x: op.x, y: op.y, width: op.width, height: op.height }, isFrameworkManagedPortalOp(op), opts)
       }
 
       if (op.newTextContent !== undefined && el instanceof Text) {
@@ -377,7 +385,7 @@ export function applyOps(
 
       // Update position — skip portal children (CSS-managed)
       if (op.x !== undefined && oldNode instanceof HTMLElement) {
-        applyFrameworkLayout(oldNode, { x: op.x, y: op.y, width: op.width, height: op.height }, isFrameworkManagedPortalOp(op))
+        applyFrameworkLayout(oldNode, { x: op.x, y: op.y, width: op.width, height: op.height }, isFrameworkManagedPortalOp(op), opts)
       }
 
       // Move to new position in domNodes
@@ -394,7 +402,7 @@ export function applyOps(
       // Portal inserts: CSS-managed by default (portalTarget set, portalCssManaged not false).
       // When portalCssManaged===false, framework applies layout styles even to portal children.
       const isPortalChild = op.portalTarget !== undefined && op.portalCssManaged !== false
-      const el = createDOMElement(op, isPortalChild)
+      const el = createDOMElement(op, isPortalChild, opts)
       domNodes[op.index] = el
       const container = op.portalTarget ?? root
       let frag = fragments.get(container)
@@ -431,19 +439,54 @@ export function applyOps(
 // ============================================================
 
 /**
+ * Returns the composed transform string that Axiom writes for layout positioning.
+ * Animation libraries must animate `--animation-transform` instead of `transform`.
+ */
+function composedTransform(x: number, y: number): string {
+  return `translate(${x}px,${y}px) var(--animation-transform)`
+}
+
+/**
  * Applies Axiom's absolute-position layout styles to an element.
  * Portal children are CSS-managed — this is a no-op when managedByFramework=false.
+ *
+ * Compose contract: always writes `translate(Xpx, Ypx) var(--animation-transform)`.
+ * If the element already carries an inline transform that Axiom did not write (e.g. a
+ * conflicting animation), `opts.onTransformConflict` is called synchronously before
+ * the overwrite. If the existing transform priority is `important`, the hook fires but
+ * the value is NOT overwritten — the user-declared `!important` rule wins.
  */
 function applyFrameworkLayout(
   el: HTMLElement,
   layoutInfo: { x?: number; y?: number; width?: number; height?: number },
-  managedByFramework: boolean
+  managedByFramework: boolean,
+  opts?: CommitOptions
 ): void {
   if (!managedByFramework) return
   el.style.position = 'absolute'
   const { x, y, width, height } = layoutInfo
   if (x !== undefined && y !== undefined) {
-    el.style.transform = `translate(${x}px,${y}px)`
+    const axiomEl = el as AxiomDOMElement
+    const currentTransform = el.style.transform
+    const ownedTransform = axiomEl[AXIOM_TRANSFORM_OWNED]
+
+    // Detect conflict: there's a non-empty inline transform that Axiom did not write.
+    if (
+      opts?.onTransformConflict !== undefined &&
+      currentTransform !== '' &&
+      currentTransform !== ownedTransform
+    ) {
+      opts.onTransformConflict(el, currentTransform)
+    }
+
+    // Respect `!important` overrides — user intent wins; Axiom does not escalate priority.
+    if (el.style.getPropertyPriority('transform') === 'important') {
+      // Hook was called above if applicable; we do not overwrite.
+    } else {
+      const composed = composedTransform(x, y)
+      el.style.transform = composed
+      axiomEl[AXIOM_TRANSFORM_OWNED] = composed
+    }
   }
   if (width !== undefined && height !== undefined) {
     el.style.width = `${width}px`
@@ -462,7 +505,8 @@ function buildDOMTree(
   layout: LayoutResult,
   parent: HTMLElement,
   state: DOMState,
-  portalChild = false
+  portalChild = false,
+  opts?: CommitOptions
 ): void {
   const idx = getNodeIndex(prepared)
   const nodeType = getNodeType(prepared)
@@ -479,7 +523,7 @@ function buildDOMTree(
   if (nodeType === 'fragment') {
     // Fragments are transparent — just process children
     for (const child of children) {
-      buildDOMTree(child, layout, parent, state)
+      buildDOMTree(child, layout, parent, state, portalChild, opts)
     }
     return
   }
@@ -496,7 +540,7 @@ function buildDOMTree(
       for (const child of children) {
         // Capture childNodes count before insertion to track root-level nodes added
         const before = portalTarget.childNodes.length
-        buildDOMTree(child, layout, portalTarget, state, childrenAreCssManaged)
+        buildDOMTree(child, layout, portalTarget, state, childrenAreCssManaged, opts)
         // Collect any new direct children of portalTarget added by this child
         for (let i = before; i < portalTarget.childNodes.length; i++) {
           entry.nodes.push(portalTarget.childNodes[i]!)
@@ -519,7 +563,7 @@ function buildDOMTree(
   applyFrameworkLayout(el, {
     x: layout.x[idx], y: layout.y[idx],
     width: layout.width[idx], height: layout.height[idx],
-  }, !portalChild)
+  }, !portalChild, opts)
 
   // Apply classes
   const classes = getClasses(prepared)
@@ -555,11 +599,11 @@ function buildDOMTree(
 
   // Process children — propagate portalChild flag so descendants also skip inline styles
   for (const child of children) {
-    buildDOMTree(child, layout, el, state, portalChild)
+    buildDOMTree(child, layout, el, state, portalChild, opts)
   }
 }
 
-function createDOMElement(op: import('./diff.js').DOMInsertOp, isPortalChild = false): HTMLElement | Text {
+function createDOMElement(op: import('./diff.js').DOMInsertOp, isPortalChild = false, opts?: CommitOptions): HTMLElement | Text {
   if (op.textContent !== undefined && op.tag === undefined) {
     return document.createTextNode(op.textContent)
   }
@@ -570,7 +614,7 @@ function createDOMElement(op: import('./diff.js').DOMInsertOp, isPortalChild = f
 
   // Apply layout ONLY for framework-managed nodes.
   // Portal children (isPortalChild=true) are CSS-managed — no inline styles.
-  applyFrameworkLayout(el, { x: op.x, y: op.y, width: op.width, height: op.height }, !isPortalChild)
+  applyFrameworkLayout(el, { x: op.x, y: op.y, width: op.width, height: op.height }, !isPortalChild, opts)
 
   if (op.textContent !== undefined) {
     el.textContent = op.textContent

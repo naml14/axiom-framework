@@ -154,6 +154,28 @@ export interface LayoutResult {
   nodeCount: number
 }
 
+// --- Transform Animation Types ---
+
+/**
+ * Callback fired synchronously when Axiom detects a conflicting inline
+ * `transform` that was not written by the framework layout engine.
+ *
+ * @param element - The element whose transform is in conflict.
+ * @param animationTransform - The conflicting transform value currently on the element.
+ */
+export type TransformConflictHook = (
+  element: HTMLElement,
+  animationTransform: string,
+) => void
+
+/**
+ * Options forwarded from createApp into the commit phase.
+ * Extend this interface to add future per-commit controls.
+ */
+export interface CommitOptions {
+  onTransformConflict?: TransformConflictHook
+}
+
 // --- Hydration Types (SSR v0.2.7) ---
 
 export interface HydrationOptions {

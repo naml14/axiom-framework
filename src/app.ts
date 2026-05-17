@@ -7,6 +7,7 @@ import type {
   ProfileEvent,
   ProfilePhase,
   ProfileSubscriber,
+  CommitOptions,
 } from './core/types.js'
 import type { TextLayoutEngine, PrepareOptions } from './render/prepare.js'
 import type { SchedulerFn } from './scheduler.js'
@@ -134,6 +135,13 @@ export interface AppOptions {
   onError?: (err: unknown, context: AppErrorContext) => void
   /** Stable identifier for this app instance. Auto-generated if absent. */
   appId?: string
+  /**
+   * Fired synchronously when Axiom detects an inline `transform` on an element
+   * that was not written by the framework layout engine (e.g. a conflicting
+   * CSS animation using the deprecated `transform` property instead of
+   * `--animation-transform`).
+   */
+  onTransformConflict?: CommitOptions['onTransformConflict']
 }
 
 export type AppErrorPhase = 'prepare' | 'reflow' | 'commit' | 'hydrate'
@@ -210,6 +218,10 @@ export function createApp(
 
   const reflowOpts: ReflowOptions = {
     lineHeight: options?.lineHeight ?? 20,
+  }
+
+  const commitOpts: CommitOptions = {
+    onTransformConflict: options?.onTransformConflict,
   }
 
   const scheduler = options?.scheduler
@@ -355,14 +367,14 @@ export function createApp(
         if (requiresFallbackRecovery) {
           // Hot reload incompatible change: deterministic internal refresh.
           // Use commitFull to avoid hydration mismatch loops during runtime recovery.
-          commitFull(layout, prepared, root, state.domState)
+          commitFull(layout, prepared, root, state.domState, commitOpts)
         } else {
-          commitFull(layout, prepared, root, state.domState)
+          commitFull(layout, prepared, root, state.domState, commitOpts)
         }
       } else {
         // Value change only — incremental diff and apply
         const ops = fullDiff(state.prevPrepared, state.prevLayout, prepared, layout, state.domState.domNodes)
-        applyOps(ops, root, state.domState.domNodes)
+        applyOps(ops, root, state.domState.domNodes, commitOpts)
         // Update root height (commitFull does this internally, but applyOps doesn't)
         const rootHeight = layout.height[0] ?? 0
          root.style.height = `${rootHeight}px`
@@ -440,13 +452,13 @@ export function createApp(
             commitHydrate(layout, prepared, root, state.domState, {
               strictMismatch: options.strictHydration,
               debug: options.hydrationDebug,
-            })
+            }, commitOpts)
           } catch (err) {
             reportError(err, resolveContextFromPrepared('hydrate', cycle, prepared))
             throw err
           }
         } else {
-          commitFull(layout, prepared, root, state.domState)
+          commitFull(layout, prepared, root, state.domState, commitOpts)
         }
       } catch (err) {
         releaseLayoutResult(layout)
