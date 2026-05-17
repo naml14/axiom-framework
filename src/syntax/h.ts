@@ -342,6 +342,19 @@ export function buildLayoutFromShortcuts(props: LayoutShortcuts): LayoutProps | 
 
 // ─── Breakpoints (C6) ─────────────────────────────────────────────────────────
 // `at` es la ÚNICA forma de breakpoints. responsive() eliminado.
+//
+// Spec: openspec/specs/responsive-breakpoints.md
+//
+// `at` keys are normalized here into LayoutProps.breakpoints (array of
+// { minWidth, layout } entries sorted ascending by minWidth). Matching is
+// performed at render time by mergeBreakpointOverrides() in
+// src/render/strategy/responsive.ts against the container constraints
+// (maxWidth/maxHeight) — NOT against the browser viewport.
+//
+// Named keys map through BREAKPOINT_PX; numeric string keys are parsed with
+// Number(). Entries whose minWidth is not a finite number are discarded.
+// Ascending sort ensures the additive cascade in mergeBreakpointOverrides()
+// lets the largest matching breakpoint win for conflicting properties.
 const BREAKPOINT_PX: Readonly<Record<string, number>> = {
   sm: 480, md: 768, lg: 1024, xl: 1280,
 }

@@ -24,6 +24,47 @@ describe('responsive resolver', () => {
     expect(resolved?.height).toBe(90)
   })
 
+  // Spec: Viewport Unit Fallback — vw resolves relative to container when viewportWidth is absent
+  test('resuelve vw relativo al contenedor cuando viewportWidth no está presente', () => {
+    const resolved = resolveResponsiveLayout(
+      { width: '50vw' } as any,
+      { maxWidth: 800, maxHeight: 600 } // no viewportWidth
+    )
+
+    // Falls back to maxWidth (800), so 50vw = 400
+    expect(resolved?.width).toBe(400)
+  })
+
+  // Spec: Container-Query Resolution — breakpoints resolve against container width, not viewport
+  test('no aplica breakpoint cuando el contenedor es más angosto que el viewport', () => {
+    const layout = {
+      width: '40%',
+      breakpoints: [
+        { minWidth: 700, layout: { width: '90%' } },
+      ],
+    } as any
+
+    // viewport is 1200 (wider than 700), but container is only 500
+    const narrowContainer = resolveResponsiveLayout(layout, {
+      maxWidth: 500,
+      maxHeight: 400,
+      viewportWidth: 1200,
+    })
+    // viewport-based logic would apply 90% of 1200 = 1080 — wrong
+    // container-based logic: maxWidth(500) < minWidth(700) → breakpoint does NOT apply
+    // base width: 40% of 500 = 200
+    expect(narrowContainer?.width).toBe(200)
+
+    // same viewport, wider container — now the breakpoint SHOULD apply
+    const wideContainer = resolveResponsiveLayout(layout, {
+      maxWidth: 800,
+      maxHeight: 400,
+      viewportWidth: 1200,
+    })
+    // 90% of 800 = 720
+    expect(wideContainer?.width).toBe(720)
+  })
+
   test('aplica breakpoints en orden y usa el último match', () => {
     const layout = {
       width: '40%',
