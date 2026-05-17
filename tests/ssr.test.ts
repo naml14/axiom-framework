@@ -64,7 +64,7 @@ describe('SSR: renderToString', () => {
     expect(html).toContain('<p')
     expect(html).toContain('class="copy"')
     expect(html).toContain('id="lead"')
-    expect(html).toMatch(/style="position:absolute;left:0px;top:0px;transform:translate\(\d+px,\d+px\);width:\d+px;height:\d+px;/)
+    expect(html).toMatch(/style="position:absolute;left:0px;top:0px;transform:translate\(\d+px,\d+px\);width:\d+px;height:\d+px;box-sizing:border-box;margin:0;padding:0;/)
   })
 
   test('portal y fragment se serializan inline en v0.2.6', async () => {

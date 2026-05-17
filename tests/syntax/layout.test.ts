@@ -141,3 +141,17 @@ describe('box()', () => {
     expect(fromBox.layout).toEqual(fromH.layout)
   })
 })
+
+describe('layout shortcuts: space-around + baseline via h()', () => {
+  test('row con justify: space-around', () => {
+    const node = h('div', { flex: 'row', justify: 'space-around' })
+    expect(node.layout?.flexDirection).toBe('row')
+    expect(node.layout?.justifyContent).toBe('space-around')
+  })
+
+  test('row con align: baseline', () => {
+    const node = h('div', { flex: 'row', align: 'baseline' })
+    expect(node.layout?.flexDirection).toBe('row')
+    expect(node.layout?.alignItems).toBe('baseline')
+  })
+})

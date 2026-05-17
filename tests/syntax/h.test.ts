@@ -296,3 +296,41 @@ describe('normalizeChildren()', () => {
     expect(normalizeChildren([null, undefined, false])).toEqual([])
   })
 })
+
+describe('layout shortcuts: space-around + baseline validation', () => {
+  test('justify: space-around se mapea a justifyContent', () => {
+    const layout = h('div', { justify: 'space-around' }).layout
+    expect(layout?.justifyContent).toBe('space-around')
+  })
+
+  test('align: baseline se mapea a alignItems', () => {
+    const layout = h('div', { align: 'baseline' }).layout
+    expect(layout?.alignItems).toBe('baseline')
+  })
+
+  test('justify con valor inválido no produce justifyContent', () => {
+    const layout = h('div', { justify: 'invalid' as never }).layout
+    expect(layout?.justifyContent).toBeUndefined()
+  })
+
+  test('align con valor inválido no produce alignItems', () => {
+    const layout = h('div', { align: 'invalid' as never }).layout
+    expect(layout?.alignItems).toBeUndefined()
+  })
+
+  test('todos los valores de justify válidos se aceptan', () => {
+    const values = ['start', 'center', 'end', 'space-between', 'space-around'] as const
+    for (const v of values) {
+      const layout = h('div', { justify: v }).layout
+      expect(layout?.justifyContent).toBe(v)
+    }
+  })
+
+  test('todos los valores de align válidos se aceptan', () => {
+    const values = ['start', 'center', 'end', 'stretch', 'baseline'] as const
+    for (const v of values) {
+      const layout = h('div', { align: v }).layout
+      expect(layout?.alignItems).toBe(v)
+    }
+  })
+})

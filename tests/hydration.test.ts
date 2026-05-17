@@ -301,3 +301,34 @@ describe('hydration: portals, debug and deep tree', () => {
     expect(result.hydratedNodeCount).toBeGreaterThanOrEqual(depth)
   })
 })
+
+describe('hydration: layout resets applied by commitHydrate', () => {
+  test('commitHydrate applies framework layout styles even when DOM was built without SSR', () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'Hello' }],
+    }))
+
+    // Build DOM manually WITHOUT SSR resets (no box-sizing/margin/padding)
+    installWindow()
+    const root = document.createElement('div')
+    root.id = 'app'
+    document.body.appendChild(root)
+    const el = document.createElement('div')
+    el.setAttribute('data-axiom-id', '0')
+    // Intentionally do NOT set any style
+    root.appendChild(el)
+
+    const prepared = prepare(App, undefined, { textEngine: fakeTextEngine })
+    const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 }, { lineHeight: 20 })
+    const state = { domNodes: [] as Array<HTMLElement | Text | null>, portalRoots: new Map() }
+    commitHydrate(layout, prepared, root, state)
+
+    // After commitHydrate, framework layout styles should be applied
+    const hydratedEl = root.children[0] as HTMLElement | undefined
+    expect(hydratedEl).not.toBeUndefined()
+    const style = hydratedEl?.getAttribute('style') ?? ''
+    expect(style).toContain('position')
+  })
+})
