@@ -43,9 +43,12 @@ export function reflow(
 ): LayoutResult {
   const result = createLayoutResult(prepared)
   const lineHeight = options?.lineHeight ?? 20
+  // Primary pass: lay out all non-portal nodes. Layout engines (measureSimple, measureFlex,
+  // measureGrid) skip portal nodes entirely — portals are invisible to the primary layout tree.
   layoutNode(prepared, constraints, result, lineHeight)
-  // Second pass: portals with cssManaged:false are skipped by measureSimple/measureFlex.
-  // We must lay out their children separately so the result arrays are populated.
+  // Secondary pass: for portals with cssManaged:false, lay out their children so the framework
+  // can apply computed inline position/size styles. cssManaged:true portals are skipped here too
+  // — CSS owns their layout entirely.
   reflowPortalChildren(prepared, constraints, result, lineHeight)
   return result
 }
@@ -89,23 +92,6 @@ function layoutNode(
   const layout = resolveResponsiveLayout(getLayoutProps(prepared), constraints)
   const nodeType = getNodeType(prepared)
   const children = getPreparedChildren(prepared)
-
-  // Portal nodes: assign 0×0 to the slot (transparent to parent layout).
-  // Portal children are CSS-managed by default — the framework inserts them into the DOM
-  // but does NOT apply inline position/size styles. CSS owns their layout entirely.
-  // When cssManaged:false, the framework lays out children so it can apply inline styles.
-  if (nodeType === 'portal') {
-    result.width[idx] = 0
-    result.height[idx] = 0
-    if (!getPortalCssManaged(prepared)) {
-      // cssManaged:false: lay out each portal child through the full pipeline.
-      // Calling layoutNode directly respects each child's own layout props (width, height, flex…).
-      for (const child of children) {
-        layoutNode(child, constraints, result, lineHeight)
-      }
-    }
-    return
-  }
 
   // Resolve own dimensions
   const ownWidth = layout?.width ?? constraints.maxWidth
