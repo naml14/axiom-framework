@@ -1,4 +1,4 @@
-import type { ComponentDefinition, ComponentNode } from '../core/types.js'
+import type { ComponentDefinition, ComponentNode, ComponentOptions } from '../core/types.js'
 
 const NODE_DEBUG_META = Symbol('axiom-node-debug-meta')
 
@@ -7,7 +7,6 @@ interface NodeDebugMeta {
   route: string
 }
 
-let nextAnonymousId = 1
 const componentRouteStack: string[] = []
 
 function withComponentRoute<T>(displayName: string, run: () => T): T {
@@ -41,6 +40,24 @@ function sanitizeDisplayName(name: string | undefined): string | undefined {
   return value !== undefined && value.length > 0 ? value : undefined
 }
 
+/**
+ * 32-bit FNV-1a hash of a string, returned as an 8-character lowercase hex string.
+ * Used to produce deterministic, human-readable anonymous component names.
+ *
+ * Note: two component functions whose source text is identical (e.g. due to aggressive
+ * minification) will produce the same display name. Use an explicit name in production
+ * if disambiguation is required.
+ */
+function fnv1a32hex(input: string): string {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i)
+    // Multiply by FNV prime (0x01000193), kept within 32 bits
+    hash = (Math.imul(hash, 0x01000193) >>> 0)
+  }
+  return hash.toString(16).padStart(8, '0')
+}
+
 function resolveComponentDisplayNameInternal(fn: Function, explicit?: string): string {
   const fromExplicit = sanitizeDisplayName(explicit)
   if (fromExplicit !== undefined) return fromExplicit
@@ -48,7 +65,7 @@ function resolveComponentDisplayNameInternal(fn: Function, explicit?: string): s
   const fromFunctionName = sanitizeDisplayName(fn.name)
   if (fromFunctionName !== undefined) return fromFunctionName
 
-  return `Component#${nextAnonymousId++}`
+  return `Component#${fnv1a32hex(fn.toString())}`
 }
 
 export function resolveComponentDisplayName(component: ComponentDefinition<unknown>): string {
@@ -73,16 +90,28 @@ function invokeComponentInternal<Props>(
 
 function normalizeComponentDefinition<Props>(
   nameOrFn: string | ((props: Props) => ComponentNode),
-  maybeFn?: (props: Props) => ComponentNode
+  maybeFnOrOptions?: ((props: Props) => ComponentNode) | ComponentOptions
 ): { fn: (props: Props) => ComponentNode; displayName: string } {
-  const fn = typeof nameOrFn === 'function' ? nameOrFn : maybeFn
+  let fn: ((props: Props) => ComponentNode) | undefined
+  let explicitDisplayName: string | undefined
+
+  if (typeof nameOrFn === 'string') {
+    // Legacy overload: defineComponent('Name', fn)
+    explicitDisplayName = nameOrFn
+    fn = maybeFnOrOptions as (props: Props) => ComponentNode
+  } else {
+    // New overload: defineComponent(fn, options?)
+    fn = nameOrFn
+    if (typeof maybeFnOrOptions === 'object' && maybeFnOrOptions !== null) {
+      explicitDisplayName = (maybeFnOrOptions as ComponentOptions).name
+    }
+  }
+
   if (!fn) {
     throw new Error('defineComponent requiere una función de componente válida')
   }
 
-  const explicitDisplayName = typeof nameOrFn === 'string' ? nameOrFn : undefined
   const displayName = resolveComponentDisplayNameInternal(fn, explicitDisplayName)
-
   return { fn, displayName }
 }
 
@@ -91,19 +120,20 @@ export function getNodeDebugMeta(node: ComponentNode): NodeDebugMeta | undefined
 }
 
 export function defineComponent<Props = void>(
-  fn: (props: Props) => ComponentNode
+  fn: (props: Props) => ComponentNode,
+  options?: ComponentOptions,
 ): ComponentDefinition<Props> & ((props: Props) => ComponentNode)
 
 export function defineComponent<Props = void>(
   displayName: string,
-  fn: (props: Props) => ComponentNode
+  fn: (props: Props) => ComponentNode,
 ): ComponentDefinition<Props> & ((props: Props) => ComponentNode)
 
 export function defineComponent<Props = void>(
   nameOrFn: string | ((props: Props) => ComponentNode),
-  maybeFn?: (props: Props) => ComponentNode
+  maybeFnOrOptions?: ((props: Props) => ComponentNode) | ComponentOptions
 ): ComponentDefinition<Props> & ((props: Props) => ComponentNode) {
-  const { fn, displayName } = normalizeComponentDefinition(nameOrFn, maybeFn)
+  const { fn, displayName } = normalizeComponentDefinition(nameOrFn, maybeFnOrOptions)
 
   // Make it callable: Card({ title, body }) returns the ComponentNode directly.
   // This allows using components inline in children arrays without calling ._fn().

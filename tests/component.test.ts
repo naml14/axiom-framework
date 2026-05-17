@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test'
 import { defineComponent } from '../src/render/component.js'
-import type { ElementNode, TextNode, FragmentNode } from '../src/core/types.js'
+import type { ElementNode, TextNode, FragmentNode, ComponentOptions } from '../src/core/types.js'
 
 describe('defineComponent', () => {
   test('wraps a function and returns ComponentDefinition with unique _id', () => {
@@ -92,5 +92,49 @@ describe('defineComponent', () => {
   test('genera fallback displayName cuando la función es anónima', () => {
     const def = defineComponent(() => ({ type: 'text' as const, content: 'anon' }))
     expect((def.displayName?.length ?? 0) > 0).toBe(true)
+  })
+
+  // --- Deterministic anonymous naming (eliminate-next-anonymous-id-global) ---
+
+  test('anonymous component gets Component#{8-hex} format display name', () => {
+    const def = defineComponent(() => ({ type: 'text' as const, content: 'anon' }))
+    expect(def.displayName).toMatch(/^Component#[0-9a-f]{8}$/)
+  })
+
+  test('identical anonymous function bodies produce the same display name', () => {
+    // Two separate arrow functions with identical source → same hash
+    const a = defineComponent(() => ({ type: 'text' as const, content: 'same' }))
+    const b = defineComponent(() => ({ type: 'text' as const, content: 'same' }))
+    expect(a.displayName).toBe(b.displayName)
+  })
+
+  test('different anonymous function bodies produce different display names', () => {
+    const a = defineComponent(() => ({ type: 'text' as const, content: 'aaa' }))
+    const b = defineComponent(() => ({ type: 'text' as const, content: 'bbb' }))
+    expect(a.displayName).not.toBe(b.displayName)
+  })
+
+  test('defineComponent(fn, { name }) uses options.name over hash fallback', () => {
+    const def = defineComponent(
+      () => ({ type: 'text' as const, content: 'opts' }),
+      { name: 'OptionsNamed' } satisfies ComponentOptions,
+    )
+    expect(def.displayName).toBe('OptionsNamed')
+  })
+
+  test('defineComponent(fn, { name }) skips hash when name is provided', () => {
+    const def = defineComponent(
+      () => ({ type: 'text' as const, content: 'opts2' }),
+      { name: 'ExplicitName' },
+    )
+    // Must be exact string, NOT a Component# hash
+    expect(def.displayName).not.toMatch(/^Component#/)
+    expect(def.displayName).toBe('ExplicitName')
+  })
+
+  test('defineComponent(fn, {}) with empty/missing name falls through to fn.name or hash', () => {
+    const def = defineComponent(() => ({ type: 'text' as const, content: 'empty-opts' }), {})
+    // anonymous function → should fall back to Component#{hash}
+    expect(def.displayName).toMatch(/^Component#[0-9a-f]{8}$/)
   })
 })

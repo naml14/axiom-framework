@@ -11,6 +11,7 @@ Recetas prácticas organizadas por nivel de complejidad. Cada receta incluye el 
 3. [Formularios con Validación](#3-formularios-con-validación)
 4. [SSR Básico](#4-ssr-básico)
 5. [Lista Dinámica con For/Show](#5-lista-dinámica-con-forshow)
+6. [Responsive Container Query con `at`](#6-responsive-container-query-con-at)
 
 ---
 
@@ -469,3 +470,83 @@ createApp(Card, document.getElementById('app')!).mount()
 - `createTheme(tokens)` define tu sistema de diseño.
 - Usa `resolveStyleTokens(style, theme)` para convertir referencias `$...` a valores CSS antes de pasar `style` al nodo.
 - No se permiten keys de layout directas como `position` o `display` en los estilos; usa los primitivos `stack`, `row`, `grid` en su lugar.
+
+---
+
+## 6. Responsive Container Query con `at`
+
+**Problema**: Necesitas que un componente cambie su layout (por ejemplo, de columna a fila) en función del ancho del *contenedor padre*, no del viewport del dispositivo.
+
+> **Importante**: `at` implementa un modelo de **container query**, no de media query de viewport. Los breakpoints se evalúan contra el `maxWidth` del contenedor tal como lo reporta el motor de reflow — no contra `window.innerWidth`. Esto hace el layout determinista en SSR y tests.
+
+```typescript
+import { defineComponent, createApp, stack, h } from 'axiom-framework'
+
+// ============================================================
+// Tarjeta que adapta su layout al ancho del contenedor
+// ============================================================
+
+const AdaptiveCard = defineComponent(() =>
+  h('div', {
+    // Sin `at`: layout de columna por defecto (mobile-first)
+    flex: 'column',
+    gap: 12,
+    padding: 16,
+
+    // `at` aplica overrides cuando el contenedor satisface el breakpoint.
+    // Los breakpoints se evalúan en orden ascendente; el más grande que
+    // coincida gana en propiedades conflictivas (cascada aditiva).
+    at: {
+      // sm: 480 px — el contenedor tiene al menos 480 px de ancho
+      sm: { padding: 20 },
+
+      // md: 768 px — cambia a fila y agranda el gap
+      md: { flex: 'row', gap: 24, padding: 24 },
+
+      // lg: 1024 px — más espacio interno; `flex: 'row'` heredado de md
+      lg: { gap: 32, padding: 32 },
+    },
+  },
+    h('img', { src: '/avatar.png', width: 64, height: 64 }),
+    stack({ gap: 8 },
+      h('h2', null, 'Nombre del usuario'),
+      h('p', null, 'Descripción breve del perfil.'),
+    ),
+  )
+)
+
+createApp(AdaptiveCard, document.getElementById('app')!).mount()
+```
+
+**Cómo funciona la cascada aditiva**:
+
+Dado un contenedor de 1200 px de ancho, los breakpoints `sm`, `md`, y `lg` coinciden todos. El motor aplica sus overrides en orden ascendente:
+
+| Breakpoint | Coincide | Propiedad        | Valor aplicado |
+|------------|----------|------------------|----------------|
+| `sm` (480) | ✅       | `padding`        | `20`           |
+| `md` (768) | ✅       | `flex`, `gap`, `padding` | `'row'`, `24`, `24` (sobreescribe sm) |
+| `lg` (1024)| ✅       | `gap`, `padding` | `32`, `32` (sobreescribe md) |
+
+Resultado final: `{ flex: 'row', gap: 32, padding: 32 }`.
+
+**`vw`/`vh` dentro de `at`**:
+
+```typescript
+h('div', {
+  at: {
+    md: { width: '80vw' },  // si viewportWidth no está disponible,
+                             // se resuelve contra maxWidth del contenedor
+  }
+})
+```
+
+Cuando `viewportWidth` no se pasa al renderer (caso SSR o test), `vw` cae back al `maxWidth` del contenedor. Este comportamiento es por diseño — ver `openspec/specs/responsive-breakpoints.md §Requirement 2`.
+
+**Conceptos clave**:
+
+- `at` es un modelo de **container query**: los breakpoints se evalúan contra el `maxWidth` del *contenedor*, no del viewport.
+- Las claves nombradas (`sm`, `md`, `lg`, `xl`) mapean a px fijos; las numéricas también son válidas: `at: { 600: { gap: 8 } }`.
+- La cascada es **aditiva**: todas las propiedades de breakpoints coincidentes se fusionan. En conflictos, el breakpoint mayor gana.
+- `vw`/`vh` sin `viewportWidth`/`viewportHeight` explícito caen back al tamaño del contenedor — seguro para SSR y tests.
+- No se requieren media queries CSS; toda la lógica vive en el motor de layout de Axiom.

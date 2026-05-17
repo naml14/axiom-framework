@@ -63,6 +63,10 @@ export interface ComponentDefinition<Props = void> {
   displayName?: string
 }
 
+export interface ComponentOptions {
+  name?: string
+}
+
 // --- Prepare Types ---
 
 export interface ComponentMetrics {

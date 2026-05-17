@@ -215,4 +215,26 @@ describe('SSR: attrs security policy', () => {
     expect(html).toContain('href="#blocked"')
     expect(html).not.toContain('href="javascript:alert(1)"')
   })
+
+  // --- SSR/Client consistency (eliminate-next-anonymous-id-global) ---
+
+  test('anonymous component display name is deterministic across simulated SSR and client init', async () => {
+    // "SSR path": define the component (simulating server-side init)
+    const ssrComponent = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'SSR' }],
+    }))
+
+    // "Client path": define a component with the exact same source (simulating client hydration init)
+    const clientComponent = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'SSR' }],
+    }))
+
+    // Both should resolve to the same deterministic display name
+    expect(ssrComponent.displayName).toMatch(/^Component#[0-9a-f]{8}$/)
+    expect(ssrComponent.displayName).toBe(clientComponent.displayName)
+  })
 })
