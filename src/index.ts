@@ -139,6 +139,7 @@ export type {
   ComputedSignal,
   // Components
   ComponentDefinition,
+  ComponentOptions,
   ComponentNode,
   ElementNode,
   TextNode,
