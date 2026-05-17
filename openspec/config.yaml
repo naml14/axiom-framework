@@ -1,0 +1,15 @@
+# openspec/config.yaml — Axiom Framework SDD Configuration
+project: axiom-framework
+artifact_store: hybrid
+strict_tdd: true
+
+testing:
+  runner: bun
+  command: bun test
+  typecheck: bun run typecheck
+  coverage_threshold: 0
+
+rules:
+  apply:
+    - match_existing_code_patterns
+    - no_freelancing_from_design
