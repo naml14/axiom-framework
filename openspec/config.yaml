@@ -1,0 +1,61 @@
+schema: spec-driven
+
+context: |
+  Project: axiom-framework v0.9.8
+  Language: TypeScript 6.x (strict mode, ESNext, JSX react-jsx)
+  Runtime: Bun >=1.0.0 / Node >=22.0.0
+  Architecture: Framework library — two-phase rendering, signals, reactivity, zero DOM reads
+  Structure: src/{core,features,reactivity,render,syntax} → dist/
+  Testing: bun test (unit + integration); coverage via scripts/validate-coverage.ts
+  Build: bunx tsc --project tsconfig.build.json
+
+strict_tdd: true
+
+testing:
+  runner:
+    command: "bun test"
+    framework: bun
+  layers:
+    unit:
+      available: true
+      tool: bun test
+    integration:
+      available: true
+      tool: bun test (tests/integration.test.ts)
+    e2e:
+      available: false
+  coverage:
+    available: true
+    command: "bun run test:coverage"
+  quality:
+    typecheck:
+      available: true
+      command: "bun run typecheck"
+    linter:
+      available: false
+    formatter:
+      available: false
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Reference affected src/ modules (core, render, reactivity, etc.)
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex rendering/reactivity flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    - Follow existing code patterns in src/
+    - "tdd: true"
+    - "test_command: bun test"
+  verify:
+    test_command: "bun test"
+    build_command: "bun run build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas into specs/

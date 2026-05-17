@@ -74,6 +74,38 @@ describe('hydration: markers and happy path', () => {
     expect(markerIndices).toEqual(expected)
   })
 
+  test('commitHydrate applies box-sizing, margin, and padding resets to hydrated framework elements', () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'section',
+      children: [
+        { type: 'element' as const, tag: 'div', children: [{ type: 'text' as const, content: 'Reset test' }] },
+      ],
+    }))
+
+    const html = renderToString(App, { textEngine: fakeTextEngine })
+    installWindow(html)
+    const root = getHydrationRoot()
+
+    const prepared = prepare(App, undefined, { textEngine: fakeTextEngine })
+    const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 }, { lineHeight: 20 })
+    const state = { domNodes: [] as Array<HTMLElement | Text | null>, portalRoots: new Map() }
+
+    commitHydrate(layout, prepared, root, state, { strictMismatch: true })
+
+    // After hydration, framework-managed elements must have layout resets applied
+    const section = root.getElementsByTagName('section')[0] as HTMLElement
+    expect(section.style.boxSizing).toBe('border-box')
+    // happy-dom normalizes '0' → '0px'
+    expect(section.style.margin).toMatch(/^0/)
+    expect(section.style.padding).toMatch(/^0/)
+
+    const inner = root.getElementsByTagName('div')[0] as HTMLElement
+    expect(inner.style.boxSizing).toBe('border-box')
+    expect(inner.style.margin).toMatch(/^0/)
+    expect(inner.style.padding).toMatch(/^0/)
+  })
+
   test('commitHydrate reusa nodos y no reporta mismatch en happy path', () => {
     let clicks = 0
     const App = defineComponent(() => ({

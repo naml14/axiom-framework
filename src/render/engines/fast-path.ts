@@ -12,6 +12,7 @@ import {
 
 import { measureFlex } from './flex.js'
 import { measureGrid } from './grid.js'
+import { measureTextChild } from './text-measure.js'
 
 // ============================================================
 // Fast Path — simple top-to-bottom block layout
@@ -117,12 +118,8 @@ function measureText(
   }
 
   if (text !== undefined && text.length > 0) {
-    const charWidth = 8
-    const charsPerLine = Math.max(1, Math.floor(availableWidth / charWidth))
-    // Word-wrap factor: real text wraps at word boundaries before char limit.
-    // Long words cause early line breaks. 1.4x provides sufficient margin for prose.
-    const lineCount = Math.max(1, Math.ceil((text.length / charsPerLine) * 1.4))
-    result.height[idx] = lineCount * lineHeight
-    result.width[idx] = availableWidth
+    const dimensions = measureTextChild(text, { availableWidth, lineHeight }, true)
+    result.height[idx] = dimensions.height
+    result.width[idx] = dimensions.width
   }
 }
