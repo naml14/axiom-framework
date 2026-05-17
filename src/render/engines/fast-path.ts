@@ -1,17 +1,16 @@
-import type { PreparedComponent, LayoutResult, LayoutProps } from '../../core/types.js'
+import type { PreparedComponent, LayoutResult } from '../../core/types.js'
 
 import {
   getNodeIndex,
   getPreparedChildren,
   getMetrics,
   getNodeType,
-  getTextHandle,
-  getTextContent,
   getLayoutProps,
 } from '../prepare.js'
 
 import { measureFlex } from './flex.js'
 import { measureGrid } from './grid.js'
+import { measureTextChild } from './text-measure.js'
 
 // ============================================================
 // Fast Path — simple top-to-bottom block layout
@@ -72,11 +71,10 @@ function layoutChild(
   lineHeight: number
 ): void {
   const nodeType = getNodeType(prepared)
-  const idx = getNodeIndex(prepared)
   const children = getPreparedChildren(prepared)
 
   if (nodeType === 'text') {
-    measureText(prepared, availableWidth, result, lineHeight)
+    measureTextChild(prepared, availableWidth, result, lineHeight)
     return
   }
 
@@ -99,30 +97,3 @@ function layoutChild(
   }
 }
 
-function measureText(
-  prepared: PreparedComponent,
-  availableWidth: number,
-  result: LayoutResult,
-  lineHeight: number
-): void {
-  const idx = getNodeIndex(prepared)
-  const textHandle = getTextHandle(prepared)
-
-  // Resolve text content — prefer text engine handle, fallback to raw textContent
-  let text: string | undefined
-  if (textHandle !== undefined) {
-    text = (textHandle as { text: string }).text
-  } else {
-    text = getTextContent(prepared)
-  }
-
-  if (text !== undefined && text.length > 0) {
-    const charWidth = 8
-    const charsPerLine = Math.max(1, Math.floor(availableWidth / charWidth))
-    // Word-wrap factor: real text wraps at word boundaries before char limit.
-    // Long words cause early line breaks. 1.4x provides sufficient margin for prose.
-    const lineCount = Math.max(1, Math.ceil((text.length / charsPerLine) * 1.4))
-    result.height[idx] = lineCount * lineHeight
-    result.width[idx] = availableWidth
-  }
-}
