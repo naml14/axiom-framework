@@ -138,7 +138,7 @@ function renderNode(
   // Emitir el mismo contrato de layout que el renderer de cliente: position:absolute + transform.
   // Los portal children son CSS-managed (reflow les asigna 0×0), así que se omite el layout.
   if (!isPortalChild) {
-    let style = `position:absolute;left:0px;top:0px;transform:translate(${layout.x[idx]}px,${layout.y[idx]}px);width:${layout.width[idx]}px;height:${layout.height[idx]}px;box-sizing:border-box;margin:0;padding:0;`
+    let style = `position:absolute;left:0px;top:0px;transform:translate(${layout.x[idx]}px,${layout.y[idx]}px);width:${layout.width[idx]}px;height:${layout.height[idx]}px;`
     if (attrs?.style) {
       style += attrs.style.endsWith(';') ? ` ${attrs.style}` : ` ${attrs.style};`
     }

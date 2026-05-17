@@ -21,7 +21,6 @@ import {
 import { measureSimple } from './fast-path.js'
 import { resolveResponsiveLayout } from '../strategy/responsive.js'
 import { measureGrid } from './grid.js'
-import { measureTextChild as measureTextDimensions } from './text-measure.js'
 
 // ============================================================
 // FlexAxis Abstraction
@@ -247,21 +246,6 @@ export function measureFlex(
       }
       crossOffset += line.crossSize + (l < lines.length - 1 ? gap : 0)
       continue
-    } else if (justifyContent === 'space-around' && line.items.length > 0) {
-      const spacePerItem = freeSpace / line.items.length
-      mainOffset += spacePerItem / 2
-      for (let i = 0; i < line.items.length; i++) {
-        const item = line.items[i]!
-        const pos = axis.compose(
-          mainOffset,
-          crossOffset + getCrossOffset(alignItems, item.size, line.crossSize, 0, direction)
-        )
-        result.x[item.childIdx] = pos.x
-        result.y[item.childIdx] = pos.y
-        mainOffset += axis.main(item.size) + spacePerItem
-      }
-      crossOffset += line.crossSize + (l < lines.length - 1 ? gap : 0)
-      continue
     }
 
     for (const item of line.items) {
@@ -305,7 +289,7 @@ function getCrossOffset(
   direction: FlexDirection
 ): number {
   const childCross = direction === 'row' ? childSize.height : childSize.width
-  if (alignItems === 'center' || alignItems === 'baseline') {
+  if (alignItems === 'center') {
     return padding + (crossSize - childCross) / 2
   }
   if (alignItems === 'end') {
@@ -330,9 +314,11 @@ function measureTextChild(
   }
 
   if (text !== undefined && text.length > 0) {
-    const dimensions = measureTextDimensions(text, { availableWidth, lineHeight }, true)
-    result.height[idx] = dimensions.height
-    result.width[idx] = dimensions.width
+    const charWidth = 8
+    const charsPerLine = Math.max(1, Math.floor(availableWidth / charWidth))
+    const lineCount = Math.max(1, Math.ceil((text.length / charsPerLine) * 1.4))
+    result.height[idx] = lineCount * lineHeight
+    result.width[idx] = availableWidth
   }
 }
 

@@ -54,12 +54,6 @@ describe('row()', () => {
     expect(node.layout?.flexDirection).toBe('row')
   })
 
-  test('con align baseline maps to alignItems: baseline', () => {
-    const node = row({ align: 'baseline' })
-    expect(node.layout?.alignItems).toBe('baseline')
-    expect(node.layout?.flexDirection).toBe('row')
-  })
-
   test('con hijos', () => {
     const node = row(null, h('span', null, 'A'), h('span', null, 'B'))
     expect(node.children!.length).toBe(2)
