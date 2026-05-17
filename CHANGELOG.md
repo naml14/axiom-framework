@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.9](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.8...axiom-framework-v0.9.9) (2026-05-17)
+
+
+### Features
+
+* **layout:** support space-around (justify) and baseline (align) ([c3e6b7d](https://github.com/naml14/axiom-framework/commit/c3e6b7d32689219ade2465ec8e657d88daff4525))
+
+
+### Bug Fixes
+
+* **core:** unify text measurement and support layout shortcuts ([b11c019](https://github.com/naml14/axiom-framework/commit/b11c01940b14dad0a7983751031c77c79d799343))
+* **render:** unify text measurement to charWidth=8 ([ff7b940](https://github.com/naml14/axiom-framework/commit/ff7b94071e261d03a266cc050d9c4111bd84f0d0))
+
 ## [0.9.8](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.7...axiom-framework-v0.9.8) (2026-05-15)
 
 
