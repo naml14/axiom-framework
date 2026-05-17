@@ -91,8 +91,8 @@ export interface LayoutConstraints {
   viewportHeight?: number
 }
 
-export type JustifyContent = 'start' | 'center' | 'end' | 'space-between' | 'space-around'
-export type AlignItems = 'start' | 'center' | 'end' | 'stretch' | 'baseline'
+export type JustifyContent = 'start' | 'center' | 'end' | 'space-between'
+export type AlignItems = 'start' | 'center' | 'end' | 'stretch'
 export type FlexDirection = 'row' | 'column'
 export type FlexWrap = 'nowrap' | 'wrap' | 'wrap-reverse'
 export type LayoutDisplay = 'flex' | 'grid'

@@ -20,7 +20,6 @@ import {
 import { measureSimple } from './engines/fast-path.js'
 import { measureFlex } from './engines/flex.js'
 import { measureGrid } from './engines/grid.js'
-import { measureTextChild } from './engines/text-measure.js'
 import { resolveResponsiveLayout } from './strategy/responsive.js'
 import { acquireLayoutResult } from './pool.js'
 
@@ -196,8 +195,10 @@ function layoutText(
   }
 
   if (text !== undefined && text.length > 0) {
-    const dimensions = measureTextChild(text, { availableWidth, lineHeight }, true)
-    result.height[idx] = dimensions.height
-    result.width[idx] = dimensions.width
+    const charWidth = 6
+    const charsPerLine = Math.max(1, Math.floor(availableWidth / charWidth))
+    const lineCount = Math.max(1, Math.ceil(text.length / charsPerLine))
+    result.height[idx] = lineCount * lineHeight
+    result.width[idx] = availableWidth
   }
 }
