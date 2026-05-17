@@ -26,3 +26,12 @@ h(Card, null)
 h(Card)
 // @ts-expect-error string tag props still reject reserved props
 h('div', { ref: 'reserved' })
+
+// Layout shortcut type assertions
+h('div', { justify: 'space-around' })    // ✅ accepted
+h('div', { align: 'baseline' })          // ✅ accepted
+
+// @ts-expect-error 'start-start' is not a valid justify shortcut
+h('div', { justify: 'start-start' })
+// @ts-expect-error 'top' is not a valid align shortcut
+h('div', { align: 'top' })

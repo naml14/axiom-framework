@@ -247,6 +247,21 @@ export function measureFlex(
       }
       crossOffset += line.crossSize + (l < lines.length - 1 ? gap : 0)
       continue
+    } else if (justifyContent === 'space-around' && line.items.length > 0) {
+      const spacePerItem = freeSpace / line.items.length
+      mainOffset += spacePerItem / 2
+      for (let i = 0; i < line.items.length; i++) {
+        const item = line.items[i]!
+        const pos = axis.compose(
+          mainOffset,
+          crossOffset + getCrossOffset(alignItems, item.size, line.crossSize, 0, direction)
+        )
+        result.x[item.childIdx] = pos.x
+        result.y[item.childIdx] = pos.y
+        mainOffset += axis.main(item.size) + spacePerItem
+      }
+      crossOffset += line.crossSize + (l < lines.length - 1 ? gap : 0)
+      continue
     }
 
     for (const item of line.items) {
@@ -290,7 +305,7 @@ function getCrossOffset(
   direction: FlexDirection
 ): number {
   const childCross = direction === 'row' ? childSize.height : childSize.width
-  if (alignItems === 'center') {
+  if (alignItems === 'center' || alignItems === 'baseline') {
     return padding + (crossSize - childCross) / 2
   }
   if (alignItems === 'end') {

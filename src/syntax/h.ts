@@ -311,6 +311,10 @@ export function extractLayout(props: HProps | null | undefined): LayoutProps | u
   return { ...shortcuts, ...explicit }
 }
 
+// ─── Accepted values for layout shortcut validation ───────────────────────────
+const VALID_JUSTIFY_VALUES = new Set(['start', 'center', 'end', 'space-between', 'space-around'])
+const VALID_ALIGN_VALUES   = new Set(['start', 'center', 'end', 'stretch', 'baseline'])
+
 // ─── buildLayoutFromShortcuts ─────────────────────────────────────────────────
 export function buildLayoutFromShortcuts(props: LayoutShortcuts): LayoutProps | undefined {
   const { flex, gap, padding, justify, align, width, height, wrap, at } = props
@@ -322,16 +326,23 @@ export function buildLayoutFromShortcuts(props: LayoutShortcuts): LayoutProps | 
     return undefined
   }
 
+  if (justify !== undefined && !VALID_JUSTIFY_VALUES.has(justify)) {
+    throw new TypeError(
+      `[Axiom] Invalid justify value: "${justify}". Accepted: ${[...VALID_JUSTIFY_VALUES].join(', ')}`
+    )
+  }
+  if (align !== undefined && !VALID_ALIGN_VALUES.has(align)) {
+    throw new TypeError(
+      `[Axiom] Invalid align value: "${align}". Accepted: ${[...VALID_ALIGN_VALUES].join(', ')}`
+    )
+  }
+
   const layout: LayoutProps = {}
   if (flex    !== undefined) layout.flexDirection  = flex
   if (gap     !== undefined) layout.gap            = gap
   if (padding !== undefined) layout.padding        = padding
-  if (justify !== undefined) {
-    // El tipo de justifyContent en LayoutProps no incluye 'space-around'
-    // pero lo aceptamos en shortcuts como conveniencia — se pasa directo
-    layout.justifyContent = justify as LayoutProps['justifyContent']
-  }
-  if (align   !== undefined) layout.alignItems     = align as LayoutProps['alignItems']
+  if (justify !== undefined) layout.justifyContent = justify
+  if (align   !== undefined) layout.alignItems     = align
   if (width   !== undefined) layout.width          = width
   if (height  !== undefined) layout.height         = height
   if (wrap    !== undefined) layout.flexWrap        = wrap

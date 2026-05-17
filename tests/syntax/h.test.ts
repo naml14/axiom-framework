@@ -197,6 +197,22 @@ describe('h() — layout shortcuts', () => {
   test('sin props → layout undefined', () => {
     expect(h('div').layout).toBeUndefined()
   })
+
+  test('justify: space-around maps to justifyContent: space-around', () => {
+    expect(h('div', { justify: 'space-around' }).layout?.justifyContent).toBe('space-around')
+  })
+
+  test('align: baseline maps to alignItems: baseline', () => {
+    expect(h('div', { align: 'baseline' }).layout?.alignItems).toBe('baseline')
+  })
+
+  test('invalid justify shortcut throws TypeError', () => {
+    expect(() => h('div', { justify: 'start-start' as any })).toThrow(TypeError)
+  })
+
+  test('invalid align shortcut throws TypeError', () => {
+    expect(() => h('div', { align: 'top' as any })).toThrow(TypeError)
+  })
 })
 
 // ─── Attrs (C2 — whitelist) ───────────────────────────────────────────────────
