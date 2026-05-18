@@ -94,7 +94,10 @@ export interface LayoutConstraints {
 export type JustifyContent = 'start' | 'center' | 'end' | 'space-between' | 'space-around'
 export type AlignItems = 'start' | 'center' | 'end' | 'stretch' | 'baseline'
 
-// Validation sets — derived from the type unions above so they never drift.
+// Validation sets — must be kept in sync with the type unions above.
+// The `readonly` annotation and `as const` provide compile-time checking
+// that entries are valid literals, but the list must be manually updated
+// when the unions change.
 export const VALID_JUSTIFY_VALUES: readonly JustifyContent[] = ['start', 'center', 'end', 'space-between', 'space-around'] as const
 export const VALID_ALIGN_VALUES: readonly AlignItems[] = ['start', 'center', 'end', 'stretch', 'baseline'] as const
 export type FlexDirection = 'row' | 'column'

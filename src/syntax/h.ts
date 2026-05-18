@@ -328,12 +328,12 @@ export function buildLayoutFromShortcuts(props: LayoutShortcuts): LayoutProps | 
   if (gap     !== undefined) layout.gap            = gap
   if (padding !== undefined) layout.padding        = padding
   if (justify !== undefined) {
-    if ((VALID_JUSTIFY_VALUES as readonly string[]).includes(justify)) {
+    if (VALID_JUSTIFY_VALUES.includes(justify)) {
       layout.justifyContent = justify as LayoutProps['justifyContent']
     }
   }
   if (align !== undefined) {
-    if ((VALID_ALIGN_VALUES as readonly string[]).includes(align)) {
+    if (VALID_ALIGN_VALUES.includes(align)) {
       layout.alignItems = align as LayoutProps['alignItems']
     }
   }

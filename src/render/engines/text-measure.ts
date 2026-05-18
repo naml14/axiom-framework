@@ -30,11 +30,12 @@ export function measureTextChild(
   }
 
   if (text !== undefined && text.length > 0) {
-    const charsPerLine = Math.max(1, Math.floor(availableWidth / CHAR_WIDTH))
+    const clampedWidth = Math.max(0, availableWidth)
+    const charsPerLine = Math.max(1, Math.floor(clampedWidth / CHAR_WIDTH))
     // Word-wrap factor: real text wraps at word boundaries before char limit.
     // Long words cause early line breaks. 1.4x provides sufficient margin for prose.
     const lineCount = Math.max(1, Math.ceil((text.length / charsPerLine) * WORD_WRAP_FACTOR))
     result.height[idx] = lineCount * lineHeight
-    result.width[idx] = availableWidth
+    result.width[idx] = clampedWidth
   }
 }

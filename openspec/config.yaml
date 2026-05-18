@@ -7,6 +7,8 @@ testing:
   runner: bun
   command: bun test
   typecheck: bun run typecheck
+  # OpenSpec verification uses 0 (no gate) — CI gating is enforced separately
+  # via `scripts/validate-coverage.ts` which requires 85%.
   coverage_threshold: 0
 
 rules:

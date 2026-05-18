@@ -219,18 +219,11 @@ export function commitHydrate(
     // Sanitize and apply user attributes, but merge style instead of replacing.
     // Replacing domEl.style would wipe out the layout resets applied above.
     const userAttrs = getAttrs(node)
-    const userStyle = userAttrs?.style
-    const attrsWithoutStyle = userAttrs
-      ? Object.fromEntries(Object.entries(userAttrs).filter(([k]) => k !== 'style'))
-      : undefined
-    sanitizeHydratedElementAttrs(domEl, attrsWithoutStyle)
+    const { style: userStyle, ...attrsWithoutStyle } = userAttrs ?? {}
+    sanitizeHydratedElementAttrs(domEl, Object.keys(attrsWithoutStyle).length > 0 ? attrsWithoutStyle : undefined)
     // Merge user inline style on top of existing layout styles
     if (typeof userStyle === 'string' && userStyle.length > 0) {
-      const existing = domEl.getAttribute('style') ?? ''
-      const merged = existing.endsWith(';') || existing.length === 0
-        ? `${existing}${userStyle}`
-        : `${existing};${userStyle}`
-      domEl.setAttribute('style', merged)
+      mergeInlineStyle(domEl, userStyle)
     }
 
     const listeners = getOn(node)
@@ -455,7 +448,22 @@ function composedTransform(x: number, y: number): string {
  * conflicting animation), `opts.onTransformConflict` is called synchronously before
  * the overwrite. If the existing transform priority is `important`, the hook fires but
  * the value is NOT overwritten — the user-declared `!important` rule wins.
+  */
+
+/**
+ * Merge user inline style onto an existing style attribute.
+ * Appends user style after existing styles, separated by `;`.
+ * Used during hydration to avoid overwriting framework layout styles.
  */
+function mergeInlineStyle(domEl: HTMLElement, userStyle: string): void {
+  if (userStyle.length === 0) return
+  const existing = domEl.getAttribute('style') ?? ''
+  const merged = existing.endsWith(';') || existing.length === 0
+    ? `${existing}${userStyle}`
+    : `${existing};${userStyle}`
+  domEl.setAttribute('style', merged)
+}
+
 function applyFrameworkLayout(
   el: HTMLElement,
   layoutInfo: { x?: number; y?: number; width?: number; height?: number },
