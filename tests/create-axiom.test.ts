@@ -119,10 +119,14 @@ afterEach(async () => {
 });
 
 describe("create-axiom starter", () => {
-	test("scaffoldProject writes a starter stylesheet and links it from index.html", async () => {
+	test("scaffoldProject writes a minimal starter app and links its stylesheet", async () => {
 		const projectDir = await scaffoldStarterProject("scaffold");
 
 		const indexHtml = await readFile(join(projectDir, "index.html"), "utf8");
+		const starterApp = await readFile(
+			join(projectDir, "src", "app.ts"),
+			"utf8",
+		);
 		const generatedPackage = JSON.parse(
 			await readFile(join(projectDir, "package.json"), "utf8"),
 		) as { dependencies?: Record<string, string> };
@@ -134,15 +138,89 @@ describe("create-axiom starter", () => {
 			"utf8",
 		);
 
+		// HTML wiring
 		expect(indexHtml).toMatch(
 			/<link\s+rel="stylesheet"\s+href="\/src\/styles\.css"\s*\/?>/,
 		);
 		expect(indexHtml).toContain('src="/src/app.ts"');
+
+		// Title is personalized with the project name
+		expect(indexHtml).toContain("<title>my-app</title>");
+		expect(indexHtml).not.toContain("{{PROJECT_NAME}}");
+
+		// No raw className — always class
+		expect(starterApp).not.toContain("className");
+
+		// New starter markers
+		expect(starterApp).toContain("Edit `src/app.ts` to start building");
+		expect(starterApp).toContain("defineComponent(() =>");
+		expect(starterApp).toContain("count.value");
+		expect(starterApp).toContain("doubled");
+		expect(starterApp).toContain("items");
+		expect(starterApp).toContain("Next steps");
+
+		// No landing-page sections
+		expect(starterApp).not.toContain("The DOM is just");
+		expect(starterApp).not.toContain("Architecture principles");
+		expect(starterApp).not.toContain("dual-licensed");
+		expect(starterApp).not.toContain("Up and running in seconds");
+		expect(starterApp).not.toContain("A framework that respects the platform");
+
 		expect(generatedPackage.dependencies?.["axiom-framework"]).toBe(
 			rootPackage.version,
 		);
-		expect(starterStyles).toContain("h1,");
+
+		// CSS: base styles must be present
 		expect(starterStyles).toContain("button {");
+		expect(starterStyles).toContain("radial-gradient");
+
+		// CSS: new starter classes must exist
+		expect(starterStyles).toContain(".header {");
+		expect(starterStyles).toContain(".section {");
+		expect(starterStyles).toContain(".hint {");
+
+		// CSS: old landing-only classes must be gone
+		expect(starterStyles).not.toContain(".hero {");
+		expect(starterStyles).not.toContain(".principles-grid {");
+		expect(starterStyles).not.toContain(".demo-snippet {");
+		expect(starterStyles).not.toContain(".pipeline-section {");
+		expect(starterStyles).not.toContain(".api-section {");
+		expect(starterStyles).not.toContain(".cta-section {");
+	});
+
+	test("scaffoldProject personalizes the HTML title with the given project name", async () => {
+		const workspace = await freshDir("title");
+		const projectDir = join(workspace, "cool-project");
+		await scaffoldProject(projectDir, "cool-project");
+
+		const indexHtml = await readFile(join(projectDir, "index.html"), "utf8");
+
+		expect(indexHtml).toContain("<title>cool-project</title>");
+		expect(indexHtml).not.toContain("{{PROJECT_NAME}}");
+		expect(indexHtml).not.toContain("my-app");
+	});
+
+	test("scaffoldProject personalizes the visible heading in app.ts with the project name", async () => {
+		const workspace = await freshDir("heading");
+		const projectDir = join(workspace, "cool-project");
+		await scaffoldProject(projectDir, "cool-project");
+
+		const starterApp = await readFile(join(projectDir, "src", "app.ts"), "utf8");
+
+		// Visible h1 heading must use the project name, not the hardcoded default
+		expect(starterApp).toContain("'cool-project'");
+		expect(starterApp).not.toContain("'my-app'");
+		expect(starterApp).not.toContain("{{PROJECT_NAME}}");
+	});
+
+	test("scaffoldProject keeps visible heading when project name is the default my-app", async () => {
+		const projectDir = await scaffoldStarterProject("heading-default");
+
+		const starterApp = await readFile(join(projectDir, "src", "app.ts"), "utf8");
+
+		// When the project is named my-app, the heading should read my-app
+		expect(starterApp).toContain("'my-app'");
+		expect(starterApp).not.toContain("{{PROJECT_NAME}}");
 	});
 
 	test("generated static build inlines the starter stylesheet into dist HTML", async () => {
