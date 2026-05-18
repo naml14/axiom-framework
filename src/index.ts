@@ -152,4 +152,7 @@ export type {
   LayoutProps,
   ProfileEvent,
   ProfileSubscriber,
+  // Transform animation hooks
+  TransformConflictHook,
+  CommitOptions,
 } from './core/types.js'

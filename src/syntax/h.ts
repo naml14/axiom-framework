@@ -15,6 +15,7 @@ import type {
   FragmentNode,
   LayoutProps,
 } from '../core/types.js'
+import { VALID_JUSTIFY_VALUES, VALID_ALIGN_VALUES } from '../core/types.js'
 import { BOOLEAN_HTML_ATTR_KEYS, HTML_ATTR_DOM_NAMES } from './types.js'
 import type { HProps, HChild, ResponsiveMap, LayoutShortcuts } from './types.js'
 
@@ -327,11 +328,15 @@ export function buildLayoutFromShortcuts(props: LayoutShortcuts): LayoutProps | 
   if (gap     !== undefined) layout.gap            = gap
   if (padding !== undefined) layout.padding        = padding
   if (justify !== undefined) {
-    // El tipo de justifyContent en LayoutProps no incluye 'space-around'
-    // pero lo aceptamos en shortcuts como conveniencia — se pasa directo
-    layout.justifyContent = justify as LayoutProps['justifyContent']
+    if (VALID_JUSTIFY_VALUES.includes(justify)) {
+      layout.justifyContent = justify as LayoutProps['justifyContent']
+    }
   }
-  if (align   !== undefined) layout.alignItems     = align as LayoutProps['alignItems']
+  if (align !== undefined) {
+    if (VALID_ALIGN_VALUES.includes(align)) {
+      layout.alignItems = align as LayoutProps['alignItems']
+    }
+  }
   if (width   !== undefined) layout.width          = width
   if (height  !== undefined) layout.height         = height
   if (wrap    !== undefined) layout.flexWrap        = wrap

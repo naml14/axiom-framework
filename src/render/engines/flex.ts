@@ -13,14 +13,13 @@ import {
   getPreparedChildren,
   getMetrics,
   getNodeType,
-  getTextHandle,
-  getTextContent,
   getLayoutProps,
 } from '../prepare.js'
 
 import { measureSimple } from './fast-path.js'
 import { resolveResponsiveLayout } from '../strategy/responsive.js'
 import { measureGrid } from './grid.js'
+import { measureTextChild } from './text-measure.js'
 
 // ============================================================
 // FlexAxis Abstraction
@@ -246,6 +245,20 @@ export function measureFlex(
       }
       crossOffset += line.crossSize + (l < lines.length - 1 ? gap : 0)
       continue
+    } else if (justifyContent === 'space-around') {
+      const spacePerItem = line.items.length > 0 ? freeSpace / line.items.length : 0
+      mainOffset += spacePerItem / 2
+      for (const item of line.items) {
+        const pos = axis.compose(
+          mainOffset,
+          crossOffset + getCrossOffset(alignItems, item.size, line.crossSize, 0, direction)
+        )
+        result.x[item.childIdx] = pos.x
+        result.y[item.childIdx] = pos.y
+        mainOffset += axis.main(item.size) + gap + spacePerItem
+      }
+      crossOffset += line.crossSize + (l < lines.length - 1 ? gap : 0)
+      continue
     }
 
     for (const item of line.items) {
@@ -289,37 +302,13 @@ function getCrossOffset(
   direction: FlexDirection
 ): number {
   const childCross = direction === 'row' ? childSize.height : childSize.width
-  if (alignItems === 'center') {
+  if (alignItems === 'center' || alignItems === 'baseline') {
     return padding + (crossSize - childCross) / 2
   }
   if (alignItems === 'end') {
     return padding + crossSize - childCross
   }
   return padding
-}
-
-function measureTextChild(
-  prepared: PreparedComponent,
-  availableWidth: number,
-  result: LayoutResult,
-  lineHeight: number
-): void {
-  const idx = getNodeIndex(prepared)
-  const textHandle = getTextHandle(prepared)
-  let text: string | undefined
-  if (textHandle !== undefined) {
-    text = (textHandle as { text: string }).text
-  } else {
-    text = getTextContent(prepared)
-  }
-
-  if (text !== undefined && text.length > 0) {
-    const charWidth = 8
-    const charsPerLine = Math.max(1, Math.floor(availableWidth / charWidth))
-    const lineCount = Math.max(1, Math.ceil((text.length / charsPerLine) * 1.4))
-    result.height[idx] = lineCount * lineHeight
-    result.width[idx] = availableWidth
-  }
 }
 
 function layoutChildFast(

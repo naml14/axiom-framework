@@ -5,6 +5,7 @@ import { defineComponent } from '../src/render/component.js'
 import { prepare } from '../src/render/prepare.js'
 import { reflow } from '../src/render/reflow.js'
 import { renderToString } from '../src/ssr.js'
+import { createApp } from '../src/app.js'
 
 // Setup happy-dom
 beforeAll(() => {
@@ -80,7 +81,7 @@ describe('applyOps', () => {
 
     applyOps(ops, root, domNodes)
 
-    expect(child.style.transform).toBe('translate(100px,50px)')
+    expect(child.style.transform).toBe('translate(100px,50px) var(--animation-transform)')
     expect(child.style.width).toBe('200px')
     expect(child.style.height).toBe('100px')
   })
@@ -139,7 +140,7 @@ describe('applyOps', () => {
     applyOps(ops, root, domNodes)
 
     expect(child.style.position).toBe('absolute')
-    expect(child.style.transform).toBe('translate(10px,20px)')
+    expect(child.style.transform).toBe('translate(10px,20px) var(--animation-transform)')
     expect(child.style.width).toBe('30px')
     expect(child.style.height).toBe('40px')
   })
@@ -304,7 +305,7 @@ describe('commitFull', () => {
 
     const container = root.children[0] as HTMLElement
     expect(container.style.position).toBe('absolute')
-    expect(container.style.transform).toBe('translate(0px,0px)')
+    expect(container.style.transform).toBe('translate(0px,0px) var(--animation-transform)')
     expect(container.style.width).toBe('500px')
   })
 
@@ -425,5 +426,264 @@ describe('commitHydrate: security hardening', () => {
 
     expect(div.getAttribute('title')).toBe('safe title')
     expect(div.getAttribute('data-legacy')).toBe('1')
+  })
+})
+
+// ============================================================
+// Transform animation tests (Task 1.2 RED + Task 3.2 GREEN)
+// ============================================================
+
+describe('transform animations', () => {
+  test('applyOps emits composed transform with var(--animation-transform)', () => {
+    const root = document.createElement('div')
+    const child = document.createElement('div')
+    root.appendChild(child)
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+
+    const ops: DOMOperation[] = [
+      { type: 'update', index: 0, x: 50, y: 75, width: 100, height: 200 },
+    ]
+    applyOps(ops, root, domNodes)
+
+    expect(child.style.transform).toBe('translate(50px,75px) var(--animation-transform)')
+  })
+
+  test('onTransformConflict fires synchronously when external transform is detected', () => {
+    const root = document.createElement('div')
+    const child = document.createElement('div')
+    // Simulate an animation library writing a conflicting transform
+    child.style.transform = 'scale(0.95)'
+    root.appendChild(child)
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+
+    const conflictCalls: Array<{ el: HTMLElement; transform: string }> = []
+    const ops: DOMOperation[] = [
+      { type: 'update', index: 0, x: 10, y: 20, width: 100, height: 50 },
+    ]
+
+    applyOps(ops, root, domNodes, {
+      onTransformConflict: (el, animationTransform) => {
+        conflictCalls.push({ el, transform: animationTransform })
+      },
+    })
+
+    // Hook must have been called exactly once, synchronously, before this line
+    expect(conflictCalls.length).toBe(1)
+    expect(conflictCalls[0]!.el).toBe(child)
+    expect(conflictCalls[0]!.transform).toBe('scale(0.95)')
+    // Axiom still writes its composed transform
+    expect(child.style.transform).toBe('translate(10px,20px) var(--animation-transform)')
+  })
+
+  test('onTransformConflict does NOT fire for elements Axiom wrote previously (no false positive)', () => {
+    const root = document.createElement('div')
+    const child = document.createElement('div')
+    root.appendChild(child)
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+
+    const conflictCalls: number[] = []
+
+    // First write — establishes Axiom ownership
+    applyOps([{ type: 'update', index: 0, x: 10, y: 20, width: 100, height: 50 }], root, domNodes, {
+      onTransformConflict: () => conflictCalls.push(1),
+    })
+    expect(conflictCalls.length).toBe(0)
+
+    // Second write — same Axiom ownership, no external conflict
+    applyOps([{ type: 'update', index: 0, x: 15, y: 25, width: 100, height: 50 }], root, domNodes, {
+      onTransformConflict: () => conflictCalls.push(1),
+    })
+    expect(conflictCalls.length).toBe(0)
+  })
+
+  test('!important transform: hook fires but Axiom does not overwrite', () => {
+    const root = document.createElement('div')
+    const child = document.createElement('div')
+    // Simulate a user keyframe applying transform with !important
+    child.style.setProperty('transform', 'rotate(45deg)', 'important')
+    root.appendChild(child)
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+
+    const conflictCalls: string[] = []
+    applyOps([{ type: 'update', index: 0, x: 5, y: 10, width: 100, height: 50 }], root, domNodes, {
+      onTransformConflict: (_el, t) => conflictCalls.push(t),
+    })
+
+    // Hook must fire
+    expect(conflictCalls.length).toBe(1)
+    expect(conflictCalls[0]).toBe('rotate(45deg)')
+    // The !important value must survive — Axiom must not overwrite it
+    expect(child.style.transform).toBe('rotate(45deg)')
+    expect(child.style.getPropertyPriority('transform')).toBe('important')
+  })
+
+  test('non-animated elements preserve x/y/width/height layout math', () => {
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'static' }],
+    }))
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const layout = reflow(prepared, { maxWidth: 400, maxHeight: 800 }, { lineHeight: 20 })
+    const root = document.createElement('div')
+    const state = { domNodes: [] as Array<HTMLElement | Text | null>, portalRoots: new Map() }
+
+    commitFull(layout, prepared, root, state)
+
+    const el = root.children[0] as HTMLElement
+    expect(el.style.position).toBe('absolute')
+    expect(el.style.width).toBe('400px')
+    // Transform must still be the composed form even without animation
+    expect(el.style.transform).toContain('translate(')
+    expect(el.style.transform).toContain('var(--animation-transform)')
+  })
+
+  test('createApp with onTransformConflict — hook receives element and prior transform (applyOps direct)', () => {
+    const root = document.createElement('div')
+
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [],
+    }))
+
+    const app = createApp(App, root, {
+      textEngine: fakeTextEngine,
+    })
+    app.mount()
+
+    // After mount, find the Axiom-managed child via DOM traversal
+    const child = root.firstElementChild as HTMLElement
+    expect(child).not.toBeNull()
+
+    // Simulate an external write (e.g. animation library) on the child
+    child.style.transform = 'scale(0.5)'
+
+    // Call applyOps directly with this element — mimics an incremental update
+    const conflictArgs: Array<{ el: HTMLElement; transform: string }> = []
+    const domNodes = [child] as (HTMLElement | Text | null)[]
+    const ops: DOMOperation[] = [
+      { type: 'update', index: 0, x: 0, y: 0, width: 100, height: 50 },
+    ]
+    applyOps(ops, root, domNodes, {
+      onTransformConflict: (el, t) => conflictArgs.push({ el, transform: t }),
+    })
+
+    expect(conflictArgs.length).toBe(1)
+    expect(conflictArgs[0]!.el).toBe(child)
+    expect(conflictArgs[0]!.transform).toBe('scale(0.5)')
+
+    app.unmount()
+  })
+
+  // ── fill-mode: both ──────────────────────────────────────────────────────
+  // Spec scenario: Element with fill-mode both
+  // GIVEN an element positioned by Axiom layout
+  // WHEN a CSS animation with animation-fill-mode: both animates --animation-transform
+  // THEN the element MUST render using both Axiom's layout translate and the animation transform
+  test('fill-mode: both — composed transform includes Axiom translate AND --animation-transform CSS var', () => {
+    const root = document.createElement('div')
+    const child = document.createElement('div')
+    // Simulate a CSS animation that sets --animation-transform (fill-mode: both applies
+    // the value before and after the animation, at computed style level)
+    child.style.setProperty('--animation-transform', 'rotate(45deg)')
+    root.appendChild(child)
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+
+    applyOps([{ type: 'update', index: 0, x: 120, y: 240, width: 300, height: 150 }], root, domNodes)
+
+    // The inline transform must embed the Axiom translate so fill-mode: both can
+    // compose both values at the CSS computed-style level in a real browser.
+    expect(child.style.transform).toBe('translate(120px,240px) var(--animation-transform)')
+    // Axiom's positional coordinates are present
+    expect(child.style.transform).toContain('translate(120px,240px)')
+    // The CSS variable reference is the composition point for the animation value
+    expect(child.style.transform).toContain('var(--animation-transform)')
+  })
+
+  // ── fill-mode: forwards ──────────────────────────────────────────────────
+  // Spec scenario: Element with fill-mode forwards
+  // GIVEN an element positioned by Axiom layout
+  // WHEN a CSS animation with animation-fill-mode: forwards animates --animation-transform
+  // THEN the Axiom layout translate MUST be preserved after the animation completes
+  test('fill-mode: forwards — Axiom layout translate is preserved after animation completes', () => {
+    const root = document.createElement('div')
+    const child = document.createElement('div')
+    root.appendChild(child)
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+
+    // First Axiom layout write — establishes ownership
+    applyOps([{ type: 'update', index: 0, x: 50, y: 100, width: 200, height: 80 }], root, domNodes)
+    expect(child.style.transform).toBe('translate(50px,100px) var(--animation-transform)')
+
+    // Simulate animation end with fill-mode: forwards:
+    // the final keyframe holds --animation-transform at its last value.
+    child.style.setProperty('--animation-transform', 'translateX(20px)')
+
+    // Axiom processes a layout update (e.g. parent resized, new coordinates)
+    applyOps([{ type: 'update', index: 0, x: 60, y: 110, width: 200, height: 80 }], root, domNodes)
+
+    // Axiom translate MUST reflect the new layout coordinates — not the stale ones
+    expect(child.style.transform).toContain('translate(60px,110px)')
+    // The CSS variable reference MUST still be present so fill-mode: forwards value persists
+    expect(child.style.transform).toContain('var(--animation-transform)')
+    // Full composed string check
+    expect(child.style.transform).toBe('translate(60px,110px) var(--animation-transform)')
+  })
+
+  // ── createApp({ onTransformConflict }) end-to-end wiring ─────────────────
+  // Proves the option travels: createApp(opts) → commitOpts → performUpdate → applyOps
+  // using the real scheduler capture pattern to invoke performUpdate synchronously.
+  test('createApp({ onTransformConflict }) wires hook through performUpdate → applyOps', () => {
+    const root = document.createElement('div')
+    const conflictCalls: Array<{ el: HTMLElement; transform: string }> = []
+
+    // Non-reactive text captured by closure; changing it makes prepare() return
+    // a new VNode with different text length → reflow produces different height →
+    // fullDiff detects layout change → update op carries x/y → applyFrameworkLayout runs.
+    let labelText = 'A'
+
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: labelText }],
+    }))
+
+    // Synchronous capturing scheduler: holds performUpdate without running it yet.
+    let scheduledRender: (() => void) | null = null
+
+    const app = createApp(App, root, {
+      textEngine: fakeTextEngine,
+      scheduler: (fn) => { scheduledRender = fn },
+      onTransformConflict: (el, t) => conflictCalls.push({ el, transform: t }),
+    })
+
+    app.mount()
+
+    // mount() runs commitFull (first render) then wires the effect which captures
+    // performUpdate via the scheduler above.
+    const child = root.firstElementChild as HTMLElement
+    expect(child).not.toBeNull()
+    expect(scheduledRender).not.toBeNull()
+
+    // Inject a conflicting transform — simulates an animation library writing
+    // to transform instead of --animation-transform.
+    child.style.transform = 'scale(0.9)'
+
+    // Force a layout change by growing the text beyond one line so that reflow
+    // produces a different height for the element.
+    // fakeTextEngine: charsPerLine = floor(800/6) = 133; 200 chars → 2 lines → height 40
+    // Previous height was 20 (1 line). fullDiff detects height change → layout update op.
+    labelText = 'A'.repeat(200)
+
+    // Run the captured performUpdate — the real app commit path executes with commitOpts.
+    scheduledRender!()
+
+    // The hook MUST have fired through the real createApp → performUpdate → applyOps path.
+    expect(conflictCalls.length).toBe(1)
+    expect(conflictCalls[0]!.el).toBe(child)
+    expect(conflictCalls[0]!.transform).toBe('scale(0.9)')
+
+    app.unmount()
   })
 })

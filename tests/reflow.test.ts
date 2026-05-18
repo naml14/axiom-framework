@@ -253,6 +253,62 @@ describe('reflow — flex layout', () => {
     // Child width = parent - 2*padding
     expect(result.width[1]).toBe(460) // 500 - 40
   })
+
+  test('justifyContent: space-around distributes equal space around each item', () => {
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'column', height: 300, justifyContent: 'space-around' },
+      children: [
+        { type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 100, height: 50 } }
+      ]
+    }))
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+
+    // freeSpace = 300 - (3*50) = 150, spacePerItem = 50, half = 25
+    // item[0]: y = 25, item[1]: y = 25 + 50 + 50 = 125, item[2]: y = 125 + 50 + 50 = 225
+    expect(result.y[1]).toBe(25)
+    expect(result.y[2]).toBe(125)
+    expect(result.y[3]).toBe(225)
+  })
+
+  test('justifyContent: space-around with gap includes gap in item spacing', () => {
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'row', width: 400, height: 100, justifyContent: 'space-around', gap: 10 },
+      children: [
+        { type: 'element' as const, tag: 'div', layout: { width: 50, height: 50 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 50, height: 50 } }
+      ]
+    }))
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+
+    // Items are placed with space-around — first item should not be at x=0
+    expect(result.x[1]).toBeGreaterThan(0)
+    // Second item should be further right than first + width
+    expect(result.x[2]).toBeGreaterThan((result.x[1] ?? 0) + 50)
+  })
+
+  test('alignItems: baseline aligns children like center', () => {
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'row', alignItems: 'baseline', height: 100 },
+      children: [
+        { type: 'element' as const, tag: 'div', layout: { width: 50, height: 40 } }
+      ]
+    }))
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const result = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+
+    // baseline falls back to center: (100 - 40) / 2 = 30
+    expect(result.y[1]).toBe(30)
+  })
 })
 
 describe('reflow — edge cases', () => {

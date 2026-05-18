@@ -15,6 +15,7 @@ How to write unit tests for components using the public `render()` and `fireEven
 7. [Testing with Async Lifecycle](#7-testing-with-async-lifecycle)
 8. [Common Patterns](#8-common-patterns)
 9. [Debugging Tips](#9-debugging-tips)
+10. [SSR / Hydration Testing](#10-ssr--hydration-testing)
 
 ---
 
@@ -495,3 +496,129 @@ What this command does:
 - Fails clearly if tests fail, if the coverage summary cannot be parsed, or if line coverage drops below `85%`.
 
 CI uses the same command, so local output should match the workflow behavior.
+
+---
+
+## 10. SSR / Hydration Testing
+
+Axiom's SSR-to-hydration pipeline can be tested using `happy-dom` without a real browser.
+This section documents the patterns, the key limits of `happy-dom`, and why assertions must
+use literal string values instead of computed CSS.
+
+### Key constraints of happy-dom
+
+| Constraint | Implication |
+|------------|-------------|
+| Does **not** execute CSS keyframes | `--animation-transform` CSS variable is never resolved to a concrete value |
+| Does **not** compute `var()` references | `style.transform` returns the literal string, e.g. `translate(0px,0px) var(--animation-transform)` |
+| `document.write(html)` parses and loads the HTML | Use this to install SSR markup before hydrating |
+
+Because `var()` is never resolved, **all transform assertions must match the exact literal string**:
+
+```ts
+// ✅ correct — asserts the literal composed transform
+expect(el.style.transform).toMatch(/^translate\(\d+px,\d+px\) var\(--animation-transform\)$/)
+
+// ❌ wrong — happy-dom never resolves var() so this will never match
+expect(el.style.transform).toContain('rotate(45deg)')
+```
+
+### SSR → hydrate flow
+
+```ts
+import { Window } from 'happy-dom'
+import { defineComponent, renderToString, prepare, reflow, commitHydrate } from 'axiom-framework'
+
+const fakeTextEngine = { /* ... */ }
+
+function installWindow(html?: string) {
+  const win = new Window()
+  globalThis.window = win as unknown as typeof globalThis.window
+  globalThis.document = win.document as unknown as Document
+  globalThis.HTMLElement = win.HTMLElement as unknown as typeof HTMLElement
+  globalThis.Text = win.Text as unknown as typeof Text
+  if (html) win.document.write(html)
+  return win
+}
+
+test('hydrated element preserves composed transform', () => {
+  const App = defineComponent(() => ({
+    type: 'element' as const,
+    tag: 'div',
+    children: [{ type: 'text' as const, content: 'Hi' }],
+  }))
+
+  // 1. Render to HTML on the "server"
+  const html = renderToString(App, { textEngine: fakeTextEngine })
+
+  // 2. Load into happy-dom (simulates browser receiving SSR markup)
+  installWindow(html)
+  const root = document.getElementById('app') as HTMLElement
+
+  // 3. Hydrate
+  const prepared = prepare(App, undefined, { textEngine: fakeTextEngine })
+  const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 }, { lineHeight: 20 })
+  const state = { domNodes: [] as Array<HTMLElement | Text | null>, portalRoots: new Map() }
+  commitHydrate(layout, prepared, root, state, { strictMismatch: true })
+
+  // 4. Assert the literal composed transform — both layout slot and animation slot present
+  const el = root.firstElementChild as HTMLElement
+  expect(el.style.transform).toMatch(/^translate\(\d+px,\d+px\) var\(--animation-transform\)$/)
+})
+```
+
+### Testing `onTransformConflict` after hydration
+
+Use a synchronous capturing scheduler to control when `performUpdate` runs. This lets you
+inject a conflicting transform after hydration but before the next update cycle.
+
+> **Note**: The `onTransformConflict` hook also fires during `commitHydrate` itself for SSR
+> elements whose `transform` was written by the server (the client-side Axiom instance has
+> not yet "owned" that value). If you want to assert only **post-hydration** conflicts,
+> reset your call collector after `app.mount()`.
+
+```ts
+import { createApp } from 'axiom-framework'
+
+test('onTransformConflict fires on post-hydration update', () => {
+  let labelText = 'Hello'
+  const App = defineComponent(() => ({
+    type: 'element' as const,
+    tag: 'div',
+    children: [{ type: 'text' as const, content: labelText }],
+  }))
+
+  const html = renderToString(App, { textEngine: fakeTextEngine })
+  installWindow(html)
+  const root = document.getElementById('app') as HTMLElement
+
+  const conflictCalls: Array<{ el: HTMLElement; transform: string }> = []
+  let scheduledRender: (() => void) | null = null
+
+  const app = createApp(App, root, {
+    textEngine: fakeTextEngine,
+    hydrate: true,
+    scheduler: (fn) => { scheduledRender = fn },
+    onTransformConflict: (el, t) => conflictCalls.push({ el: el as HTMLElement, transform: t }),
+  })
+
+  app.mount()
+
+  // Reset baseline — hook fires once during commitHydrate for the SSR-written transform.
+  // Clear it to test only the post-hydration update scenario.
+  conflictCalls.length = 0
+
+  const child = root.firstElementChild as HTMLElement
+  // Simulate an animation library writing to `transform` instead of `--animation-transform`
+  child.style.transform = 'scale(0.9)'
+
+  // Force a layout change so fullDiff emits a layout update op
+  labelText = 'Hello'.repeat(50)
+  scheduledRender!()
+
+  expect(conflictCalls.length).toBe(1)
+  expect(conflictCalls[0]!.transform).toBe('scale(0.9)')
+
+  app.unmount()
+})
+```

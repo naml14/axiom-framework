@@ -1,7 +1,7 @@
 import { expectTypeOf } from 'expect-type'
 import { h, t, fragment } from '../../src/syntax/h.js'
 import { defineComponent } from '../../src/render/component.js'
-import type { ComponentNode, ElementNode, FragmentNode, TextNode } from '../../src/core/types.js'
+import type { ComponentNode, ElementNode, FragmentNode, TextNode, JustifyContent, AlignItems } from '../../src/core/types.js'
 
 const text = t('hello')
 expectTypeOf(text).toEqualTypeOf<TextNode>()
@@ -26,3 +26,14 @@ h(Card, null)
 h(Card)
 // @ts-expect-error string tag props still reject reserved props
 h('div', { ref: 'reserved' })
+
+// JustifyContent includes space-around
+expectTypeOf<'space-around'>().toExtend<JustifyContent>()
+// AlignItems includes baseline
+expectTypeOf<'baseline'>().toExtend<AlignItems>()
+
+// h() accepts space-around and baseline as shortcuts
+const withSpaceAround = h('div', { justify: 'space-around' })
+expectTypeOf(withSpaceAround).toEqualTypeOf<ElementNode>()
+const withBaseline = h('div', { align: 'baseline' })
+expectTypeOf(withBaseline).toEqualTypeOf<ElementNode>()

@@ -91,8 +91,15 @@ export interface LayoutConstraints {
   viewportHeight?: number
 }
 
-export type JustifyContent = 'start' | 'center' | 'end' | 'space-between'
-export type AlignItems = 'start' | 'center' | 'end' | 'stretch'
+export type JustifyContent = 'start' | 'center' | 'end' | 'space-between' | 'space-around'
+export type AlignItems = 'start' | 'center' | 'end' | 'stretch' | 'baseline'
+
+// Validation sets — must be kept in sync with the type unions above.
+// The `readonly` annotation and `as const` provide compile-time checking
+// that entries are valid literals, but the list must be manually updated
+// when the unions change.
+export const VALID_JUSTIFY_VALUES: readonly JustifyContent[] = ['start', 'center', 'end', 'space-between', 'space-around'] as const
+export const VALID_ALIGN_VALUES: readonly AlignItems[] = ['start', 'center', 'end', 'stretch', 'baseline'] as const
 export type FlexDirection = 'row' | 'column'
 export type FlexWrap = 'nowrap' | 'wrap' | 'wrap-reverse'
 export type LayoutDisplay = 'flex' | 'grid'
@@ -148,6 +155,28 @@ export interface LayoutResult {
   width: Float32Array
   height: Float32Array
   nodeCount: number
+}
+
+// --- Transform Animation Types ---
+
+/**
+ * Callback fired synchronously when Axiom detects a conflicting inline
+ * `transform` that was not written by the framework layout engine.
+ *
+ * @param element - The element whose transform is in conflict.
+ * @param animationTransform - The conflicting transform value currently on the element.
+ */
+export type TransformConflictHook = (
+  element: HTMLElement,
+  animationTransform: string,
+) => void
+
+/**
+ * Options forwarded from createApp into the commit phase.
+ * Extend this interface to add future per-commit controls.
+ */
+export interface CommitOptions {
+  onTransformConflict?: TransformConflictHook
 }
 
 // --- Hydration Types (SSR v0.2.7) ---
