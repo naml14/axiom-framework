@@ -37,35 +37,35 @@ function initHComparison(): void {
   const output      = document.getElementById('syntax-h-output')
   if (!literalRoot || !v2Root || !output) return
 
-  // ---- API Literal (el "antes") ----
+  // ---- Before: plain object literal API ----
   const LiteralCard = defineComponent(() => ({
     type: 'element' as const,
     tag: 'div',
     classes: ['syntax-demo-item'],
-    layout: { flexDirection: 'column' as const, gap: 6, padding: 8 },
+    layout: { flexDirection: 'column' as const, gap: 4, padding: 8 },
     children: [
       {
         type: 'element' as const,
         tag: 'div',
         classes: [],
         layout: {},
-        children: [{ type: 'text' as const, content: 'API Literal' }],
+        children: [{ type: 'text' as const, content: 'Literal API' }],
       },
       {
         type: 'element' as const,
         tag: 'div',
         classes: [],
         layout: {},
-        children: [{ type: 'text' as const, content: 'Más verboso, explícito.' }],
+        children: [{ type: 'text' as const, content: 'Same tree. More boilerplate.' }],
       },
     ],
   }))
 
-  // ---- h() Syntax v2 ----
+  // ---- After: h() shorthand (Syntax v2) ----
   const V2Card = defineComponent(() =>
-    h('div', { class: 'syntax-demo-item', flex: 'column', gap: 6, padding: 8 },
-      h('div', {}, t('Syntax v2 — h()')),
-      h('div', {}, t('Menos ruido. Mismo árbol.')),
+    h('div', { class: 'syntax-demo-item', flex: 'column', gap: 4, padding: 8 },
+      h('div', {}, t('h() shorthand')),
+      h('div', {}, t('Same tree. Less noise.')),
     )
   )
 
@@ -74,7 +74,7 @@ function initHComparison(): void {
   literalApp.mount()
   v2App.mount()
 
-  output.textContent = '✅ Ambos árboles montados. h() produce el mismo ComponentNode que la API literal.'
+  output.textContent = '✅ Both trees mounted — h() compiles to the same ComponentNode as the literal API.'
 }
 
 // ============================================================

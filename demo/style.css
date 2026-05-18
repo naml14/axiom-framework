@@ -34,6 +34,7 @@
   --gap-section:   20px;
   --radius-md:     10px;
   --radius-lg:     14px;
+  --animation-transform: scale(1);
 }
 
 /* ============================================================
@@ -480,8 +481,8 @@ body {
 }
 
 /* ============================================================
-    Portal Modal — Rendered by portal into #portal-modal-root
-   ============================================================ */
+Portal Modal — Rendered by portal into #portal-modal-root
+============================================================ */
 
 .portal-demo-section {
   background: linear-gradient(135deg, rgba(13, 148, 136, 0.1), rgba(124, 58, 237, 0.1));
@@ -784,8 +785,8 @@ body {
 
 .syntax-side-by-side {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .syntax-panel {
@@ -797,20 +798,50 @@ body {
   overflow: hidden;
 }
 
+/* Before panel — amber accent to signal "verbose / old" */
+.syntax-side-by-side .syntax-panel:first-child {
+  border-top: 2px solid var(--accent-amber);
+}
+
+/* After panel — violet accent to signal "preferred / new" */
+.syntax-side-by-side .syntax-panel:last-child {
+  border-top: 2px solid var(--accent-violet);
+}
+
 .syntax-panel-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-muted);
-  padding: 4px 8px;
+  padding: 6px 10px;
   border-bottom: 1px solid var(--border);
   background: var(--surface-3);
 }
 
+.syntax-side-by-side .syntax-panel:first-child .syntax-panel-label {
+  color: var(--accent-amber);
+}
+
+.syntax-side-by-side .syntax-panel:last-child .syntax-panel-label {
+  color: var(--accent-violet);
+}
+
 .syntax-panel > div:last-child {
-  padding: 6px 8px;
-  min-height: 40px;
+  padding: 10px;
+  min-height: 56px;
+}
+
+/* ---- h() comparison output block ---- */
+
+#syntax-h-output {
+  background: var(--surface);
+  border-color: rgba(124, 58, 237, 0.25);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  line-height: 1.55;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
 }
 
 /* ---- Layout DSL preview container ---- */
