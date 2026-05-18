@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.9](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.8...axiom-framework-v0.9.9) (2026-05-18)
+
+
+### Features
+
+* **core:** add space-around/baseline layout support and unify text measurement ([e5a8fb3](https://github.com/naml14/axiom-framework/commit/e5a8fb377148a909b4bfbdc8db7acbab6477a930))
+* **layout:** support space-around (justify) and baseline (align) ([c3e6b7d](https://github.com/naml14/axiom-framework/commit/c3e6b7d32689219ade2465ec8e657d88daff4525))
+
+
+### Bug Fixes
+
+* **animations:** preserve layout transforms during CSS animations ([74d6d66](https://github.com/naml14/axiom-framework/commit/74d6d66808a1b24a4dc113ecad707a6134d2caec))
+* **core:** unify text measurement and support layout shortcuts ([b11c019](https://github.com/naml14/axiom-framework/commit/b11c01940b14dad0a7983751031c77c79d799343))
+* **core:** unify text measurement, layout shortcuts, and SSR box-model resets ([d6d44ee](https://github.com/naml14/axiom-framework/commit/d6d44ee00ea38b900beef91d49acd3a17b8d24b7))
+* **render:** hydration style merge, SSR box-model resets, and VALID_* import dedup ([64347da](https://github.com/naml14/axiom-framework/commit/64347da8e3d08e95f1880b892e076f1fbf92fb46))
+* **render:** unify text measurement to charWidth=8 ([ff7b940](https://github.com/naml14/axiom-framework/commit/ff7b94071e261d03a266cc050d9c4111bd84f0d0))
+* **review:** address PR [#72](https://github.com/naml14/axiom-framework/issues/72) review comments ([1fda3db](https://github.com/naml14/axiom-framework/commit/1fda3db356b897c39ac4f3830eea1413c3414866))
+
 ## [0.9.8](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.7...axiom-framework-v0.9.8) (2026-05-15)
 
 
