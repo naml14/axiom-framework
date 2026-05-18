@@ -59,6 +59,14 @@ export async function scaffoldProject(
 			final = `${JSON.stringify(pkg, null, 2)}\n`;
 		}
 
+		if (src === "index.html") {
+			final = content.replace("{{PROJECT_NAME}}", projectName);
+		}
+
+		if (src === "src/app.ts") {
+			final = content.replace("'{{PROJECT_NAME}}'", `'${projectName}'`);
+		}
+
 		await writeFile(join(projectDir, dest), final, "utf8");
 		console.log(`  Created ${dest}`);
 	}
