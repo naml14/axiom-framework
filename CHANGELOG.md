@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.10](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.9...axiom-framework-v0.9.10) (2026-06-01)
+
+
+### Features
+
+* **create-axiom:** engine-native starter and demo onboarding redesign ([42e910a](https://github.com/naml14/axiom-framework/commit/42e910a3582939b0a5c0ca731b613567d70fae24))
+* **create-axiom:** redesign starter and demo onboarding ([c35af6b](https://github.com/naml14/axiom-framework/commit/c35af6b66de5e379324c72de8ebbfd4f40ee29da))
+* **create-axiom:** redesign starter to engine-native layout ([8966931](https://github.com/naml14/axiom-framework/commit/89669314b4f7fe2e7e3a47acd0bb0416af9dff22))
+
+
+### Bug Fixes
+
+* **animations:** add empty fallback to composed transform var ([0ba7ba4](https://github.com/naml14/axiom-framework/commit/0ba7ba4988761d1df5778144cedb51f632276db1))
+* **create-axiom:** harden project scaffolding from PR [#76](https://github.com/naml14/axiom-framework/issues/76) review ([300163a](https://github.com/naml14/axiom-framework/commit/300163a1d4a948d4a1264113949e5c6f90e35c20))
+* **demo:** externalize launcher and align SSR render ([1f031d4](https://github.com/naml14/axiom-framework/commit/1f031d45a7fea41905d4683966f78f5c79fda0c5))
+* **dev-server:** harden CORS allowlist for scaffolded projects ([78ef0b2](https://github.com/naml14/axiom-framework/commit/78ef0b213f702af0d03d852662ace04713737cbe))
+
 ## [0.9.9](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.8...axiom-framework-v0.9.9) (2026-05-18)
 
 
