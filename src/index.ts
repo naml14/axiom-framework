@@ -33,7 +33,7 @@ export type { HydrationOptions, HydrationResult } from './core/types.js'
 
 // --- Router ---
 export { createRouter, defineAsyncComponent } from './router.js'
-export type { Route, RouteState, Router } from './router.js'
+export type { Route, RouteState, Router, AsyncComponentOptions } from './router.js'
 
 // --- Layout (advanced — for custom rendering pipelines) ---
 export { prepare } from './render/prepare.js'
