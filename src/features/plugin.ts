@@ -7,7 +7,7 @@
  * They are designed to be non-intrusive: a failing plugin does not break the
  * prepare → reflow → commit pipeline.
  *
- * Example:
+ * ## Global registry (backward-compatible)
  *
  * ```ts
  * import { createPlugin, registerPlugin } from 'axiom-framework'
@@ -19,6 +19,19 @@
  * })
  *
  * registerPlugin(devtools)
+ * ```
+ *
+ * ## Request-scoped context (multi-tenant safe)
+ *
+ * Use `createAppContext()` to get an isolated plugin scope that is never
+ * shared across app instances or tenants:
+ *
+ * ```ts
+ * import { createPlugin, createAppContext } from 'axiom-framework'
+ *
+ * const scope = createAppContext()
+ * scope.registerPlugin(createPlugin({ name: 'tenant-plugin', onMount: () => {} }))
+ * scope.applyPluginHook('onMount', { appId: 'tenant-123' })
  * ```
  */
 
@@ -128,5 +141,75 @@ export function applyPluginHook(hook: PluginHook, ctx: PluginContext): void {
         // Plugin authors can add their own error reporting inside their hooks.
       }
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Request-scoped plugin context (multi-tenant safe)
+// ---------------------------------------------------------------------------
+
+/**
+ * An isolated plugin scope that owns its own registry.
+ *
+ * Plugins registered through a `PluginScope` are completely isolated from the
+ * global registry and from every other scope. This prevents cross-request /
+ * cross-tenant state pollution in multi-tenant environments.
+ */
+export interface PluginScope {
+  /** Register a plugin with this scope. Duplicates (by name) are silently ignored. */
+  registerPlugin(plugin: AxiomPlugin): void
+  /** Returns a snapshot of plugins registered in this scope (in registration order). */
+  getRegisteredPlugins(): readonly AxiomPlugin[]
+  /**
+   * Invoke a lifecycle hook on all plugins in this scope.
+   *
+   * Errors thrown by individual hooks are swallowed — consistent with the
+   * global `applyPluginHook` contract.
+   */
+  applyPluginHook(hook: PluginHook, ctx: PluginContext): void
+}
+
+/**
+ * Create a request-scoped plugin context.
+ *
+ * Each call returns a brand-new, fully isolated `PluginScope`. Plugins
+ * registered inside the scope are never visible to the global registry or to
+ * any other scope, eliminating cross-request state pollution.
+ *
+ * Typical usage — one context per incoming request or per app instance:
+ *
+ * ```ts
+ * const scope = createAppContext()
+ * scope.registerPlugin(tenantPlugin)
+ * scope.applyPluginHook('onMount', { appId })
+ * ```
+ */
+export function createAppContext(): PluginScope {
+  const scopedRegistry: AxiomPlugin[] = []
+
+  return {
+    registerPlugin(plugin: AxiomPlugin): void {
+      const alreadyRegistered = scopedRegistry.some(p => p.name === plugin.name)
+      if (!alreadyRegistered) {
+        scopedRegistry.push(plugin)
+      }
+    },
+
+    getRegisteredPlugins(): readonly AxiomPlugin[] {
+      return [...scopedRegistry]
+    },
+
+    applyPluginHook(hook: PluginHook, ctx: PluginContext): void {
+      for (const plugin of scopedRegistry) {
+        const fn = plugin[hook]
+        if (typeof fn === 'function') {
+          try {
+            fn(ctx)
+          } catch {
+            // Intentionally swallowed: plugin errors must not break the app lifecycle.
+          }
+        }
+      }
+    },
   }
 }
