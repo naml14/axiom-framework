@@ -68,8 +68,8 @@ export {
 export type { TransitionDefinition, AnimationState, TransitionProperty } from './features/animation.js'
 
 // --- Plugin / Adapter hooks (Ruta B, Fase 5) ---
-export { createPlugin, registerPlugin, getRegisteredPlugins, clearPlugins, applyPluginHook } from './features/plugin.js'
-export type { AxiomPlugin, PluginContext, PluginHook } from './features/plugin.js'
+export { createPlugin, registerPlugin, getRegisteredPlugins, clearPlugins, applyPluginHook, createAppContext } from './features/plugin.js'
+export type { AxiomPlugin, PluginContext, PluginHook, PluginScope } from './features/plugin.js'
 
 // --- Context ---
 export {
