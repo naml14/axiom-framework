@@ -149,6 +149,28 @@ await renderToString(app, { metadata: { og: { title, description } } });
 
 See also [Plugin Lifecycle Risks](#plugin-lifecycle-risks) for additional SSR concerns.
 
+### CORS Origin Reflection
+
+The `corsHeaders()` function in the core server (`src/server.ts`) reflects the `Origin` request header back as `Access-Control-Allow-Origin` only when it matches an entry in the `allowedOrigins` allowlist configured via `AxiomServerOptions`.
+
+**Risk**: An attacker-controlled origin can be echoed back as `Access-Control-Allow-Origin`, allowing arbitrary cross-origin requests (including with credentials).
+
+**Consumer responsibility**: Configure `allowedOrigins` with the exact origins that should be allowed:
+
+```ts
+// ❌ Vulnerable — reflects any origin
+createServer({ routes, port: 3000 });
+
+// ✅ Safe — allowlist pattern
+createServer({
+  routes,
+  port: 3000,
+  allowedOrigins: ['https://example.com', 'https://app.example.com'],
+});
+```
+
+If `allowedOrigins` is not provided, CORS headers are **not returned** (deny-by-default). The template and demo servers ship with a local development allowlist (`http://localhost:3000` or `http://localhost:5173`), which must be updated for production use.
+
 ## Plugin Lifecycle Risks
 
 ### Cross-Request Pollution

@@ -3,6 +3,7 @@
 // ============================================================
 
 import { isAbsolute, relative, resolve } from 'node:path'
+import { statSync } from 'node:fs'
 import type { ComponentDefinition } from './core/types.js'
 import type { StreamSSROptions, SSRMetadata } from './ssr-stream.js'
 import { renderToReadableStream } from './ssr-stream.js'
@@ -20,6 +21,7 @@ export interface AxiomServerOptions {
   staticDir?: string
   port?: number
   ssr?: StreamSSROptions
+  allowedOrigins?: string[]
 }
 
 export interface AxiomServer {
@@ -74,6 +76,92 @@ function resolveStaticFilePath(staticDir: string, requestPath: string): string |
   return isPathInside(staticRoot, candidate) ? candidate : null
 }
 
+function normalizeAllowedOrigins(allowedOrigins?: string[]): string[] | undefined {
+  if (allowedOrigins === undefined) return undefined
+  const normalized = allowedOrigins
+    .map(origin => origin.trim())
+    .filter(origin => origin.length > 0 && origin !== '*')
+  return normalized.length > 0 ? normalized : undefined
+}
+
+function validateStaticDir(staticDir: string | undefined): void {
+  if (staticDir === undefined) return
+  const resolved = resolve(staticDir)
+  let stats: ReturnType<typeof statSync>
+  try {
+    stats = statSync(resolved)
+  } catch {
+    throw new Error(`createServer() staticDir does not exist: ${staticDir}`)
+  }
+  if (!stats.isDirectory()) {
+    throw new Error(`createServer() staticDir must be a directory: ${staticDir}`)
+  }
+}
+
+
+function corsHeaders(req: Request, allowedOrigins?: string[]): Record<string, string> {
+  const origin = req.headers.get('Origin') ?? ''
+  if (origin === '') return {}
+
+  // Reject malformed origins
+  try {
+    new URL(origin)
+  } catch {
+    return {}
+  }
+
+  // Reject wildcard
+  if (origin === '*') return {}
+
+  // Validate against allowlist
+  if (allowedOrigins === undefined || !allowedOrigins.includes(origin)) {
+    return {}
+  }
+
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Vary': 'Origin',
+  }
+}
+
+// ============================================================
+// Security Headers
+// ============================================================
+
+const SECURITY_HEADERS: Record<string, string> = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'SAMEORIGIN',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'",
+  'Permissions-Policy': 'geolocation=(), camera=(), microphone=()',
+}
+
+// ============================================================
+// Rate Limiting
+// ============================================================
+
+const requestCounts = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 100 // req per minute
+const RATE_WINDOW = 60_000 // 1 minute
+
+function getRateLimiter(req: Request): boolean {
+  const ip = req.headers.get('X-Forwarded-For') ?? req.headers.get('cf-connecting-ip') ?? '127.0.0.1'
+  const now = Date.now()
+  let entry = requestCounts.get(ip)
+  if (!entry || now > entry.resetAt) {
+    entry = { count: 1, resetAt: now + RATE_WINDOW }
+    requestCounts.set(ip, entry)
+    return false
+  }
+  entry.count++
+  if (entry.count > RATE_LIMIT) {
+    return true // rate limited
+  }
+  return false
+}
+
 // ============================================================
 // createServer
 // ============================================================
@@ -86,7 +174,9 @@ function resolveStaticFilePath(staticDir: string, requestPath: string): string |
  */
 export function createServer(options: AxiomServerOptions): AxiomServer {
   const { routes, staticDir, ssr } = options
+  const allowedOrigins = normalizeAllowedOrigins(options.allowedOrigins)
   const configuredPort = options.port ?? 3000
+  validateStaticDir(staticDir)
   let server: BunServerInstance | null = null
   const bun = getBunRuntime()
 
@@ -99,7 +189,22 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
       server = bun.serve({
         port: configuredPort,
         async fetch(req: Request) {
+          if (getRateLimiter(req)) {
+            return new Response('Too Many Requests', {
+              status: 429,
+              headers: { ...SECURITY_HEADERS, ...corsHeaders(req, allowedOrigins) },
+            })
+          }
+
           const url = new URL(req.url)
+
+          // Handle CORS preflight
+          if (req.method === 'OPTIONS') {
+            return new Response(null, {
+              status: 204,
+              headers: { ...SECURITY_HEADERS, ...corsHeaders(req, allowedOrigins) },
+            })
+          }
 
           // Try static file first
           if (staticDir) {
@@ -107,7 +212,9 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
             if (filePath !== null) {
               const file = bun.file(filePath)
               if (await file.exists()) {
-                return new Response(file)
+                return new Response(file, {
+                  headers: { ...SECURITY_HEADERS, ...corsHeaders(req, allowedOrigins) },
+                })
               }
             }
           }
@@ -120,13 +227,16 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
                 metadata: route.metadata ?? ssr?.metadata,
               })
               return new Response(stream, {
-                headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                headers: { 'Content-Type': 'text/html; charset=utf-8', ...SECURITY_HEADERS, ...corsHeaders(req, allowedOrigins) },
               })
             }
           }
 
           // 404
-          return new Response('Not Found', { status: 404 })
+          return new Response('Not Found', {
+            status: 404,
+            headers: { ...SECURITY_HEADERS, ...corsHeaders(req, allowedOrigins) },
+          })
         },
       })
       actualPort = server.port
