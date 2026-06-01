@@ -266,7 +266,16 @@ export function commitHydrate(
   const rootHeight = layout.height[0] ?? 0
   root.style.height = `${rootHeight}px`
 
-  hydrateNode(prepared)
+  try {
+    hydrateNode(prepared)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (strict) {
+      throw error
+    }
+    result.mismatchCount++
+    result.warnings.push(`Hydration failed: ${message}`)
+  }
 
   state.domNodes = nextDomNodes
 
