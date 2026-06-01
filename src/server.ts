@@ -78,10 +78,22 @@ function resolveStaticFilePath(staticDir: string, requestPath: string): string |
 
 function normalizeAllowedOrigins(allowedOrigins?: string[]): string[] | undefined {
   if (allowedOrigins === undefined) return undefined
-  const normalized = allowedOrigins
-    .map(origin => origin.trim())
-    .filter(origin => origin.length > 0 && origin !== '*')
-  return normalized.length > 0 ? normalized : undefined
+  const normalized = new Set<string>()
+  for (const raw of allowedOrigins) {
+    const trimmed = raw.trim()
+    if (trimmed.length === 0 || trimmed === '*') continue
+    try {
+      // new URL(...).origin canonicalizes to scheme://host[:port], dropping any
+      // trailing slash or path so it matches the browser-sent Origin header,
+      // which never carries a path. Invalid entries are dropped instead of
+      // being kept as unmatchable values.
+      const canonical = new URL(trimmed).origin
+      if (canonical !== 'null') normalized.add(canonical)
+    } catch {
+      // Skip malformed origin configuration entries.
+    }
+  }
+  return normalized.size > 0 ? [...normalized] : undefined
 }
 
 function validateStaticDir(staticDir: string | undefined): void {
@@ -103,18 +115,18 @@ function corsHeaders(req: Request, allowedOrigins?: string[]): Record<string, st
   const origin = req.headers.get('Origin') ?? ''
   if (origin === '') return {}
 
-  // Reject malformed origins
-  try {
-    new URL(origin)
-  } catch {
+  // Deny-by-default: when the origin is not on the explicit allowlist we return
+  // no CORS headers. Checking membership first also avoids the cost of URL
+  // parsing on every request that will be rejected anyway. A wildcard origin
+  // can never be present here because normalizeAllowedOrigins() filters it out.
+  if (allowedOrigins === undefined || !allowedOrigins.includes(origin)) {
     return {}
   }
 
-  // Reject wildcard
-  if (origin === '*') return {}
-
-  // Validate against allowlist
-  if (allowedOrigins === undefined || !allowedOrigins.includes(origin)) {
+  // Defense-in-depth: reject malformed origins even if allowlisted.
+  try {
+    new URL(origin)
+  } catch {
     return {}
   }
 
@@ -134,7 +146,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'SAMEORIGIN',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self'",
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'",
   'Permissions-Policy': 'geolocation=(), camera=(), microphone=()',
 }
 
@@ -146,8 +158,25 @@ const requestCounts = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 100 // req per minute
 const RATE_WINDOW = 60_000 // 1 minute
 
+/**
+ * Resolves a stable client identity for rate limiting.
+ *
+ * `X-Forwarded-For` may carry a comma-separated chain (`client, proxy1, ...`),
+ * so we key on the first entry rather than the raw header value. Keying on the
+ * raw string would let a caller mint a fresh bucket per request by appending
+ * arbitrary hops.
+ */
+function getClientIp(req: Request): string {
+  const forwarded = req.headers.get('X-Forwarded-For')
+  if (forwarded !== null) {
+    const first = forwarded.split(',')[0]?.trim()
+    if (first !== undefined && first.length > 0) return first
+  }
+  return req.headers.get('cf-connecting-ip') ?? '127.0.0.1'
+}
+
 function getRateLimiter(req: Request): boolean {
-  const ip = req.headers.get('X-Forwarded-For') ?? req.headers.get('cf-connecting-ip') ?? '127.0.0.1'
+  const ip = getClientIp(req)
   const now = Date.now()
   let entry = requestCounts.get(ip)
   if (!entry || now > entry.resetAt) {
