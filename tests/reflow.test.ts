@@ -312,6 +312,36 @@ describe('reflow — flex layout', () => {
 })
 
 describe('reflow — edge cases', () => {
+  test('root text node uses textEngine handle path', () => {
+    const comp = defineComponent(() => ({ type: 'text' as const, content: 'Root text node' }))
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const result = reflow(prepared, { maxWidth: 60, maxHeight: 200 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+
+    expect(result.nodeCount).toBe(1)
+    expect(result.width[0]).toBe(60)
+    expect(result.height[0]).toBeGreaterThan(0)
+  })
+
+  test('root text node falls back to raw textContent without textEngine', () => {
+    const comp = defineComponent(() => ({ type: 'text' as const, content: 'Fallback path text' }))
+    const prepared = prepare(comp, undefined, {})
+    const result = reflow(prepared, { maxWidth: 48, maxHeight: 200 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+
+    expect(result.nodeCount).toBe(1)
+    expect(result.width[0]).toBe(48)
+    expect(result.height[0]).toBeGreaterThan(0)
+  })
+
+  test('root empty text keeps zero height', () => {
+    const comp = defineComponent(() => ({ type: 'text' as const, content: '' }))
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const result = reflow(prepared, { maxWidth: 120, maxHeight: 200 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+
+    expect(result.nodeCount).toBe(1)
+    expect(result.width[0]).toBe(120)
+    expect(result.height[0]).toBe(0)
+  })
+
   test('empty tree returns zero dimensions', () => {
     const comp = defineComponent(() => ({
       type: 'element' as const,
