@@ -55,4 +55,32 @@ describe('renderToReadableStream()', () => {
     expect(result).toInclude('<title>Stream Test</title>')
     expect(result).toInclude('description" content="Testing stream SSR')
   })
+
+  test('accepts a plain-object component definition (e.g. defineAsyncComponent output)', async () => {
+    // A ComponentDefinition is an object with a callable `_fn`. Unlike
+    // defineComponent (which returns a callable function), object-form
+    // definitions must NOT be rejected by the runtime validation.
+    const objComponent = {
+      _id: Symbol('obj-component'),
+      _fn: () => h('section', null, 'Object Component'),
+    }
+
+    const stream = renderToReadableStream(objComponent)
+    const result = await readStream(stream)
+
+    expect(result).toStartWith('<!DOCTYPE html>')
+    expect(result).toInclude('Object Component')
+  })
+
+  test('throws on invalid component input', () => {
+    expect(() => renderToReadableStream(null as never)).toThrow(
+      'renderToReadableStream() requires a valid component definition'
+    )
+    expect(() => renderToReadableStream({} as never)).toThrow(
+      'renderToReadableStream() requires a valid component definition'
+    )
+    expect(() => renderToReadableStream('nope' as never)).toThrow(
+      'renderToReadableStream() requires a valid component definition'
+    )
+  })
 })
