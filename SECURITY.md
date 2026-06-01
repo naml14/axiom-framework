@@ -151,17 +151,17 @@ See also [Plugin Lifecycle Risks](#plugin-lifecycle-risks) for additional SSR co
 
 ### Inline CSS via bodyStyle
 
-`SSRRenderOptions.metadata.bodyStyle` is rendered as the `style` attribute on `<body>`. Axiom calls `escapeStyleText()` to prevent CSS-based attacks (same function used for `inlineStyles`).
+`SSRRenderOptions.metadata.bodyStyle` is rendered as the `style` attribute on `<body>`. Axiom applies **best-effort** sanitization: it strips dangerous CSS constructs (`url()`, `@import`, `expression()`, `behavior:`, `javascript:`) by re-running the filter until the string stabilizes, and then HTML-escapes the result so it cannot break out of the `style="..."` attribute.
 
-**Risk**: An attacker controlling `bodyStyle` can inject CSS `url()` expressions to exfiltrate data or `@import` external stylesheets.
+**Risk**: Best-effort stripping is not a full CSS parser. An attacker controlling `bodyStyle` may still craft CSS that survives the filters (for example, novel data-exfiltration vectors). HTML-escaping prevents attribute breakout (XSS), but it does not make arbitrary untrusted CSS safe.
 
-**Consumer responsibility**: Sanitize all CSS before passing it to `renderToString`:
+**Consumer responsibility**: Treat Axiom's sanitization as defense-in-depth, not a substitute for validating untrusted CSS before passing it to `renderToString`:
 
 ```ts
-// ❌ Vulnerable — CSS from untrusted source
+// ⚠️ Axiom sanitizes best-effort, but do not feed it raw untrusted CSS
 await renderToString(app, { metadata: { bodyStyle: userCss } });
 
-// ✅ Safe — sanitize first (example using a CSS sanitizer library)
+// ✅ Recommended — validate/sanitize untrusted CSS first
 const safeCss = sanitizeCss(userCss); // strip url(), @import, etc.
 await renderToString(app, { metadata: { bodyStyle: safeCss } });
 ```
@@ -170,15 +170,15 @@ await renderToString(app, { metadata: { bodyStyle: safeCss } });
 
 The `corsHeaders()` function in the core server (`src/server.ts`) reflects the `Origin` request header back as `Access-Control-Allow-Origin` only when it matches an entry in the `allowedOrigins` allowlist configured via `AxiomServerOptions`.
 
-**Risk**: An attacker-controlled origin can be echoed back as `Access-Control-Allow-Origin`, allowing arbitrary cross-origin requests (including with credentials).
+**Risk**: If an attacker-controlled origin were echoed back as `Access-Control-Allow-Origin`, browsers would let that origin read cross-origin responses. Axiom does **not** set `Access-Control-Allow-Credentials`, so cookies/credentials are not included in these cross-origin requests by default; the exposure is limited to unintended reads of response bodies, not credentialed access.
 
 **Consumer responsibility**: Configure `allowedOrigins` with the exact origins that should be allowed:
 
 ```ts
-// ❌ Vulnerable — reflects any origin
+// Default — deny-by-default: no Access-Control-Allow-Origin header is returned
 createServer({ routes, port: 3000 });
 
-// ✅ Safe — allowlist pattern
+// ✅ Safe — explicit allowlist
 createServer({
   routes,
   port: 3000,
