@@ -40,7 +40,7 @@ async function buildAppBundle(): Promise<string> {
 		entrypoints: [appEntry],
 		target: "browser",
 		format: "esm",
-		sourcemap: "inline",
+		sourcemap: process.env.NODE_ENV === 'production' ? 'none' : 'inline',
 	});
 
 	if (!result.success || result.outputs.length === 0) {
@@ -90,29 +90,82 @@ async function resolvePublicAsset(pathname: string): Promise<string | null> {
 	return filePath;
 }
 
-function serveStaticFile(filePath: string): Response {
+const SECURITY_HEADERS: Record<string, string> = {
+	"X-Content-Type-Options": "nosniff",
+	"X-Frame-Options": "SAMEORIGIN",
+	"Referrer-Policy": "strict-origin-when-cross-origin",
+	"Content-Security-Policy": "default-src 'self'; script-src 'self'",
+	"Permissions-Policy": "geolocation=(), camera=(), microphone=()",
+};
+
+function serveStaticFile(filePath: string, req: Request): Response {
 	const file = Bun.file(filePath);
 	return new Response(file, {
 		headers: {
 			"Content-Type": file.type || "application/octet-stream",
+			...SECURITY_HEADERS,
+			...corsHeaders(req),
 		},
 	});
+}
+
+const ALLOWED_ORIGINS = ["http://localhost:5173"];
+
+function corsHeaders(req: Request): Record<string, string> {
+	const origin = req.headers.get("Origin") ?? "";
+	if (origin === "") return {};
+
+	try {
+		new URL(origin);
+	} catch {
+		return {};
+	}
+
+	if (origin === "*") return {};
+
+	if (!ALLOWED_ORIGINS.includes(origin)) {
+		return {};
+	}
+
+	return {
+		"Access-Control-Allow-Origin": origin,
+		"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+		"Access-Control-Allow-Headers": "Content-Type",
+		"Vary": "Origin",
+	};
 }
 
 const server = Bun.serve({
 	port,
 	async fetch(req: Request) {
 		const url = new URL(req.url);
+
+		// Handle CORS preflight
+		if (req.method === "OPTIONS") {
+			return new Response(null, {
+				status: 204,
+				headers: { ...SECURITY_HEADERS, ...corsHeaders(req) },
+			});
+		}
+
 		if (url.pathname === "/") {
 			return new Response(Bun.file(indexHtmlPath), {
-				headers: { "Content-Type": "text/html; charset=utf-8" },
+				headers: {
+					"Content-Type": "text/html; charset=utf-8",
+					...SECURITY_HEADERS,
+					...corsHeaders(req),
+				},
 			});
 		}
 		if (url.pathname === "/src/app.ts") {
 			try {
 				const code = await buildAppBundle();
 				return new Response(code, {
-					headers: { "Content-Type": "application/javascript; charset=utf-8" },
+					headers: {
+						"Content-Type": "application/javascript; charset=utf-8",
+						...SECURITY_HEADERS,
+						...corsHeaders(req),
+					},
 				});
 			} catch (error) {
 				const message =
@@ -124,17 +177,32 @@ const server = Bun.serve({
 
 				return new Response(errorPayload, {
 					status: 500,
-					headers: { "Content-Type": "application/javascript; charset=utf-8" },
+					headers: {
+						"Content-Type": "application/javascript; charset=utf-8",
+						...SECURITY_HEADERS,
+						...corsHeaders(req),
+					},
 				});
 			}
 		}
 
 		const publicAsset = await resolvePublicAsset(url.pathname);
 		if (publicAsset !== null) {
-			return serveStaticFile(publicAsset);
+			return serveStaticFile(publicAsset, req);
 		}
 
-		return new Response("Not Found", { status: 404 });
+		// Browsers auto-request /favicon.ico. Answer 204 so the dev console stays clean.
+		if (url.pathname === "/favicon.ico") {
+			return new Response(null, {
+				status: 204,
+				headers: { ...SECURITY_HEADERS, ...corsHeaders(req) },
+			});
+		}
+
+		return new Response("Not Found", {
+			status: 404,
+			headers: { ...SECURITY_HEADERS, ...corsHeaders(req) },
+		});
 	},
 });
 
