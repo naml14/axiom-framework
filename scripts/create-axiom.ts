@@ -14,6 +14,15 @@ const ROOT_PACKAGE_JSON_PATH = join(__dirname, "..", "package.json");
 
 const SAFE_NAME_RE = /^[a-z0-9][a-z0-9._-]*$/i;
 
+/**
+ * Validates a project name against the safe-name policy: it must start with an
+ * alphanumeric character and contain only alphanumerics, dots, dashes, and
+ * underscores. Pure and side-effect free so it can be unit tested directly.
+ */
+export function isValidProjectName(name: string): boolean {
+	return SAFE_NAME_RE.test(name);
+}
+
 async function getCurrentFrameworkVersion(): Promise<string> {
 	const rootPackage = JSON.parse(
 		await readFile(ROOT_PACKAGE_JSON_PATH, "utf8"),
@@ -62,11 +71,11 @@ export async function scaffoldProject(
 		}
 
 		if (src === "index.html") {
-			final = content.replace("{{PROJECT_NAME}}", projectName);
+			final = content.replaceAll("{{PROJECT_NAME}}", projectName);
 		}
 
 		if (src === "src/app.ts") {
-			final = content.replace("'{{PROJECT_NAME}}'", `'${projectName}'`);
+			final = content.replaceAll("'{{PROJECT_NAME}}'", `'${projectName}'`);
 		}
 
 		await writeFile(join(projectDir, dest), final, "utf8");
@@ -91,7 +100,7 @@ async function main(): Promise<void> {
 	const args = process.argv.slice(2);
 	const projectName = args[0] || "my-axiom-app";
 
-	if (!SAFE_NAME_RE.test(projectName)) {
+	if (!isValidProjectName(projectName)) {
 		throw new Error(
 			`Invalid project name: "${projectName}". Use only alphanumeric characters, dots, dashes, and underscores.`,
 		);

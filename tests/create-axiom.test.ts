@@ -1,10 +1,14 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { scaffoldProject, installProjectDependencies } from "../scripts/create-axiom.ts";
+import {
+	isValidProjectName,
+	scaffoldProject,
+	installProjectDependencies,
+} from "../scripts/create-axiom.ts";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const tempDirs: string[] = [];
@@ -138,17 +142,39 @@ describe("create-axiom starter", () => {
 		}
 	});
 
-	test("installProjectDependencies returns subprocess exit code", async () => {
-		const projectDir = await freshDir("install-exit");
-		await writeFile(
-			join(projectDir, "package.json"),
-			`${JSON.stringify({ name: "tmp-install", private: true }, null, 2)}\n`,
-			"utf8",
-		);
+	test("installProjectDependencies runs 'bun install' in the project dir and returns its exit code", () => {
+		const projectDir = join(tmpdir(), "axiom-install-contract");
 
-		const exitCode = installProjectDependencies(projectDir);
-		expect(typeof exitCode).toBe("number");
-		expect(exitCode).toBeGreaterThanOrEqual(0);
+		const spy = spyOn(Bun, "spawnSync").mockReturnValue({
+			exitCode: 0,
+		} as ReturnType<typeof Bun.spawnSync>);
+
+		try {
+			const exitCode = installProjectDependencies(projectDir);
+
+			expect(exitCode).toBe(0);
+			expect(spy).toHaveBeenCalledTimes(1);
+			const [command, options] = spy.mock.calls[0] as [
+				string[],
+				{ cwd: string },
+			];
+			expect(command).toEqual(["bun", "install"]);
+			expect(options.cwd).toBe(projectDir);
+		} finally {
+			spy.mockRestore();
+		}
+	});
+
+	test("installProjectDependencies propagates a non-zero exit code", () => {
+		const spy = spyOn(Bun, "spawnSync").mockReturnValue({
+			exitCode: 1,
+		} as ReturnType<typeof Bun.spawnSync>);
+
+		try {
+			expect(installProjectDependencies("/any/dir")).toBe(1);
+		} finally {
+			spy.mockRestore();
+		}
 	});
 
 	test("scaffoldProject writes a minimal starter app and links its stylesheet", async () => {
@@ -184,7 +210,7 @@ describe("create-axiom starter", () => {
 		expect(starterApp).not.toContain("className");
 
 		// New starter markers
-		expect(starterApp).toContain("Edit src/app.ts to start building")
+		expect(starterApp).toContain("Edit src/app.ts to start building");
 		expect(starterApp).toContain("defineComponent(() =>");
 		expect(starterApp).toContain("count.value");
 		expect(starterApp).toContain("doubled");
@@ -340,5 +366,43 @@ describe("create-axiom starter", () => {
 			`http://127.0.0.1:${port}/tsconfig.json`,
 		);
 		expect(tsConfigResponse.status).toBe(404);
+	});
+});
+
+describe("isValidProjectName", () => {
+	test("accepts valid project names", () => {
+		const valid = [
+			"my-app",
+			"My_App",
+			"app.v2",
+			"a",
+			"project123",
+			"a.b-c_d",
+		];
+		for (const name of valid) {
+			expect(isValidProjectName(name)).toBe(true);
+		}
+	});
+
+	test("rejects names that start with a non-alphanumeric character", () => {
+		const invalid = ["-bad", ".hidden", "_private"];
+		for (const name of invalid) {
+			expect(isValidProjectName(name)).toBe(false);
+		}
+	});
+
+	test("rejects names containing unsafe characters", () => {
+		const invalid = [
+			"my app",
+			"my/app",
+			"../escape",
+			"name;rm",
+			"name$(x)",
+			"name#hash",
+			"",
+		];
+		for (const name of invalid) {
+			expect(isValidProjectName(name)).toBe(false);
+		}
 	});
 });
