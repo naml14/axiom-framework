@@ -115,7 +115,7 @@ function renderToString(
 | `og` | `Record<string, string>` | Sets `<meta property="og:*">` tags |
 | `stylesheets` | `string[]` | Injects `<link rel="stylesheet">` tags |
 | `inlineStyles` | `string` | Injects a `<style>` block |
-| `bodyStyle` | `string` | Sets `style` attribute on `<body>` |
+| `bodyStyle` | `string` | Sets `style` attribute on `<body>` (sanitized via `escapeStyleText()`) |
 
 ### Guarantees
 
@@ -322,8 +322,9 @@ During hydration:
 1. `commitHydrate` scans for `[data-axiom-portal]` elements.
 2. If found, resolves the portal's children against the marker content.
 3. If not found:
-  - `skipMissingPortals: false` (default): strict mode throws plain `Error`
-   - `skipMissingPortals: true`: warns, marks portal as unresolved
+
+    - `skipMissingPortals: false` (default): strict mode throws plain `Error`
+    - `skipMissingPortals: true`: warns, marks portal as unresolved
 
 **Important**: portals are not moved to `document.body` on the client — they
 remain in place. If you need portal content in a different DOM position, you

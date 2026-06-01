@@ -166,6 +166,15 @@ const DANGEROUS_URL_SCHEME_RE = /^\s*(javascript|data|vbscript|file)\s*:/i
  * This is used as allowlist for URL validation.
  */
 const SAFE_URL_PATTERN = /^(https?:|mailto:|tel:|#|\/|\.\/|\.\.\/)/i
+/**
+ * Protocol-relative URL prefix (e.g. `//evil.com`).
+ *
+ * Matches any combination of two leading slashes or backslashes. Chromium-based
+ * browsers normalize backslashes to forward slashes in URL attributes, so
+ * `\\evil.com`, `/\evil.com`, and `\/evil.com` all resolve to protocol-relative
+ * navigation and must be blocked alongside `//evil.com`.
+ */
+const PROTOCOL_RELATIVE_URL_RE = /^\s*[/\\][/\\]/
 
 /**
  * Valid HTML attribute name pattern.
@@ -225,16 +234,15 @@ export function sanitizeAttrValue(
 
   // Validate URL schemes for URL-sensitive attributes
   if (isUrlSensitiveAttr(lowerKey)) {
-    // Allow safe schemes and relative URLs
+    if (PROTOCOL_RELATIVE_URL_RE.test(value)) {
+      return '#blocked'
+    }
     if (SAFE_URL_PATTERN.test(value)) {
       return value
     }
-    // Block dangerous schemes
     if (hasDangerousUrlScheme(value)) {
       return '#blocked'
     }
-    // Allow other values (could be relative paths without prefix)
-    // Only block if it explicitly matches a dangerous scheme
     return value
   }
 
