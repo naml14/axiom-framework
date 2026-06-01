@@ -44,7 +44,9 @@ interface SignalInternal<T> extends ReactiveNode {
 
 let activeEffect: EffectNode | null = null
 let executionDepth = 0
+let computedDepth = 0
 const MAX_DEPTH = 100
+const MAX_COMPUTED_DEPTH = 100
 
 // ============================================================
 // Signal
@@ -202,6 +204,12 @@ function evaluateComputed(internal: ComputedNode<unknown>): void {
     throw new Error('Circular dependency detected in computed signal')
   }
 
+  computedDepth++
+  if (computedDepth > MAX_COMPUTED_DEPTH) {
+    computedDepth--
+    throw new Error('Infinite loop detected: computed depth exceeded maximum')
+  }
+
   internal._depVersions.clear()
   internal._computing = true
 
@@ -224,6 +232,7 @@ function evaluateComputed(internal: ComputedNode<unknown>): void {
   } finally {
     internal._computing = false
     activeEffect = prevEffect
+    computedDepth--
   }
 }
 
