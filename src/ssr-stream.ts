@@ -29,8 +29,13 @@ export function renderToReadableStream(
   component: ComponentDefinition<void>,
   options?: StreamSSROptions
 ): ReadableStream<Uint8Array> {
-  // Current implementation: wrap the full renderToString() result in a
-  // ReadableStream as a single chunk.
+  if (
+    component === null ||
+    typeof component !== 'function' ||
+    typeof (component as ComponentDefinition<void>)._fn !== 'function'
+  ) {
+    throw new Error('renderToReadableStream() requires a valid component definition')
+  }
   const html = renderToString(component, options)
   const encoder = new TextEncoder()
 
