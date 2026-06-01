@@ -52,7 +52,7 @@ beforeEach(() => {
 // Spec: Transform String Contract
 //
 // Requirement: During SSR and hydration, the system MUST emit
-// the identical `translate(Xpx,Ypx) var(--animation-transform)`
+// the identical `translate(Xpx,Ypx) var(--animation-transform,)`
 // string to preserve layout and animation slots.
 // Tests MUST assert this exact string using happy-dom, avoiding
 // parsed CSS values (happy-dom does not resolve var() or keyframes).
@@ -60,7 +60,7 @@ beforeEach(() => {
 
 describe('SSR → hydration: transform string contract', () => {
   // Scenario: SSR output contains the literal composed transform
-  test('SSR markup contains translate(Xpx,Ypx) var(--animation-transform) in inline style', () => {
+  test('SSR markup contains translate(Xpx,Ypx) var(--animation-transform,) in inline style', () => {
     const App = defineComponent(() => ({
       type: 'element' as const,
       tag: 'div',
@@ -71,8 +71,8 @@ describe('SSR → hydration: transform string contract', () => {
 
     // The SSR output must embed the composed transform contract literally.
     // This is the "layout slot + animation slot" string the client relies on.
-    expect(html).toContain('var(--animation-transform)')
-    expect(html).toMatch(/translate\(\d+px,\d+px\) var\(--animation-transform\)/)
+    expect(html).toContain('var(--animation-transform,)')
+    expect(html).toMatch(/translate\(\d+px,\d+px\) var\(--animation-transform,\)/)
   })
 
   // Triangulation: nested component — multiple elements must all carry the contract
@@ -90,16 +90,16 @@ describe('SSR → hydration: transform string contract', () => {
 
     // Every framework element in the tree gets its own layout slot.
     // We expect at least 3 occurrences: section + h1 + p.
-    const matches = [...html.matchAll(/translate\(\d+px,\d+px\) var\(--animation-transform\)/g)]
+    const matches = [...html.matchAll(/translate\(\d+px,\d+px\) var\(--animation-transform,\)/g)]
     expect(matches.length).toBeGreaterThanOrEqual(3)
   })
 
   // Scenario: SSR to Hydration preservation
   // GIVEN an application rendered on the server with layout transforms
   // WHEN the client hydrates the server-rendered markup
-  // THEN the transform string MUST remain `translate(Xpx,Ypx) var(--animation-transform)`
+  // THEN the transform string MUST remain `translate(Xpx,Ypx) var(--animation-transform,)`
   // AND the layout and animation slots MUST be preserved
-  test('hydrated element preserves translate(Xpx,Ypx) var(--animation-transform) after commitHydrate', () => {
+  test('hydrated element preserves translate(Xpx,Ypx) var(--animation-transform,) after commitHydrate', () => {
     const App = defineComponent(() => ({
       type: 'element' as const,
       tag: 'div',
@@ -120,7 +120,7 @@ describe('SSR → hydration: transform string contract', () => {
     // happy-dom preserves inline values literally — no computed CSS resolution.
     const el = root.firstElementChild as HTMLElement
     expect(el).not.toBeNull()
-    expect(el.style.transform).toMatch(/^translate\(\d+px,\d+px\) var\(--animation-transform\)$/)
+    expect(el.style.transform).toMatch(/^translate\(\d+px,\d+px\) var\(--animation-transform,\)$/)
   })
 
   // Triangulation: two-element tree — child element must also preserve the contract
@@ -146,8 +146,8 @@ describe('SSR → hydration: transform string contract', () => {
     // Both the outer section and the inner div must carry the composed transform.
     const section = root.getElementsByTagName('section')[0] as HTMLElement
     const div = root.getElementsByTagName('div')[0] as HTMLElement
-    expect(section.style.transform).toMatch(/^translate\(\d+px,\d+px\) var\(--animation-transform\)$/)
-    expect(div.style.transform).toMatch(/^translate\(\d+px,\d+px\) var\(--animation-transform\)$/)
+    expect(section.style.transform).toMatch(/^translate\(\d+px,\d+px\) var\(--animation-transform,\)$/)
+    expect(div.style.transform).toMatch(/^translate\(\d+px,\d+px\) var\(--animation-transform,\)$/)
   })
 })
 
