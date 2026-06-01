@@ -8,7 +8,7 @@ Defines the security guarantees and origin policy for external stylesheets rende
 
 ### Requirement: Stylesheet Scheme Validation
 
-The framework MUST validate all `href` values provided in `metadata.stylesheets` against known dangerous URI schemes before emitting them in the document `<head>`. Valid URLs MUST be emitted exactly, and dangerous URLs MUST be neutralized by replacing their value with `#blocked`, while preserving HTML escaping.
+The framework MUST validate all `href` values provided in `metadata.stylesheets` against known dangerous URI schemes before emitting them in the document `<head>`. Valid URLs MUST be emitted exactly (HTML-escaped), and dangerous URLs MUST be omitted entirely — NO `<link>` tag is emitted for a blocked href. The framework MUST NOT rewrite blocked hrefs to a `#blocked` sentinel, because an emitted `<link href="#blocked">` is useless and triggers a pointless fetch.
 
 #### Scenario: Render relative stylesheet href
 - GIVEN a relative `href` (`/styles.css` or `./x.css`)
