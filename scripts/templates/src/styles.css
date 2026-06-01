@@ -30,6 +30,8 @@ body {
 
 #app {
 	min-height: 100vh;
+	max-width: 640px;
+	margin: 0 auto;
 }
 
 /* ── Reset ─────────────────────────────────────────────────────────────────── */
@@ -50,37 +52,9 @@ a:hover {
 	text-decoration: underline;
 }
 
-code {
-	font-family: "Fira Code", ui-monospace, SFMono-Regular, monospace;
-	font-size: 0.875em;
-	background: rgba(79, 70, 229, 0.08);
-	padding: 2px 6px;
-	border-radius: 4px;
-	color: var(--indigo);
-}
-
-/* ── Layout ─────────────────────────────────────────────────────────────────── */
-
-.app {
-	display: flex;
-	flex-direction: column;
-	max-width: 640px;
-	margin: 0 auto;
-	padding: 48px 24px 80px;
-	gap: 40px;
-}
-
 /* ── Header ─────────────────────────────────────────────────────────────────── */
 
-.header {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	padding-bottom: 24px;
-	border-bottom: 1px solid var(--border);
-}
-
-.header h1 {
+.title {
 	font-size: 1.75rem;
 	font-weight: 800;
 	letter-spacing: -0.04em;
@@ -89,25 +63,12 @@ code {
 .hint {
 	font-size: 0.9rem;
 	color: var(--text-muted);
-	margin: 0;
-}
-
-.hint code {
-	font-size: 0.85rem;
 }
 
 /* ── Section ────────────────────────────────────────────────────────────────── */
 
-.section {
-	display: flex;
-	flex-direction: column;
-	gap: 16px;
-}
-
-.section h2 {
-	font-size: 1rem;
+.eyebrow {
 	font-weight: 700;
-	letter-spacing: -0.01em;
 	text-transform: uppercase;
 	color: var(--text-muted);
 	font-size: 0.75rem;
@@ -130,12 +91,6 @@ code {
 	color: var(--text-muted);
 }
 
-.controls {
-	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
-}
-
 /* ── Buttons ────────────────────────────────────────────────────────────────── */
 
 button {
@@ -148,7 +103,6 @@ button {
 	font: inherit;
 	font-weight: 600;
 	cursor: pointer;
-	padding: 9px 20px;
 	background: var(--indigo);
 	color: #ffffff;
 	font-size: 0.875rem;
@@ -171,33 +125,18 @@ button:focus-visible {
 
 /* ── List ───────────────────────────────────────────────────────────────────── */
 
-.list {
-	list-style: none;
-	padding: 0;
-	margin: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-}
-
 .list-item {
-	padding: 10px 14px;
+	display: flex;
+	align-items: center;
+	padding: 0 14px;
 	background: #ffffff;
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	font-size: 0.9rem;
 }
 
-.add-row {
-	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
-}
-
 .add-input {
-	flex: 1;
-	min-width: 160px;
-	padding: 9px 14px;
+	padding: 0 14px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	font: inherit;
@@ -214,16 +153,13 @@ button:focus-visible {
 
 /* ── Next steps ─────────────────────────────────────────────────────────────── */
 
-.next-steps ul {
-	padding-left: 1.25rem;
-	margin: 0;
+.next-item {
 	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-
-.next-steps li {
+	align-items: center;
 	font-size: 0.9rem;
 	color: var(--text-muted);
-	line-height: 1.6;
+}
+
+.next-item.link {
+	color: var(--indigo);
 }

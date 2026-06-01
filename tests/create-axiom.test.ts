@@ -4,7 +4,7 @@ import { createServer } from "node:net";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { scaffoldProject } from "../scripts/create-axiom.ts";
+import { scaffoldProject, installProjectDependencies } from "../scripts/create-axiom.ts";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const tempDirs: string[] = [];
@@ -119,6 +119,38 @@ afterEach(async () => {
 });
 
 describe("create-axiom starter", () => {
+	test("scaffoldProject writes expected template files", async () => {
+		const projectDir = await scaffoldStarterProject("templates-list");
+
+		const expectedFiles = [
+			"package.json",
+			"tsconfig.json",
+			"build-static.ts",
+			"dev-server.ts",
+			"src/app.ts",
+			"src/styles.css",
+			"index.html",
+		];
+
+		for (const file of expectedFiles) {
+			const content = await readFile(join(projectDir, file), "utf8");
+			expect(content.length).toBeGreaterThan(0);
+		}
+	});
+
+	test("installProjectDependencies returns subprocess exit code", async () => {
+		const projectDir = await freshDir("install-exit");
+		await writeFile(
+			join(projectDir, "package.json"),
+			`${JSON.stringify({ name: "tmp-install", private: true }, null, 2)}\n`,
+			"utf8",
+		);
+
+		const exitCode = installProjectDependencies(projectDir);
+		expect(typeof exitCode).toBe("number");
+		expect(exitCode).toBeGreaterThanOrEqual(0);
+	});
+
 	test("scaffoldProject writes a minimal starter app and links its stylesheet", async () => {
 		const projectDir = await scaffoldStarterProject("scaffold");
 
@@ -152,12 +184,15 @@ describe("create-axiom starter", () => {
 		expect(starterApp).not.toContain("className");
 
 		// New starter markers
-		expect(starterApp).toContain("Edit `src/app.ts` to start building");
+		expect(starterApp).toContain("Edit src/app.ts to start building")
 		expect(starterApp).toContain("defineComponent(() =>");
 		expect(starterApp).toContain("count.value");
 		expect(starterApp).toContain("doubled");
 		expect(starterApp).toContain("items");
 		expect(starterApp).toContain("Next steps");
+
+		// Engine-native layout: spacing/sizing live in layout props, not CSS
+		expect(starterApp).toContain("layout: { height:");
 
 		// No landing-page sections
 		expect(starterApp).not.toContain("The DOM is just");
@@ -175,8 +210,8 @@ describe("create-axiom starter", () => {
 		expect(starterStyles).toContain("radial-gradient");
 
 		// CSS: new starter classes must exist
-		expect(starterStyles).toContain(".header {");
-		expect(starterStyles).toContain(".section {");
+		expect(starterStyles).toContain(".title {");
+		expect(starterStyles).toContain(".eyebrow {");
 		expect(starterStyles).toContain(".hint {");
 
 		// CSS: old landing-only classes must be gone
@@ -248,6 +283,16 @@ describe("create-axiom starter", () => {
 		expect(distHtml).toContain("<style>");
 		expect(distHtml).toContain("button {");
 		expect(distHtml).toContain("radial-gradient");
+	});
+
+	test("generated dev server serves root HTML with security headers", async () => {
+		const projectDir = await scaffoldStarterProject("root-security-headers");
+		const port = await startStarterDevServer(projectDir);
+
+		const htmlResponse = await fetch(`http://127.0.0.1:${port}/`);
+		expect(htmlResponse.status).toBe(200);
+		expect(htmlResponse.headers.get("x-content-type-options")).toBe("nosniff");
+		expect(htmlResponse.headers.get("x-frame-options")).toBe("SAMEORIGIN");
 	});
 
 	test("generated dev server serves the starter stylesheet over HTTP", async () => {
