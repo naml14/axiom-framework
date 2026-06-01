@@ -332,3 +332,66 @@ describe('hydration: layout resets applied by commitHydrate', () => {
     expect(style).toContain('position')
   })
 })
+
+describe('hydration: graceful degrade on unexpected error', () => {
+  test('soft mode wipes container and falls back to full client render when hydration throws', () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'recovered' }],
+    }))
+
+    const html = renderToString(App, { textEngine: fakeTextEngine })
+    installWindow(html)
+    const root = getHydrationRoot()
+
+    // Force an UNEXPECTED throw (not a soft mismatch handled by `fail`) during
+    // hydration: make the matched element's `style` getter throw when
+    // applyFrameworkLayout touches it.
+    const matched = root.firstElementChild as HTMLElement
+    Object.defineProperty(matched, 'style', {
+      configurable: true,
+      get() {
+        throw new Error('boom: style access during hydration')
+      },
+    })
+
+    const prepared = prepare(App, undefined, { textEngine: fakeTextEngine })
+    const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 }, { lineHeight: 20 })
+    const state = { domNodes: [] as Array<HTMLElement | Text | null>, portalRoots: new Map() }
+
+    const result = commitHydrate(layout, prepared, root, state, { strictMismatch: false })
+
+    // Degraded gracefully instead of throwing or committing ghost nodes.
+    expect(result.warnings.some(w => w.includes('Falling back to full client-side render'))).toBe(true)
+    // Container was re-rendered from scratch; content is present and tracked.
+    expect(root.textContent).toContain('recovered')
+    expect(state.domNodes.length).toBeGreaterThan(0)
+    expect(state.domNodes[0]).not.toBeNull()
+  })
+
+  test('strict mode still rethrows unexpected hydration errors', () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'x' }],
+    }))
+
+    const html = renderToString(App, { textEngine: fakeTextEngine })
+    installWindow(html)
+    const root = getHydrationRoot()
+    const matched = root.firstElementChild as HTMLElement
+    Object.defineProperty(matched, 'style', {
+      configurable: true,
+      get() {
+        throw new Error('boom')
+      },
+    })
+
+    const prepared = prepare(App, undefined, { textEngine: fakeTextEngine })
+    const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 }, { lineHeight: 20 })
+    const state = { domNodes: [] as Array<HTMLElement | Text | null>, portalRoots: new Map() }
+
+    expect(() => commitHydrate(layout, prepared, root, state, { strictMismatch: true })).toThrow('boom')
+  })
+})
