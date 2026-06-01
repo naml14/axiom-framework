@@ -207,6 +207,33 @@ export function isValidAttrName(key: string): boolean {
 }
 
 /**
+ * Sanitizes a URL value for use in URL-sensitive contexts.
+ * Returns the original value if safe, or the `'#blocked'` sentinel if dangerous.
+ *
+ * Blocked inputs:
+ * - Protocol-relative URLs (`//host/path`) — can be upgraded to any scheme by the browser
+ * - Dangerous schemes: `javascript:`, `data:`, `vbscript:`, `file:`
+ * - Any value that does not match a known-safe scheme pattern
+ *
+ * Safe pass-through: `https:`, `http:`, `mailto:`, `tel:`, `#`, `/`, `./`, `../`
+ *
+ * @internal Module-level export — not re-exported from `src/index.ts`.
+ *   Used by `sanitizeAttrValue()` and `renderHead()` stylesheet validation.
+ */
+export function sanitizeUrlValue(value: string): string {
+  if (PROTOCOL_RELATIVE_URL_RE.test(value)) {
+    return '#blocked'
+  }
+  if (SAFE_URL_PATTERN.test(value)) {
+    return value
+  }
+  if (DANGEROUS_URL_SCHEME_RE.test(value)) {
+    return '#blocked'
+  }
+  return value
+}
+
+/**
  * Sanitizes a single attribute value based on the attribute key.
  *
  * @param key - The attribute name
@@ -226,16 +253,7 @@ export function sanitizeAttrValue(
 
   // Validate URL schemes for URL-sensitive attributes
   if (isUrlSensitiveAttr(lowerKey)) {
-    if (PROTOCOL_RELATIVE_URL_RE.test(value)) {
-      return '#blocked'
-    }
-    if (SAFE_URL_PATTERN.test(value)) {
-      return value
-    }
-    if (hasDangerousUrlScheme(value)) {
-      return '#blocked'
-    }
-    return value
+    return sanitizeUrlValue(value)
   }
 
   return value
