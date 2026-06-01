@@ -311,6 +311,7 @@ export function defineAsyncComponent<P = void>(
   loader: () => Promise<{ default: ComponentDefinition<P> }>
 ): ComponentDefinition<P> {
   const loaded = signal<ComponentDefinition<P> | null>(null)
+  const loadError = signal<Error | null>(null)
   let initiated = false
 
   return {
@@ -325,8 +326,14 @@ export function defineAsyncComponent<P = void>(
               loaded.value = mod.default
             }
           })
-          .catch(() => {
-            // Silent fail by design: keep rendering empty fragment.
+          .catch((err) => {
+            // Emit to error monitoring, never silently drop
+            const g = globalThis as typeof globalThis & { __AXIOM_ON_ASYNC_ERROR__?: (err: unknown) => void }
+            if (typeof g.__AXIOM_ON_ASYNC_ERROR__ === 'function') {
+              g.__AXIOM_ON_ASYNC_ERROR__(err)
+            }
+            // Set an error signal so the UI can show a fallback
+            loadError.value = err instanceof Error ? err : new Error(String(err))
           })
       }
 
