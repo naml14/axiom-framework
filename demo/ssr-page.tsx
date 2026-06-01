@@ -151,6 +151,27 @@ const SSR_SHELL_CSS = (width: number, rootId: string): string => [
 ].join('\n')
 
 // ---------------------------------------------------------------------------
+// Security Headers
+// ---------------------------------------------------------------------------
+
+const SECURITY_HEADERS: Record<string, string> = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'SAMEORIGIN',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  // Demo-appropriate CSP — kept in sync with demo/server.ts. Scripts stay
+  // strict ('self' only); inline styles are allowed because this SSR page
+  // is literally demonstrating renderToString()'s `inlineStyles` + style attrs.
+  'Content-Security-Policy':
+    "default-src 'self'; " +
+    "script-src 'self'; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "img-src 'self' data:; " +
+    "connect-src 'self'",
+  'Permissions-Policy': 'geolocation=(), camera=(), microphone=()',
+}
+
+// ---------------------------------------------------------------------------
 // JSX component tree
 // ---------------------------------------------------------------------------
 
@@ -274,6 +295,6 @@ export async function renderSSRPage(url: URL): Promise<Response> {
   })
 
   return new Response(html, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    headers: { 'Content-Type': 'text/html; charset=utf-8', ...SECURITY_HEADERS },
   })
 }

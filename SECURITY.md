@@ -149,6 +149,23 @@ await renderToString(app, { metadata: { og: { title, description } } });
 
 See also [Plugin Lifecycle Risks](#plugin-lifecycle-risks) for additional SSR concerns.
 
+### Inline CSS via bodyStyle
+
+`SSRRenderOptions.metadata.bodyStyle` is rendered as the `style` attribute on `<body>`. Axiom calls `escapeStyleText()` to prevent CSS-based attacks (same function used for `inlineStyles`).
+
+**Risk**: An attacker controlling `bodyStyle` can inject CSS `url()` expressions to exfiltrate data or `@import` external stylesheets.
+
+**Consumer responsibility**: Sanitize all CSS before passing it to `renderToString`:
+
+```ts
+// ❌ Vulnerable — CSS from untrusted source
+await renderToString(app, { metadata: { bodyStyle: userCss } });
+
+// ✅ Safe — sanitize first (example using a CSS sanitizer library)
+const safeCss = sanitizeCss(userCss); // strip url(), @import, etc.
+await renderToString(app, { metadata: { bodyStyle: safeCss } });
+```
+
 ### CORS Origin Reflection
 
 The `corsHeaders()` function in the core server (`src/server.ts`) reflects the `Origin` request header back as `Access-Control-Allow-Origin` only when it matches an entry in the `allowedOrigins` allowlist configured via `AxiomServerOptions`.
