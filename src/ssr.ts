@@ -12,7 +12,7 @@ import {
   getNodeIndex,
 } from './render/prepare.js'
 import { reflow } from './render/reflow.js'
-import { sanitizeAttrs, isValidAttrName } from './core/attrs.js'
+import { sanitizeAttrs, isValidAttrName, sanitizeUrlValue } from './core/attrs.js'
 import { releaseLayoutResult } from './render/pool.js'
 
 export interface SSRMetadata {
@@ -198,7 +198,9 @@ function renderHead(metadata?: SSRMetadata): string {
 
   if (metadata.stylesheets !== undefined) {
     for (const href of metadata.stylesheets) {
-      html += `<link rel="stylesheet" href="${escapeHtml(href)}">`
+      const sanitizedHref = sanitizeUrlValue(href)
+      if (sanitizedHref === '#blocked') continue
+      html += `<link rel="stylesheet" href="${escapeHtml(sanitizedHref)}">`
     }
   }
 
