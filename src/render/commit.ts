@@ -436,14 +436,19 @@ export function applyOps(
  * Animation libraries must animate `--animation-transform` instead of `transform`.
  */
 function composedTransform(x: number, y: number): string {
-  return `translate(${x}px,${y}px) var(--animation-transform)`
+  // Empty fallback (`,`) keeps the `transform` declaration valid when the consumer
+  // never defines `--animation-transform`. Without it, an undefined custom property
+  // makes the whole `transform` invalid at computed-value time, collapsing every
+  // element to translate(0,0). The fallback resolves to nothing (a no-op) and is
+  // overridden the moment a CSS animation sets `--animation-transform`.
+  return `translate(${x}px,${y}px) var(--animation-transform,)`
 }
 
 /**
  * Applies Axiom's absolute-position layout styles to an element.
  * Portal children are CSS-managed — this is a no-op when managedByFramework=false.
  *
- * Compose contract: always writes `translate(Xpx, Ypx) var(--animation-transform)`.
+ * Compose contract: always writes `translate(Xpx, Ypx) var(--animation-transform,)`.
  * If the element already carries an inline transform that Axiom did not write (e.g. a
  * conflicting animation), `opts.onTransformConflict` is called synchronously before
  * the overwrite. If the existing transform priority is `important`, the hook fires but

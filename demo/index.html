@@ -118,23 +118,6 @@
     </section>
   </main>
 
-  <script>
-    (function () {
-      const ssrLink = document.getElementById('launcher-ssr-link');
-      const note = document.getElementById('launcher-note');
-      const isFile = window.location.protocol === 'file:';
-
-      if (!ssrLink || !isFile) return;
-
-      ssrLink.classList.add('is-disabled');
-      ssrLink.removeAttribute('href');
-      ssrLink.setAttribute('aria-disabled', 'true');
-      ssrLink.title = 'SSR requiere servidor (http://localhost:3000)';
-
-      if (note) {
-        note.textContent = 'Modo archivo detectado: static.html funciona; SSR requiere bun run demo (http://localhost:3000).';
-      }
-    })();
-  </script>
+  <script src="./launcher.js"></script>
 </body>
 </html>

@@ -64,7 +64,7 @@ describe('SSR: renderToString', () => {
     expect(html).toContain('<p')
     expect(html).toContain('class="copy"')
     expect(html).toContain('id="lead"')
-    expect(html).toMatch(/style="position:absolute;left:0px;top:0px;transform:translate\(\d+px,\d+px\) var\(--animation-transform\);width:\d+px;height:\d+px;box-sizing:border-box;margin:0;padding:0;/)
+    expect(html).toMatch(/style="position:absolute;left:0px;top:0px;transform:translate\(\d+px,\d+px\) var\(--animation-transform,\);width:\d+px;height:\d+px;box-sizing:border-box;margin:0;padding:0;/)
     // No border reset should be injected by the framework
     expect(html).not.toMatch(/style="[^"]*border:[^"]*"/)
     expect(html).not.toMatch(/style="[^"]*border-width:[^"]*"/)

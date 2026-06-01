@@ -4,6 +4,7 @@
 
 # --- Build Output ---
 demo/app.js
+demo/static-out/
 dist/
 
 # --- Dependencies ---

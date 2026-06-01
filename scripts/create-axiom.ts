@@ -12,6 +12,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = join(__dirname, "templates");
 const ROOT_PACKAGE_JSON_PATH = join(__dirname, "..", "package.json");
 
+const SAFE_NAME_RE = /^[a-z0-9][a-z0-9._-]*$/i;
+
+/**
+ * Validates a project name against the safe-name policy: it must start with an
+ * alphanumeric character and contain only alphanumerics, dots, dashes, and
+ * underscores. Pure and side-effect free so it can be unit tested directly.
+ */
+export function isValidProjectName(name: string): boolean {
+	return SAFE_NAME_RE.test(name);
+}
+
 async function getCurrentFrameworkVersion(): Promise<string> {
 	const rootPackage = JSON.parse(
 		await readFile(ROOT_PACKAGE_JSON_PATH, "utf8"),
@@ -59,6 +70,14 @@ export async function scaffoldProject(
 			final = `${JSON.stringify(pkg, null, 2)}\n`;
 		}
 
+		if (src === "index.html") {
+			final = content.replaceAll("{{PROJECT_NAME}}", projectName);
+		}
+
+		if (src === "src/app.ts") {
+			final = content.replaceAll("'{{PROJECT_NAME}}'", `'${projectName}'`);
+		}
+
 		await writeFile(join(projectDir, dest), final, "utf8");
 		console.log(`  Created ${dest}`);
 	}
@@ -80,6 +99,13 @@ export function installProjectDependencies(projectDir: string): number {
 async function main(): Promise<void> {
 	const args = process.argv.slice(2);
 	const projectName = args[0] || "my-axiom-app";
+
+	if (!isValidProjectName(projectName)) {
+		throw new Error(
+			`Invalid project name: "${projectName}". Use only alphanumeric characters, dots, dashes, and underscores.`,
+		);
+	}
+
 	const projectDir = join(process.cwd(), projectName);
 
 	console.log(`\n  Creating Axiom project: ${projectName}\n`);

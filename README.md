@@ -46,7 +46,9 @@ cd my-app
 bun dev
 ```
 
-This scaffolds a complete project with TypeScript, JSX, and a Bun-based dev server. See [docs/COOKBOOK.md](./docs/COOKBOOK.md) for step-by-step recipes.
+This scaffolds a minimal interactive starter. Open `src/app.ts` first — that's where your app lives. For an advanced example, see [`demo/portal-demo.ts`](./demo/portal-demo.ts) which demonstrates `createPortal` with the idiomatic helper API.
+
+See [docs/COOKBOOK.md](./docs/COOKBOOK.md) for step-by-step recipes.
 
 Or set up manually:
 

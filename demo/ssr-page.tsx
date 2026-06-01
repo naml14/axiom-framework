@@ -259,7 +259,7 @@ export async function renderSSRPage(url: URL): Promise<Response> {
     }),
   )
 
-  const html = await renderToString(SSRDemoApp, {
+  const html = renderToString(SSRDemoApp, {
     width,
     height: 720,
     url: `${url.pathname}${url.search}`,

@@ -81,7 +81,7 @@ describe('applyOps', () => {
 
     applyOps(ops, root, domNodes)
 
-    expect(child.style.transform).toBe('translate(100px,50px) var(--animation-transform)')
+    expect(child.style.transform).toBe('translate(100px,50px) var(--animation-transform,)')
     expect(child.style.width).toBe('200px')
     expect(child.style.height).toBe('100px')
   })
@@ -140,7 +140,7 @@ describe('applyOps', () => {
     applyOps(ops, root, domNodes)
 
     expect(child.style.position).toBe('absolute')
-    expect(child.style.transform).toBe('translate(10px,20px) var(--animation-transform)')
+    expect(child.style.transform).toBe('translate(10px,20px) var(--animation-transform,)')
     expect(child.style.width).toBe('30px')
     expect(child.style.height).toBe('40px')
   })
@@ -305,7 +305,7 @@ describe('commitFull', () => {
 
     const container = root.children[0] as HTMLElement
     expect(container.style.position).toBe('absolute')
-    expect(container.style.transform).toBe('translate(0px,0px) var(--animation-transform)')
+    expect(container.style.transform).toBe('translate(0px,0px) var(--animation-transform,)')
     expect(container.style.width).toBe('500px')
   })
 
@@ -434,7 +434,7 @@ describe('commitHydrate: security hardening', () => {
 // ============================================================
 
 describe('transform animations', () => {
-  test('applyOps emits composed transform with var(--animation-transform)', () => {
+  test('applyOps emits composed transform with var(--animation-transform,)', () => {
     const root = document.createElement('div')
     const child = document.createElement('div')
     root.appendChild(child)
@@ -445,7 +445,7 @@ describe('transform animations', () => {
     ]
     applyOps(ops, root, domNodes)
 
-    expect(child.style.transform).toBe('translate(50px,75px) var(--animation-transform)')
+    expect(child.style.transform).toBe('translate(50px,75px) var(--animation-transform,)')
   })
 
   test('onTransformConflict fires synchronously when external transform is detected', () => {
@@ -472,7 +472,7 @@ describe('transform animations', () => {
     expect(conflictCalls[0]!.el).toBe(child)
     expect(conflictCalls[0]!.transform).toBe('scale(0.95)')
     // Axiom still writes its composed transform
-    expect(child.style.transform).toBe('translate(10px,20px) var(--animation-transform)')
+    expect(child.style.transform).toBe('translate(10px,20px) var(--animation-transform,)')
   })
 
   test('onTransformConflict does NOT fire for elements Axiom wrote previously (no false positive)', () => {
@@ -535,7 +535,7 @@ describe('transform animations', () => {
     expect(el.style.width).toBe('400px')
     // Transform must still be the composed form even without animation
     expect(el.style.transform).toContain('translate(')
-    expect(el.style.transform).toContain('var(--animation-transform)')
+    expect(el.style.transform).toContain('var(--animation-transform,)')
   })
 
   test('createApp with onTransformConflict — hook receives element and prior transform (applyOps direct)', () => {
@@ -594,11 +594,11 @@ describe('transform animations', () => {
 
     // The inline transform must embed the Axiom translate so fill-mode: both can
     // compose both values at the CSS computed-style level in a real browser.
-    expect(child.style.transform).toBe('translate(120px,240px) var(--animation-transform)')
+    expect(child.style.transform).toBe('translate(120px,240px) var(--animation-transform,)')
     // Axiom's positional coordinates are present
     expect(child.style.transform).toContain('translate(120px,240px)')
     // The CSS variable reference is the composition point for the animation value
-    expect(child.style.transform).toContain('var(--animation-transform)')
+    expect(child.style.transform).toContain('var(--animation-transform,)')
   })
 
   // ── fill-mode: forwards ──────────────────────────────────────────────────
@@ -614,7 +614,7 @@ describe('transform animations', () => {
 
     // First Axiom layout write — establishes ownership
     applyOps([{ type: 'update', index: 0, x: 50, y: 100, width: 200, height: 80 }], root, domNodes)
-    expect(child.style.transform).toBe('translate(50px,100px) var(--animation-transform)')
+    expect(child.style.transform).toBe('translate(50px,100px) var(--animation-transform,)')
 
     // Simulate animation end with fill-mode: forwards:
     // the final keyframe holds --animation-transform at its last value.
@@ -626,9 +626,9 @@ describe('transform animations', () => {
     // Axiom translate MUST reflect the new layout coordinates — not the stale ones
     expect(child.style.transform).toContain('translate(60px,110px)')
     // The CSS variable reference MUST still be present so fill-mode: forwards value persists
-    expect(child.style.transform).toContain('var(--animation-transform)')
+    expect(child.style.transform).toContain('var(--animation-transform,)')
     // Full composed string check
-    expect(child.style.transform).toBe('translate(60px,110px) var(--animation-transform)')
+    expect(child.style.transform).toBe('translate(60px,110px) var(--animation-transform,)')
   })
 
   // ── createApp({ onTransformConflict }) end-to-end wiring ─────────────────

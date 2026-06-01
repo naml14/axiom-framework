@@ -1,10 +1,14 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { scaffoldProject } from "../scripts/create-axiom.ts";
+import {
+	isValidProjectName,
+	scaffoldProject,
+	installProjectDependencies,
+} from "../scripts/create-axiom.ts";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const tempDirs: string[] = [];
@@ -119,10 +123,68 @@ afterEach(async () => {
 });
 
 describe("create-axiom starter", () => {
-	test("scaffoldProject writes a starter stylesheet and links it from index.html", async () => {
+	test("scaffoldProject writes expected template files", async () => {
+		const projectDir = await scaffoldStarterProject("templates-list");
+
+		const expectedFiles = [
+			"package.json",
+			"tsconfig.json",
+			"build-static.ts",
+			"dev-server.ts",
+			"src/app.ts",
+			"src/styles.css",
+			"index.html",
+		];
+
+		for (const file of expectedFiles) {
+			const content = await readFile(join(projectDir, file), "utf8");
+			expect(content.length).toBeGreaterThan(0);
+		}
+	});
+
+	test("installProjectDependencies runs 'bun install' in the project dir and returns its exit code", () => {
+		const projectDir = join(tmpdir(), "axiom-install-contract");
+
+		const spy = spyOn(Bun, "spawnSync").mockReturnValue({
+			exitCode: 0,
+		} as ReturnType<typeof Bun.spawnSync>);
+
+		try {
+			const exitCode = installProjectDependencies(projectDir);
+
+			expect(exitCode).toBe(0);
+			expect(spy).toHaveBeenCalledTimes(1);
+			const [command, options] = spy.mock.calls[0] as [
+				string[],
+				{ cwd: string },
+			];
+			expect(command).toEqual(["bun", "install"]);
+			expect(options.cwd).toBe(projectDir);
+		} finally {
+			spy.mockRestore();
+		}
+	});
+
+	test("installProjectDependencies propagates a non-zero exit code", () => {
+		const spy = spyOn(Bun, "spawnSync").mockReturnValue({
+			exitCode: 1,
+		} as ReturnType<typeof Bun.spawnSync>);
+
+		try {
+			expect(installProjectDependencies("/any/dir")).toBe(1);
+		} finally {
+			spy.mockRestore();
+		}
+	});
+
+	test("scaffoldProject writes a minimal starter app and links its stylesheet", async () => {
 		const projectDir = await scaffoldStarterProject("scaffold");
 
 		const indexHtml = await readFile(join(projectDir, "index.html"), "utf8");
+		const starterApp = await readFile(
+			join(projectDir, "src", "app.ts"),
+			"utf8",
+		);
 		const generatedPackage = JSON.parse(
 			await readFile(join(projectDir, "package.json"), "utf8"),
 		) as { dependencies?: Record<string, string> };
@@ -134,15 +196,92 @@ describe("create-axiom starter", () => {
 			"utf8",
 		);
 
+		// HTML wiring
 		expect(indexHtml).toMatch(
 			/<link\s+rel="stylesheet"\s+href="\/src\/styles\.css"\s*\/?>/,
 		);
 		expect(indexHtml).toContain('src="/src/app.ts"');
+
+		// Title is personalized with the project name
+		expect(indexHtml).toContain("<title>my-app</title>");
+		expect(indexHtml).not.toContain("{{PROJECT_NAME}}");
+
+		// No raw className — always class
+		expect(starterApp).not.toContain("className");
+
+		// New starter markers
+		expect(starterApp).toContain("Edit src/app.ts to start building");
+		expect(starterApp).toContain("defineComponent(() =>");
+		expect(starterApp).toContain("count.value");
+		expect(starterApp).toContain("doubled");
+		expect(starterApp).toContain("items");
+		expect(starterApp).toContain("Next steps");
+
+		// Engine-native layout: spacing/sizing live in layout props, not CSS
+		expect(starterApp).toContain("layout: { height:");
+
+		// No landing-page sections
+		expect(starterApp).not.toContain("The DOM is just");
+		expect(starterApp).not.toContain("Architecture principles");
+		expect(starterApp).not.toContain("dual-licensed");
+		expect(starterApp).not.toContain("Up and running in seconds");
+		expect(starterApp).not.toContain("A framework that respects the platform");
+
 		expect(generatedPackage.dependencies?.["axiom-framework"]).toBe(
 			rootPackage.version,
 		);
-		expect(starterStyles).toContain("h1,");
+
+		// CSS: base styles must be present
 		expect(starterStyles).toContain("button {");
+		expect(starterStyles).toContain("radial-gradient");
+
+		// CSS: new starter classes must exist
+		expect(starterStyles).toContain(".title {");
+		expect(starterStyles).toContain(".eyebrow {");
+		expect(starterStyles).toContain(".hint {");
+
+		// CSS: old landing-only classes must be gone
+		expect(starterStyles).not.toContain(".hero {");
+		expect(starterStyles).not.toContain(".principles-grid {");
+		expect(starterStyles).not.toContain(".demo-snippet {");
+		expect(starterStyles).not.toContain(".pipeline-section {");
+		expect(starterStyles).not.toContain(".api-section {");
+		expect(starterStyles).not.toContain(".cta-section {");
+	});
+
+	test("scaffoldProject personalizes the HTML title with the given project name", async () => {
+		const workspace = await freshDir("title");
+		const projectDir = join(workspace, "cool-project");
+		await scaffoldProject(projectDir, "cool-project");
+
+		const indexHtml = await readFile(join(projectDir, "index.html"), "utf8");
+
+		expect(indexHtml).toContain("<title>cool-project</title>");
+		expect(indexHtml).not.toContain("{{PROJECT_NAME}}");
+		expect(indexHtml).not.toContain("my-app");
+	});
+
+	test("scaffoldProject personalizes the visible heading in app.ts with the project name", async () => {
+		const workspace = await freshDir("heading");
+		const projectDir = join(workspace, "cool-project");
+		await scaffoldProject(projectDir, "cool-project");
+
+		const starterApp = await readFile(join(projectDir, "src", "app.ts"), "utf8");
+
+		// Visible h1 heading must use the project name, not the hardcoded default
+		expect(starterApp).toContain("'cool-project'");
+		expect(starterApp).not.toContain("'my-app'");
+		expect(starterApp).not.toContain("{{PROJECT_NAME}}");
+	});
+
+	test("scaffoldProject keeps visible heading when project name is the default my-app", async () => {
+		const projectDir = await scaffoldStarterProject("heading-default");
+
+		const starterApp = await readFile(join(projectDir, "src", "app.ts"), "utf8");
+
+		// When the project is named my-app, the heading should read my-app
+		expect(starterApp).toContain("'my-app'");
+		expect(starterApp).not.toContain("{{PROJECT_NAME}}");
 	});
 
 	test("generated static build inlines the starter stylesheet into dist HTML", async () => {
@@ -170,6 +309,16 @@ describe("create-axiom starter", () => {
 		expect(distHtml).toContain("<style>");
 		expect(distHtml).toContain("button {");
 		expect(distHtml).toContain("radial-gradient");
+	});
+
+	test("generated dev server serves root HTML with security headers", async () => {
+		const projectDir = await scaffoldStarterProject("root-security-headers");
+		const port = await startStarterDevServer(projectDir);
+
+		const htmlResponse = await fetch(`http://127.0.0.1:${port}/`);
+		expect(htmlResponse.status).toBe(200);
+		expect(htmlResponse.headers.get("x-content-type-options")).toBe("nosniff");
+		expect(htmlResponse.headers.get("x-frame-options")).toBe("SAMEORIGIN");
 	});
 
 	test("generated dev server serves the starter stylesheet over HTTP", async () => {
@@ -217,5 +366,43 @@ describe("create-axiom starter", () => {
 			`http://127.0.0.1:${port}/tsconfig.json`,
 		);
 		expect(tsConfigResponse.status).toBe(404);
+	});
+});
+
+describe("isValidProjectName", () => {
+	test("accepts valid project names", () => {
+		const valid = [
+			"my-app",
+			"My_App",
+			"app.v2",
+			"a",
+			"project123",
+			"a.b-c_d",
+		];
+		for (const name of valid) {
+			expect(isValidProjectName(name)).toBe(true);
+		}
+	});
+
+	test("rejects names that start with a non-alphanumeric character", () => {
+		const invalid = ["-bad", ".hidden", "_private"];
+		for (const name of invalid) {
+			expect(isValidProjectName(name)).toBe(false);
+		}
+	});
+
+	test("rejects names containing unsafe characters", () => {
+		const invalid = [
+			"my app",
+			"my/app",
+			"../escape",
+			"name;rm",
+			"name$(x)",
+			"name#hash",
+			"",
+		];
+		for (const name of invalid) {
+			expect(isValidProjectName(name)).toBe(false);
+		}
 	});
 });
