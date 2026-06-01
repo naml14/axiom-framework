@@ -210,12 +210,14 @@ export function isValidAttrName(key: string): boolean {
  * Sanitizes a URL value for use in URL-sensitive contexts.
  * Returns the original value if safe, or the `'#blocked'` sentinel if dangerous.
  *
- * Blocked inputs:
+ * Blocked inputs (return `'#blocked'`):
  * - Protocol-relative URLs (`//host/path`) — can be upgraded to any scheme by the browser
  * - Dangerous schemes: `javascript:`, `data:`, `vbscript:`, `file:`
- * - Any value that does not match a known-safe scheme pattern
  *
- * Safe pass-through: `https:`, `http:`, `mailto:`, `tel:`, `#`, `/`, `./`, `../`
+ * Pass-through (returned unchanged):
+ * - Known-safe values: `https:`, `http:`, `mailto:`, `tel:`, `#`, `/`, `./`, `../`
+ * - Any other value that is neither protocol-relative nor a dangerous scheme
+ *   (e.g. an unknown but non-dangerous scheme) — deny-list semantics, not allow-list
  *
  * @internal Module-level export — not re-exported from `src/index.ts`.
  *   Used by `sanitizeAttrValue()` and `renderHead()` stylesheet validation.
