@@ -92,7 +92,7 @@ export function renderToString(
   // bodyStyle is opt-in — only emit style attribute when the caller provides it
   // so that the bare <body> contract expected by tests is preserved by default.
   const bodyAttr = options?.metadata?.bodyStyle !== undefined && options.metadata.bodyStyle.length > 0
-    ? ` style="${escapeStyleText(options.metadata.bodyStyle)}"`
+    ? ` style="${escapeHtml(escapeStyleText(options.metadata.bodyStyle))}"`
     : ''
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${headHtml}</head><body${bodyAttr}><div id="${rootId}">${bodyHtml}</div></body></html>`
@@ -231,11 +231,26 @@ const DANGEROUS_CSS_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
   [/javascript\s*:/gi,    ''],
 ] as const
 
+/**
+ * Strips dangerous CSS constructs from raw style text.
+ *
+ * The patterns are applied repeatedly until the string stabilizes. A single
+ * pass is not enough because removing an inner match can reconstruct a
+ * dangerous keyword from the surrounding text — e.g. `javas` + `javascript:` +
+ * `cript:` collapses to `javascript:` after one replacement, and `ururl(l(`
+ * collapses to `url(`. Looping until no further change closes that bypass.
+ */
 function escapeStyleText(value: string): string {
-  return DANGEROUS_CSS_PATTERNS.reduce(
-    (css, [pattern, replacement]) => css.replace(pattern, replacement),
-    value,
-  )
+  let css = value
+  let prev: string
+  do {
+    prev = css
+    css = DANGEROUS_CSS_PATTERNS.reduce(
+      (c, [pattern, replacement]) => c.replace(pattern, replacement),
+      prev,
+    )
+  } while (css !== prev)
+  return css
 }
 
 /**

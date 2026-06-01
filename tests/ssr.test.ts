@@ -225,6 +225,24 @@ describe('SSR: attrs security policy', () => {
     expect(html).not.toContain('href="javascript:alert(1)"')
   })
 
+  test('SSR output blocks protocol-relative URLs (slash and backslash variants)', async () => {
+    for (const payload of ['//evil.com', '\\\\evil.com', '/\\evil.com', '\\/evil.com']) {
+      const App = defineComponent(() => ({
+        type: 'element' as const,
+        tag: 'a',
+        attrs: {
+          href: payload,
+        },
+        children: [{ type: 'text' as const, content: 'Dangerous link' }],
+      }))
+
+      const html = await renderToString(App)
+
+      expect(html).toContain('href="#blocked"')
+      expect(html).not.toContain(`href="${payload}"`)
+    }
+  })
+
   // --- SSR/Client consistency (eliminate-next-anonymous-id-global) ---
 
   test('anonymous component display name is deterministic across simulated SSR and client init', async () => {
@@ -330,6 +348,26 @@ describe('SSR: bodyStyle sanitization', () => {
     expect(html).toContain('color: red')
     expect(html).toContain('font-size: 16px')
     expect(html).toContain('margin: 0')
+  })
+
+  test('bodyStyle cannot break out of the style attribute (HTML-escaped)', async () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'test' }],
+    }))
+
+    const html = await renderToString(App, {
+      metadata: {
+        bodyStyle: 'red" onmouseover="alert(1)',
+      },
+    })
+
+    // The double quote must be HTML-escaped so it cannot terminate style="..."
+    // and inject a new attribute. The whole payload stays inside the style value.
+    expect(html).toContain('style="red&quot; onmouseover=&quot;alert(1)"')
+    // No raw (unescaped) quote breakout that would create a live attribute.
+    expect(html).not.toContain('red" onmouseover="alert(1)"')
   })
 })
 
