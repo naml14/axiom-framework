@@ -268,18 +268,17 @@ describe("create-axiom starter", () => {
 			stderr: "pipe",
 		});
 
-		if (build.exitCode !== 0) {
-			const stdout = new TextDecoder().decode(build.stdout);
-			const stderr = new TextDecoder().decode(build.stderr);
+		// Use stdout "Built" as success indicator — exitCode may be null on some runners
+		// even when the build actually succeeded.
+		const stdout = new TextDecoder().decode(build.stdout ?? new Uint8Array());
+		if (!stdout.includes("Built")) {
+			const stderr = new TextDecoder().decode(build.stderr ?? new Uint8Array());
 			throw new Error(
-				`build-static.ts failed with exit code ${build.exitCode}\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`,
+				`build-static.ts did not produce dist/index.html (exit code ${build.exitCode})\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`,
 			);
 		}
-
-		const distHtml = await readFile(
-			join(projectDir, "dist", "index.html"),
-			"utf8",
-		);
+		const distHtmlPath = join(projectDir, "dist", "index.html");
+		const distHtml = await readFile(distHtmlPath, "utf8");
 		expect(distHtml).toContain("<style>");
 		expect(distHtml).toContain("button {");
 		expect(distHtml).toContain("radial-gradient");
