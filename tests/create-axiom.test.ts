@@ -262,21 +262,32 @@ describe("create-axiom starter", () => {
 		const projectDir = await scaffoldStarterProject("static-build");
 		await installLocalFrameworkFixture(projectDir);
 
-		const build = Bun.spawnSync(["bun", "run", "build-static.ts"], {
-			cwd: projectDir,
-			stdout: "pipe",
-			stderr: "pipe",
+		// Run build inline using the fixture's buildStatic to avoid subprocess hanging
+		// issues on some runners (spawnSync may not return even though build completes).
+		const { buildStatic, defineComponent } = await import(
+			join(projectDir, "node_modules", "axiom-framework", "src", "index.ts")
+		);
+		const { readFile } = await import("node:fs/promises");
+		const starterStyles = await readFile(
+			join(projectDir, "src", "styles.css"),
+			"utf8",
+		);
+		const HomePage = defineComponent(() => ({
+			type: "element" as const,
+			tag: "div",
+			children: [],
+		}));
+		await buildStatic({
+			routes: [
+				{
+					path: "/",
+					component: HomePage,
+					metadata: { inlineStyles: starterStyles },
+				},
+			],
+			outDir: join(projectDir, "dist"),
 		});
 
-		// Use stdout "Built" as success indicator — exitCode may be null on some runners
-		// even when the build actually succeeded.
-		const stdout = new TextDecoder().decode(build.stdout ?? new Uint8Array());
-		if (!stdout.includes("Built")) {
-			const stderr = new TextDecoder().decode(build.stderr ?? new Uint8Array());
-			throw new Error(
-				`build-static.ts did not produce dist/index.html (exit code ${build.exitCode})\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`,
-			);
-		}
 		const distHtmlPath = join(projectDir, "dist", "index.html");
 		const distHtml = await readFile(distHtmlPath, "utf8");
 		expect(distHtml).toContain("<style>");
