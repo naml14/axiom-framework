@@ -29,8 +29,17 @@ export function renderToReadableStream(
   component: ComponentDefinition<void>,
   options?: StreamSSROptions
 ): ReadableStream<Uint8Array> {
-  // Current implementation: wrap the full renderToString() result in a
-  // ReadableStream as a single chunk.
+  // A valid ComponentDefinition is an object with a callable `_fn`. Note that
+  // `defineComponent()` returns a callable function (with `_fn` attached) while
+  // `defineAsyncComponent()` returns a plain object — both are valid here, so we
+  // must not reject non-callable definitions.
+  if (
+    component === null ||
+    (typeof component !== 'object' && typeof component !== 'function') ||
+    typeof (component as ComponentDefinition<void>)._fn !== 'function'
+  ) {
+    throw new Error('renderToReadableStream() requires a valid component definition')
+  }
   const html = renderToString(component, options)
   const encoder = new TextEncoder()
 

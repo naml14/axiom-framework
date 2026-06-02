@@ -17,6 +17,7 @@ import {
   getRegisteredPlugins,
   clearPlugins,
   applyPluginHook,
+  createAppContext,
 } from '../src/features/plugin.js'
 import type { AxiomPlugin, PluginContext } from '../src/features/plugin.js'
 
@@ -51,9 +52,7 @@ describe('createPlugin', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// 2. Plugin registry — registerPlugin + getRegisteredPlugins
-// ---------------------------------------------------------------------------
+
 describe('registerPlugin', () => {
   beforeEach(() => {
     clearPlugins()
@@ -106,7 +105,7 @@ describe('applyPluginHook', () => {
 
     registerPlugin(createPlugin({ name: 'p1', onMount: (c) => { calls.push('p1:' + c.appId) } }))
     registerPlugin(createPlugin({ name: 'p2', onMount: (c) => { calls.push('p2:' + c.appId) } }))
-    registerPlugin(createPlugin({ name: 'p3' })) // no onMount — skipped silently
+    registerPlugin(createPlugin({ name: 'p3' }))
 
     applyPluginHook('onMount', ctx)
     expect(calls).toEqual(['p1:test-app', 'p2:test-app'])
@@ -117,7 +116,7 @@ describe('applyPluginHook', () => {
     const ctx: PluginContext = { appId: 'test-app' }
 
     registerPlugin(createPlugin({ name: 'p1', onUnmount: () => { calls.push('p1-unmount') } }))
-    registerPlugin(createPlugin({ name: 'p2' })) // no onUnmount
+    registerPlugin(createPlugin({ name: 'p2' }))
 
     applyPluginHook('onUnmount', ctx)
     expect(calls).toEqual(['p1-unmount'])
@@ -163,8 +162,87 @@ describe('applyPluginHook', () => {
       onMount: () => { calls.push('survived') }
     }))
 
-    // Should not propagate the error but continue
     applyPluginHook('onMount', ctx)
     expect(calls).toEqual(['survived'])
+  })
+})
+
+describe('PluginScope (createAppContext)', () => {
+  beforeEach(() => {
+    clearPlugins()
+  })
+
+  it('is re-exported from the package root (documented import path)', async () => {
+    // The plugin docs import `createAppContext` from 'axiom-framework'. Guard the
+    // public re-export so the documented usage actually works for consumers.
+    const root = await import('../src/index.js')
+    expect(typeof root.createAppContext).toBe('function')
+    const scope = root.createAppContext()
+    expect(typeof scope.registerPlugin).toBe('function')
+    expect(typeof scope.applyPluginHook).toBe('function')
+    expect(typeof scope.getRegisteredPlugins).toBe('function')
+  })
+
+  it('creates isolated scopes independent from global registry', () => {
+    const globalCalls: string[] = []
+    const scopedCalls: string[] = []
+    const ctx: PluginContext = { appId: 'scope-app' }
+
+    registerPlugin(createPlugin({
+      name: 'global-plugin',
+      onMount: () => { globalCalls.push('global') },
+    }))
+
+    const scope = createAppContext()
+    scope.registerPlugin(createPlugin({
+      name: 'scoped-plugin',
+      onMount: () => { scopedCalls.push('scoped') },
+    }))
+
+    applyPluginHook('onMount', ctx)
+    expect(globalCalls).toEqual(['global'])
+    expect(scopedCalls).toEqual([])
+
+    scope.applyPluginHook('onMount', ctx)
+    expect(scopedCalls).toEqual(['scoped'])
+  })
+
+  it('ignores duplicate plugin names inside the same scope', () => {
+    const scope = createAppContext()
+    const plugin = createPlugin({ name: 'dup' })
+
+    scope.registerPlugin(plugin)
+    scope.registerPlugin(plugin)
+
+    expect(scope.getRegisteredPlugins()).toHaveLength(1)
+  })
+
+  it('scope hook errors are swallowed and remaining plugins continue', () => {
+    const calls: string[] = []
+    const scope = createAppContext()
+    const ctx: PluginContext = { appId: 'scope-app' }
+
+    scope.registerPlugin(createPlugin({
+      name: 'thrower',
+      onUpdate: () => { throw new Error('boom') },
+    }))
+    scope.registerPlugin(createPlugin({
+      name: 'survivor',
+      onUpdate: () => { calls.push('ok') },
+    }))
+
+    expect(() => scope.applyPluginHook('onUpdate', ctx)).not.toThrow()
+    expect(calls).toEqual(['ok'])
+  })
+
+  it('separate scopes are isolated from each other', () => {
+    const scopeA = createAppContext()
+    const scopeB = createAppContext()
+
+    scopeA.registerPlugin(createPlugin({ name: 'a' }))
+    scopeB.registerPlugin(createPlugin({ name: 'b' }))
+
+    expect(scopeA.getRegisteredPlugins().map(p => p.name)).toEqual(['a'])
+    expect(scopeB.getRegisteredPlugins().map(p => p.name)).toEqual(['b'])
   })
 })

@@ -451,6 +451,26 @@ describe('router: app + async integration (RED)', () => {
     expect(out.children).toEqual([])
   })
 
+  test('async loader rejection surfaces errorFallback so the UI can react', async () => {
+    const Fallback = makeComponent('Load failed')
+    const AsyncPage = defineAsyncComponent<void>(
+      () => Promise.reject(new Error('boom')),
+      { errorFallback: Fallback }
+    )
+
+    // Pending: empty fragment before the loader settles.
+    expect(AsyncPage._fn(undefined as void).type).toBe('fragment')
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const out = AsyncPage._fn(undefined as void)
+    expect(out.type).toBe('element')
+    if (out.type !== 'element') {
+      throw new Error('Expected errorFallback element after async loader rejection')
+    }
+    expect(out.children?.[0]).toMatchObject({ type: 'text', content: 'Load failed' })
+  })
+
   test('async route component renders through router+app after loader resolves', async () => {
     const Real = makeComponent('Real (router)')
     const loader = mock(() => Promise.resolve({ default: Real }))

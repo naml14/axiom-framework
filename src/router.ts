@@ -307,10 +307,20 @@ export function createRouter(routes: Route[]): Router {
   return router
 }
 
+export interface AsyncComponentOptions<P = void> {
+  /**
+   * Rendered when the async loader rejects. Lets the UI react to load failures
+   * instead of silently rendering an empty fragment forever.
+   */
+  errorFallback?: ComponentDefinition<P>
+}
+
 export function defineAsyncComponent<P = void>(
-  loader: () => Promise<{ default: ComponentDefinition<P> }>
+  loader: () => Promise<{ default: ComponentDefinition<P> }>,
+  options?: AsyncComponentOptions<P>
 ): ComponentDefinition<P> {
   const loaded = signal<ComponentDefinition<P> | null>(null)
+  const loadError = signal<Error | null>(null)
   let initiated = false
 
   return {
@@ -325,9 +335,25 @@ export function defineAsyncComponent<P = void>(
               loaded.value = mod.default
             }
           })
-          .catch(() => {
-            // Silent fail by design: keep rendering empty fragment.
+          .catch((err) => {
+            // Emit to error monitoring, never silently drop
+            const g = globalThis as typeof globalThis & { __AXIOM_ON_ASYNC_ERROR__?: (err: unknown) => void }
+            if (typeof g.__AXIOM_ON_ASYNC_ERROR__ === 'function') {
+              g.__AXIOM_ON_ASYNC_ERROR__(err)
+            }
+            // Set an error signal so the UI can show a fallback
+            loadError.value = err instanceof Error ? err : new Error(String(err))
           })
+      }
+
+      // Read the error signal (reactive dependency) so a failed load surfaces a
+      // fallback instead of leaving the signal write-only and the UI stuck on an
+      // empty fragment.
+      const error = loadError.value
+      if (error !== null) {
+        return options?.errorFallback !== undefined
+          ? options.errorFallback._fn(props)
+          : { type: 'fragment', children: [] }
       }
 
       const component = loaded.value

@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach } from 'bun:test'
-import { acquireLayoutResult, releaseLayoutResult, clearLayoutPool } from '../src/render/pool.js'
+import { acquireLayoutResult, releaseLayoutResult, clearLayoutPool, getLayoutPoolSize } from '../src/render/pool.js'
 
 describe('LayoutResult Memory Pool', () => {
   beforeEach(() => {
@@ -83,6 +83,47 @@ describe('LayoutResult Memory Pool', () => {
 
     const acquired = acquireLayoutResult(20000)
     expect(acquired).not.toBe(huge)
+  })
+
+  test('pool evicts oldest entry when max pooled layouts is reached', () => {
+    const released: Array<ReturnType<typeof acquireLayoutResult>> = []
+
+    for (let i = 0; i < 33; i++) {
+      const result = acquireLayoutResult(i + 1)
+      releaseLayoutResult(result)
+      released.push(result)
+    }
+
+    expect(getLayoutPoolSize()).toBe(32)
+
+    const reacquired: Array<ReturnType<typeof acquireLayoutResult>> = []
+    for (let i = 0; i < 32; i++) {
+      reacquired.push(acquireLayoutResult(1))
+    }
+
+    expect(reacquired.includes(released[0]!)).toBe(false)
+  })
+
+  test('expired pool entries are pruned by age', () => {
+    const realNow = Date.now
+    const baseNow = 1_000_000
+    let now = baseNow
+    Date.now = () => now
+
+    try {
+      const stale = acquireLayoutResult(8)
+      releaseLayoutResult(stale)
+      expect(getLayoutPoolSize()).toBe(1)
+
+      now = baseNow + 30_001
+
+      const fresh = acquireLayoutResult(8)
+      expect(fresh).not.toBe(stale)
+      releaseLayoutResult(fresh)
+      expect(getLayoutPoolSize()).toBe(1)
+    } finally {
+      Date.now = realNow
+    }
   })
 
   test('clearLayoutPool empties the pool', () => {

@@ -6,11 +6,17 @@ import type { LayoutResult } from '../core/types.js'
 // Recycles Float32Arrays to avoid GC pressure during hot path reflows.
 // Buffers only grow, they never shrink.
 
-const pool: LayoutResult[] = []
+interface PooledLayoutEntry {
+  result: LayoutResult
+  releasedAt: number
+}
+
+const pool: PooledLayoutEntry[] = []
 let inPool = new WeakSet<LayoutResult>()
 
 const MAX_POOLED_LAYOUTS = 32
 const MAX_POOLED_CAPACITY = 16_384
+const MAX_POOLED_AGE_MS = 30_000
 
 function isDevEnvironment(): boolean {
   if (globalThis.__AXIOM_DEV__ === true) return true
@@ -20,13 +26,26 @@ function isDevEnvironment(): boolean {
   return nodeEnv !== 'production'
 }
 
+function pruneExpiredEntries(now: number): void {
+  for (let i = pool.length - 1; i >= 0; i--) {
+    const entry = pool[i]!
+    if (now - entry.releasedAt > MAX_POOLED_AGE_MS) {
+      inPool.delete(entry.result)
+      pool.splice(i, 1)
+    }
+  }
+}
+
 function acquireFromPool(minCapacity: number): LayoutResult | undefined {
+  const now = Date.now()
+  pruneExpiredEntries(now)
+
   for (let i = pool.length - 1; i >= 0; i--) {
     const candidate = pool[i]!
-    if (candidate.x.length >= minCapacity) {
+    if (candidate.result.x.length >= minCapacity) {
       pool.splice(i, 1)
-      inPool.delete(candidate)
-      return candidate
+      inPool.delete(candidate.result)
+      return candidate.result
     }
   }
 
@@ -69,11 +88,17 @@ export function releaseLayoutResult(result: LayoutResult): void {
     return
   }
 
+  const now = Date.now()
+  pruneExpiredEntries(now)
+
   if (pool.length >= MAX_POOLED_LAYOUTS) {
-    pool.shift()
+    const evicted = pool.shift()
+    if (evicted !== undefined) {
+      inPool.delete(evicted.result)
+    }
   }
 
-  pool.push(result)
+  pool.push({ result, releasedAt: now })
   inPool.add(result)
 }
 
@@ -87,5 +112,6 @@ export function clearLayoutPool(): void {
  * Useful for metrics and debugging.
  */
 export function getLayoutPoolSize(): number {
+  pruneExpiredEntries(Date.now())
   return pool.length
 }
