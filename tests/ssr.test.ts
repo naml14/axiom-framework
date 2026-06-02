@@ -1,13 +1,8 @@
 import { describe, test, expect } from 'bun:test'
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { defineComponent, renderToString, createPortal } from '../src/index.js'
 import { jsxDEV } from '../src/jsx-dev-runtime.js'
 import { h } from '../src/syntax/h.js'
-
-const repoRoot = fileURLToPath(new URL('..', import.meta.url))
-const ssrPagePath = join(repoRoot, 'demo', 'ssr-page.tsx')
+import { renderSSRPage } from '../demo/ssr-page.js'
 
 describe('SSR: renderToString', () => {
   test('genera HTML base válido', async () => {
@@ -398,27 +393,25 @@ describe('SSR: bodyStyle sanitization', () => {
 })
 
 describe('SSR demo: security headers', () => {
-  test('demo/ssr-page.tsx defines SECURITY_HEADERS constant', async () => {
-    const source = await readFile(ssrPagePath, 'utf8')
-    expect(source).toContain("const SECURITY_HEADERS: Record<string, string> = {")
+  test('renderSSRPage returns an HTML Response', async () => {
+    const res = await renderSSRPage(new URL('http://localhost/ssr'))
+    expect(res).toBeInstanceOf(Response)
+    expect(res.headers.get('Content-Type')).toContain('text/html')
   })
 
-  test('SECURITY_HEADERS includes all five required headers', async () => {
-    const source = await readFile(ssrPagePath, 'utf8')
-    expect(source).toContain("'X-Content-Type-Options': 'nosniff'")
-    expect(source).toContain("'X-Frame-Options': 'SAMEORIGIN'")
-    expect(source).toContain("'Referrer-Policy': 'strict-origin-when-cross-origin'")
-    expect(source).toContain("'Content-Security-Policy'")
-    expect(source).toContain("'Permissions-Policy': 'geolocation=(), camera=(), microphone=()'")
+  test('Response includes all five required security headers', async () => {
+    const res = await renderSSRPage(new URL('http://localhost/ssr'))
+    expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    expect(res.headers.get('X-Frame-Options')).toBe('SAMEORIGIN')
+    expect(res.headers.get('Referrer-Policy')).toBe('strict-origin-when-cross-origin')
+    expect(res.headers.get('Content-Security-Policy')).toBeTruthy()
+    expect(res.headers.get('Permissions-Policy')).toBe(
+      'geolocation=(), camera=(), microphone=()',
+    )
   })
 
-  test('SECURITY_HEADERS CSP includes style-src for inline SSR styles', async () => {
-    const source = await readFile(ssrPagePath, 'utf8')
-    expect(source).toContain("'unsafe-inline'")
-  })
-
-  test('renderSSRPage merges SECURITY_HEADERS into Response headers', async () => {
-    const source = await readFile(ssrPagePath, 'utf8')
-    expect(source).toMatch(/\.\.\.SECURITY_HEADERS/)
+  test('CSP allows inline styles for SSR-rendered content', async () => {
+    const res = await renderSSRPage(new URL('http://localhost/ssr'))
+    expect(res.headers.get('Content-Security-Policy')).toContain("'unsafe-inline'")
   })
 })
