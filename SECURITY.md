@@ -114,23 +114,33 @@ const safeCss = sanitizeCss(userCss); // strip url(), @import, etc.
 await renderToString(app, { metadata: { inlineStyles: safeCss } });
 ```
 
-### External Stylesheet SSRF
+### External Stylesheet Origin Validation
 
-`SSRRenderOptions.metadata.stylesheets` (`string[]`) are emitted as `<link rel="stylesheet">` href attributes. Axiom escapes the value but does **not** validate the protocol or hostname.
+`SSRRenderOptions.metadata.stylesheets` (`string[]`) are emitted as `<link rel="stylesheet">` href attributes in `<head>`.
 
-**Risk**: A server-side request or redirect to an attacker-controlled URL (SSRF / open redirect).
+**Framework protection (scheme floor)**: Axiom validates each href against known dangerous URI schemes before emitting it. Hrefs using `javascript:`, `data:`, `vbscript:`, or `file:` schemes, and protocol-relative URLs (`//host/...`), are **omitted entirely** — no `<link>` tag is rendered for them. Relative paths and `http:`/`https:` URLs are emitted unchanged (after HTML escaping).
 
-**Consumer responsibility**: Validate that all stylesheet hrefs use allowed protocols and trusted hosts:
+**Risk**: The framework floor blocks dangerous schemes but does **not** validate hostnames or origins. A stylesheet from a trusted-looking but attacker-controlled domain can still be used for CSS-based data exfiltration (e.g., attribute selectors that leak form values).
+
+**Origin enforcement**: Use a CSP `style-src` directive to restrict which external origins are permitted to serve stylesheets. This is the recommended layer for enforcing allowed hosts:
+
+```http
+Content-Security-Policy: style-src 'self' https://fonts.googleapis.com https://cdn.example.com;
+```
+
+**Consumer responsibility**: Validate that all stylesheet hrefs use allowed protocols and trusted hosts before passing them to `renderToString`:
 
 ```ts
-// ❌ Vulnerable
+// ❌ Vulnerable — unvalidated user input reaches metadata
 const sheets = [req.query.css];
 
-// ✅ Safe
-const ALLOWED = /^https:\/\/cdn\.example\.com\//;
+// ✅ Safe — allowlist both scheme and host
+const ALLOWED = /^https:\/\/(cdn\.example\.com|fonts\.googleapis\.com)\//;
 const sheets = userSheets.filter((href) => ALLOWED.test(href));
 await renderToString(app, { metadata: { stylesheets: sheets } });
 ```
+
+The framework provides a safety floor; CSP `style-src` and host-level consumer validation are required for full origin trust and CSS exfiltration defence.
 
 ### Metadata Key Injection
 

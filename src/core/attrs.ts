@@ -166,7 +166,15 @@ const DANGEROUS_URL_SCHEME_RE = /^\s*(javascript|data|vbscript|file)\s*:/i
  * This is used as allowlist for URL validation.
  */
 const SAFE_URL_PATTERN = /^(https?:|mailto:|tel:|#|\/|\.\/|\.\.\/)/i
-const PROTOCOL_RELATIVE_URL_RE = /^\s*\/\//
+/**
+ * Protocol-relative URL prefix (e.g. `//evil.com`).
+ *
+ * Matches any combination of two leading slashes or backslashes. Chromium-based
+ * browsers normalize backslashes to forward slashes in URL attributes, so
+ * `\\evil.com`, `/\evil.com`, and `\/evil.com` all resolve to protocol-relative
+ * navigation and must be blocked alongside `//evil.com`.
+ */
+const PROTOCOL_RELATIVE_URL_RE = /^\s*[/\\][/\\]/
 
 /**
  * Valid HTML attribute name pattern.
@@ -207,6 +215,33 @@ export function isValidAttrName(key: string): boolean {
 }
 
 /**
+ * Validates a URL-bearing value against the project's deny-list policy and
+ * returns either the original value (safe) or the `'#blocked'` sentinel
+ * (dangerous). Exported so SSR paths that emit URLs outside of attribute
+ * sanitization (e.g. `<link rel="stylesheet">` hrefs in renderHead) can reuse
+ * the exact same policy instead of re-implementing it.
+ *
+ * Order matters: protocol-relative URLs are rejected first (they can smuggle a
+ * dangerous origin past the scheme check), then known-safe shapes pass, then
+ * any remaining dangerous scheme is blocked. Anything else is left untouched.
+ */
+export function sanitizeUrlValue(value: string): string {
+  if (typeof value !== 'string') {
+    return '#blocked'
+  }
+  if (PROTOCOL_RELATIVE_URL_RE.test(value)) {
+    return '#blocked'
+  }
+  if (SAFE_URL_PATTERN.test(value)) {
+    return value
+  }
+  if (hasDangerousUrlScheme(value)) {
+    return '#blocked'
+  }
+  return value
+}
+
+/**
  * Sanitizes a single attribute value based on the attribute key.
  *
  * @param key - The attribute name
@@ -226,16 +261,7 @@ export function sanitizeAttrValue(
 
   // Validate URL schemes for URL-sensitive attributes
   if (isUrlSensitiveAttr(lowerKey)) {
-    if (PROTOCOL_RELATIVE_URL_RE.test(value)) {
-      return '#blocked'
-    }
-    if (SAFE_URL_PATTERN.test(value)) {
-      return value
-    }
-    if (hasDangerousUrlScheme(value)) {
-      return '#blocked'
-    }
-    return value
+    return sanitizeUrlValue(value)
   }
 
   return value
