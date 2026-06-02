@@ -160,18 +160,24 @@ const SECURITY_HEADERS: Record<string, string> = {
 // Rate Limiting
 // ============================================================
 
-const requestCounts = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 100 // req per minute
 const RATE_WINDOW = 60_000 // 1 minute
-let lastPruneAt = 0
+
+interface RateLimitState {
+  /** Per-client buckets: client identity -> { count, resetAt }. */
+  counts: Map<string, { count: number; resetAt: number }>
+}
 
 /**
  * Resolves a stable client identity for rate limiting.
  *
+ * `cf-connecting-ip` is set by Cloudflare and cannot be forged by the client, so
+ * it is preferred over `X-Forwarded-For`. An attacker behind Cloudflare can
+ * prepend an arbitrary entry to `X-Forwarded-For`, so trusting its first entry
+ * first would let them mint a fresh bucket per request and bypass the limiter.
+ *
  * `X-Forwarded-For` may carry a comma-separated chain (`client, proxy1, ...`),
- * so we key on the first entry rather than the raw header value. Keying on the
- * raw string would let a caller mint a fresh bucket per request by appending
- * arbitrary hops.
+ * so we key on the first entry rather than the raw header value.
  *
  * When no proxy headers are present we fall back to the real socket address via
  * `server.requestIP()`. Without this fallback every direct-to-Bun connection
@@ -180,13 +186,14 @@ let lastPruneAt = 0
  * resort when the runtime cannot expose a peer address.
  */
 function getClientIp(req: Request, server?: BunServerInstance): string {
+  const cfIp = req.headers.get('cf-connecting-ip')
+  if (cfIp !== null && cfIp.length > 0) return cfIp
+
   const forwarded = req.headers.get('X-Forwarded-For')
   if (forwarded !== null) {
     const first = forwarded.split(',')[0]?.trim()
     if (first !== undefined && first.length > 0) return first
   }
-  const cfIp = req.headers.get('cf-connecting-ip')
-  if (cfIp !== null && cfIp.length > 0) return cfIp
 
   const peer = server?.requestIP?.(req)?.address
   if (peer !== undefined && peer.length > 0) return peer
@@ -195,33 +202,25 @@ function getClientIp(req: Request, server?: BunServerInstance): string {
 }
 
 /**
- * Drops expired buckets so the in-memory map cannot grow without bound across a
- * long-lived process or under high-cardinality / spoofed client IPs. The sweep
- * runs at most once per window to keep the hot path O(1) amortized.
+ * Records a request against its client bucket and reports whether the client is
+ * now over the limit. State is supplied by the caller so each server instance
+ * keeps isolated counters (no shared module-global state).
  */
-function pruneExpired(now: number): void {
-  if (now - lastPruneAt < RATE_WINDOW) return
-  lastPruneAt = now
-  for (const [ip, entry] of requestCounts) {
-    if (now > entry.resetAt) requestCounts.delete(ip)
-  }
-}
-
-function getRateLimiter(req: Request, server?: BunServerInstance): boolean {
+function isRateLimited(
+  state: RateLimitState,
+  req: Request,
+  server?: BunServerInstance,
+): boolean {
   const ip = getClientIp(req, server)
   const now = Date.now()
-  pruneExpired(now)
-  let entry = requestCounts.get(ip)
+  let entry = state.counts.get(ip)
   if (!entry || now > entry.resetAt) {
     entry = { count: 1, resetAt: now + RATE_WINDOW }
-    requestCounts.set(ip, entry)
+    state.counts.set(ip, entry)
     return false
   }
   entry.count++
-  if (entry.count > RATE_LIMIT) {
-    return true // rate limited
-  }
-  return false
+  return entry.count > RATE_LIMIT
 }
 
 // ============================================================
@@ -242,6 +241,11 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
   let server: BunServerInstance | null = null
   const bun = getBunRuntime()
 
+  // Per-instance rate-limit state: isolated across server instances and released
+  // when this server is stopped (no shared module-global counters).
+  const rateLimit: RateLimitState = { counts: new Map() }
+  let pruneTimer: ReturnType<typeof setInterval> | null = null
+
   // Track actual port (Bun may assign a random one if port is 0).
   let actualPort = configuredPort
 
@@ -251,7 +255,7 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
       server = bun.serve({
         port: configuredPort,
         async fetch(req: Request, srv: BunServerInstance) {
-          if (getRateLimiter(req, srv)) {
+          if (isRateLimited(rateLimit, req, srv)) {
             return new Response('Too Many Requests', {
               status: 429,
               headers: { ...SECURITY_HEADERS, ...corsHeaders(req, allowedOrigins) },
@@ -302,8 +306,24 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
         },
       })
       actualPort = server.port
+
+      // Prune expired buckets off the request hot path so no single request pays
+      // for a full-map sweep, even under high client-IP cardinality. The timer is
+      // unref'd so it never keeps the process alive, and stop() clears it.
+      pruneTimer = setInterval(() => {
+        const now = Date.now()
+        for (const [ip, entry] of rateLimit.counts) {
+          if (now > entry.resetAt) rateLimit.counts.delete(ip)
+        }
+      }, RATE_WINDOW)
+      pruneTimer.unref?.()
     },
     stop() {
+      if (pruneTimer !== null) {
+        clearInterval(pruneTimer)
+        pruneTimer = null
+      }
+      rateLimit.counts.clear()
       server?.stop()
       server = null
     },
