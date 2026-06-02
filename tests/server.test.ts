@@ -185,7 +185,10 @@ describe('createServer()', () => {
   })
 
   test('throws when staticDir is not a directory', async () => {
-    const filePath = join(tmpdir(), `axiom-server-static-file-${Date.now()}.txt`)
+    // Use a controlled temp directory, not os tmpdir directly, to avoid
+    // InsecureTemporaryFile CodeQL alert when creating files there.
+    const tmpDir = await mkdtemp(join(tmpdir(), 'axiom-server-test-'))
+    const filePath = join(tmpDir, 'dummy-file.txt')
     await writeFile(filePath, 'content', 'utf8')
 
     const component = defineComponent(() => h('div', null, 'Home'))
@@ -198,7 +201,7 @@ describe('createServer()', () => {
         })
       ).toThrow('createServer() staticDir must be a directory')
     } finally {
-      await rm(filePath, { force: true })
+      await rm(tmpDir, { recursive: true, force: true })
     }
   })
 
