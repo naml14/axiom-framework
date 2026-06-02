@@ -185,7 +185,8 @@ describe('createServer()', () => {
   })
 
   test('throws when staticDir is not a directory', async () => {
-    const filePath = join(tmpdir(), `axiom-server-static-file-${Date.now()}.txt`)
+    const dir = await mkdtemp(join(tmpdir(), 'axiom-server-static-'))
+    const filePath = join(dir, 'static-file.txt')
     await writeFile(filePath, 'content', 'utf8')
 
     const component = defineComponent(() => h('div', null, 'Home'))
@@ -198,7 +199,7 @@ describe('createServer()', () => {
         })
       ).toThrow('createServer() staticDir must be a directory')
     } finally {
-      await rm(filePath, { force: true })
+      await rm(dir, { recursive: true, force: true })
     }
   })
 
