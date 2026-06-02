@@ -116,7 +116,16 @@ serve({
 
     // SSR demo route
     if (url.pathname === '/ssr') {
-      return renderSSRPage(url)
+      // renderSSRPage() sets Content-Type + SECURITY_HEADERS but not CORS, so we
+      // merge corsHeaders here. Otherwise the OPTIONS preflight would advertise
+      // CORS while the actual GET lacks Access-Control-Allow-Origin, making every
+      // cross-origin fetch fail.
+      const res = await renderSSRPage(url)
+      const cors = corsHeaders(req)
+      for (const [key, value] of Object.entries(cors)) {
+        res.headers.set(key, value)
+      }
+      return res
     }
 
     // Static file serving — map `/` to `index.html`

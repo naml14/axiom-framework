@@ -33,7 +33,7 @@ export type { HydrationOptions, HydrationResult } from './core/types.js'
 
 // --- Router ---
 export { createRouter, defineAsyncComponent } from './router.js'
-export type { Route, RouteState, Router } from './router.js'
+export type { Route, RouteState, Router, AsyncComponentOptions } from './router.js'
 
 // --- Layout (advanced — for custom rendering pipelines) ---
 export { prepare } from './render/prepare.js'
@@ -68,8 +68,8 @@ export {
 export type { TransitionDefinition, AnimationState, TransitionProperty } from './features/animation.js'
 
 // --- Plugin / Adapter hooks (Ruta B, Fase 5) ---
-export { createPlugin, registerPlugin, getRegisteredPlugins, clearPlugins, applyPluginHook } from './features/plugin.js'
-export type { AxiomPlugin, PluginContext, PluginHook } from './features/plugin.js'
+export { createPlugin, registerPlugin, getRegisteredPlugins, clearPlugins, applyPluginHook, createAppContext } from './features/plugin.js'
+export type { AxiomPlugin, PluginContext, PluginHook, PluginScope } from './features/plugin.js'
 
 // --- Context ---
 export {
