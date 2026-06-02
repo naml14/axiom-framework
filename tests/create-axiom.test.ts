@@ -184,7 +184,7 @@ describe("create-axiom starter", () => {
 		expect(starterApp).not.toContain("className");
 
 		// New starter markers
-		expect(starterApp).toContain("Edit src/app.ts to start building")
+		expect(starterApp).toContain("Edit src/app.ts to start building");
 		expect(starterApp).toContain("defineComponent(() =>");
 		expect(starterApp).toContain("count.value");
 		expect(starterApp).toContain("doubled");

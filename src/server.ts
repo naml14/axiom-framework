@@ -78,10 +78,22 @@ function resolveStaticFilePath(staticDir: string, requestPath: string): string |
 
 function normalizeAllowedOrigins(allowedOrigins?: string[]): string[] | undefined {
   if (allowedOrigins === undefined) return undefined
-  const normalized = allowedOrigins
-    .map(origin => origin.trim())
-    .filter(origin => origin.length > 0 && origin !== '*')
-  return normalized.length > 0 ? normalized : undefined
+  const normalized = new Set<string>()
+  for (const raw of allowedOrigins) {
+    const trimmed = raw.trim()
+    if (trimmed.length === 0 || trimmed === '*') continue
+    try {
+      // new URL(...).origin canonicalizes to scheme://host[:port], dropping any
+      // trailing slash or path so it matches the browser-sent Origin header,
+      // which never carries a path. Invalid entries are dropped instead of
+      // being kept as unmatchable values.
+      const canonical = new URL(trimmed).origin
+      if (canonical !== 'null') normalized.add(canonical)
+    } catch {
+      // Skip malformed origin configuration entries.
+    }
+  }
+  return normalized.size > 0 ? [...normalized] : undefined
 }
 
 function validateStaticDir(staticDir: string | undefined): void {
@@ -113,8 +125,9 @@ function corsHeaders(req: Request, allowedOrigins?: string[]): Record<string, st
   // Reject wildcard
   if (origin === '*') return {}
 
-  // Validate against allowlist
-  if (allowedOrigins === undefined || !allowedOrigins.includes(origin)) {
+  // Validate against allowlist (both sides canonicalized for reliable match)
+  const canonicalOrigin = new URL(origin).origin
+  if (allowedOrigins === undefined || !allowedOrigins.includes(canonicalOrigin)) {
     return {}
   }
 
@@ -134,7 +147,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'SAMEORIGIN',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self'",
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'",
   'Permissions-Policy': 'geolocation=(), camera=(), microphone=()',
 }
 
@@ -146,8 +159,19 @@ const requestCounts = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 100 // req per minute
 const RATE_WINDOW = 60_000 // 1 minute
 
+// Prune expired buckets off the request hot path so no single request pays
+// for a full-map sweep, even under high client-IP cardinality.
+const pruneTimer = setInterval(() => {
+  const now = Date.now()
+  for (const [ip, entry] of requestCounts) {
+    if (now > entry.resetAt) requestCounts.delete(ip)
+  }
+}, RATE_WINDOW)
+
 function getRateLimiter(req: Request): boolean {
-  const ip = req.headers.get('X-Forwarded-For') ?? req.headers.get('cf-connecting-ip') ?? '127.0.0.1'
+  const forwarded = req.headers.get('X-Forwarded-For')
+  const firstIp = forwarded?.split(',')[0]?.trim()
+  const ip = req.headers.get('cf-connecting-ip') ?? firstIp ?? '127.0.0.1'
   const now = Date.now()
   let entry = requestCounts.get(ip)
   if (!entry || now > entry.resetAt) {
@@ -242,6 +266,7 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
       actualPort = server.port
     },
     stop() {
+      clearInterval(pruneTimer)
       server?.stop()
       server = null
     },

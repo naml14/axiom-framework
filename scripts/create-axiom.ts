@@ -62,7 +62,11 @@ export async function scaffoldProject(
 		}
 
 		if (src === "index.html") {
-			final = content.replace("{{PROJECT_NAME}}", projectName);
+			final = content.replaceAll("{{PROJECT_NAME}}", projectName)
+		}
+
+		if (src === "src/app.ts") {
+			final = content.replaceAll("'{{PROJECT_NAME}}'", `'${projectName}'`)
 		}
 
 		if (src === "src/app.ts") {
