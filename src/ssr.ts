@@ -198,7 +198,14 @@ function renderHead(metadata?: SSRMetadata): string {
 
   if (metadata.stylesheets !== undefined) {
     for (const href of metadata.stylesheets) {
-      const sanitizedHref = sanitizeUrlValue(href)
+      if (typeof href !== 'string') continue
+      const trimmed = href.trim()
+      if (trimmed === '') continue
+      // Stylesheet hrefs are URLs, so they must pass the same deny-list policy as
+      // URL-sensitive attributes. HTML-escaping alone does NOT neutralize a
+      // dangerous scheme (e.g. `javascript:` / `//evil.com`), so drop the link
+      // entirely rather than emit a live tag pointing at a hostile origin.
+      const sanitizedHref = sanitizeUrlValue(trimmed)
       if (sanitizedHref === '#blocked') continue
       html += `<link rel="stylesheet" href="${escapeHtml(sanitizedHref)}">`
     }

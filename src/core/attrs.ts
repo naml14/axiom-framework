@@ -166,7 +166,15 @@ const DANGEROUS_URL_SCHEME_RE = /^\s*(javascript|data|vbscript|file)\s*:/i
  * This is used as allowlist for URL validation.
  */
 const SAFE_URL_PATTERN = /^(https?:|mailto:|tel:|#|\/|\.\/|\.\.\/)/i
-const PROTOCOL_RELATIVE_URL_RE = /^\s*\/\//
+/**
+ * Protocol-relative URL prefix (e.g. `//evil.com`).
+ *
+ * Matches any combination of two leading slashes or backslashes. Chromium-based
+ * browsers normalize backslashes to forward slashes in URL attributes, so
+ * `\\evil.com`, `/\evil.com`, and `\/evil.com` all resolve to protocol-relative
+ * navigation and must be blocked alongside `//evil.com`.
+ */
+const PROTOCOL_RELATIVE_URL_RE = /^\s*[/\\][/\\]/
 
 /**
  * Valid HTML attribute name pattern.
@@ -207,29 +215,27 @@ export function isValidAttrName(key: string): boolean {
 }
 
 /**
- * Sanitizes a URL value for use in URL-sensitive contexts.
- * Returns the original value if safe, or the `'#blocked'` sentinel if dangerous.
+ * Validates a URL-bearing value against the project's deny-list policy and
+ * returns either the original value (safe) or the `'#blocked'` sentinel
+ * (dangerous). Exported so SSR paths that emit URLs outside of attribute
+ * sanitization (e.g. `<link rel="stylesheet">` hrefs in renderHead) can reuse
+ * the exact same policy instead of re-implementing it.
  *
- * Blocked inputs (return `'#blocked'`):
- * - Protocol-relative URLs (`//host/path`) — can be upgraded to any scheme by the browser
- * - Dangerous schemes: `javascript:`, `data:`, `vbscript:`, `file:`
- *
- * Pass-through (returned unchanged):
- * - Known-safe values: `https:`, `http:`, `mailto:`, `tel:`, `#`, `/`, `./`, `../`
- * - Any other value that is neither protocol-relative nor a dangerous scheme
- *   (e.g. an unknown but non-dangerous scheme) — deny-list semantics, not allow-list
- *
- * @internal Module-level export — not re-exported from `src/index.ts`.
- *   Used by `sanitizeAttrValue()` and `renderHead()` stylesheet validation.
+ * Order matters: protocol-relative URLs are rejected first (they can smuggle a
+ * dangerous origin past the scheme check), then known-safe shapes pass, then
+ * any remaining dangerous scheme is blocked. Anything else is left untouched.
  */
 export function sanitizeUrlValue(value: string): string {
+  if (typeof value !== 'string') {
+    return '#blocked'
+  }
   if (PROTOCOL_RELATIVE_URL_RE.test(value)) {
     return '#blocked'
   }
   if (SAFE_URL_PATTERN.test(value)) {
     return value
   }
-  if (DANGEROUS_URL_SCHEME_RE.test(value)) {
+  if (hasDangerousUrlScheme(value)) {
     return '#blocked'
   }
   return value

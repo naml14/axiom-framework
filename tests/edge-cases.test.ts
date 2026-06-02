@@ -330,10 +330,33 @@ describe('security: attribute sanitization module', () => {
     })
 
     test('allows relative URLs', () => {
-      expect(hasDangerousUrlScheme('/path/to/page')).toBe(false)
-      expect(hasDangerousUrlScheme('./relative')).toBe(false)
-      expect(hasDangerousUrlScheme('../parent')).toBe(false)
-      expect(hasDangerousUrlScheme('#anchor')).toBe(false)
+      expect(sanitizeUrlValue('/styles.css')).toBe('/styles.css')
+      expect(sanitizeUrlValue('./x.css')).toBe('./x.css')
+      expect(sanitizeUrlValue('../shared.css')).toBe('../shared.css')
+    })
+
+    test('allows mailto: URLs', () => {
+      expect(sanitizeUrlValue('mailto:user@example.com')).toBe('mailto:user@example.com')
+    })
+
+    test('allows tel: URLs', () => {
+      expect(sanitizeUrlValue('tel:+1-555-123-4567')).toBe('tel:+1-555-123-4567')
+    })
+
+    test('allows fragment URLs', () => {
+      expect(sanitizeUrlValue('#section')).toBe('#section')
+      expect(sanitizeUrlValue('#')).toBe('#')
+    })
+
+    test('allows custom non-dangerous schemes', () => {
+      expect(sanitizeUrlValue('custom:something')).toBe('custom:something')
+      expect(sanitizeUrlValue('app://resource')).toBe('app://resource')
+    })
+
+    test('sanitizeAttrValue href still returns #blocked for dangerous schemes (unchanged public contract)', () => {
+      expect(sanitizeAttrValue('href', 'javascript:alert(1)')).toBe('#blocked')
+      expect(sanitizeAttrValue('href', '//evil.com/x.css')).toBe('#blocked')
+      expect(sanitizeAttrValue('href', 'https://safe.com')).toBe('https://safe.com')
     })
   })
 
