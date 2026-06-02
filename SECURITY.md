@@ -114,23 +114,33 @@ const safeCss = sanitizeCss(userCss); // strip url(), @import, etc.
 await renderToString(app, { metadata: { inlineStyles: safeCss } });
 ```
 
-### External Stylesheet SSRF
+### External Stylesheet Origin Validation
 
-`SSRRenderOptions.metadata.stylesheets` (`string[]`) are emitted as `<link rel="stylesheet">` href attributes. Axiom escapes the value but does **not** validate the protocol or hostname.
+`SSRRenderOptions.metadata.stylesheets` (`string[]`) are emitted as `<link rel="stylesheet">` href attributes in `<head>`.
 
-**Risk**: A server-side request or redirect to an attacker-controlled URL (SSRF / open redirect).
+**Framework protection (scheme floor)**: Axiom validates each href against known dangerous URI schemes before emitting it. Hrefs using `javascript:`, `data:`, `vbscript:`, or `file:` schemes, and protocol-relative URLs (`//host/...`), are **omitted entirely** — no `<link>` tag is rendered for them. Relative paths and `http:`/`https:` URLs are emitted unchanged (after HTML escaping).
 
-**Consumer responsibility**: Validate that all stylesheet hrefs use allowed protocols and trusted hosts:
+**Risk**: The framework floor blocks dangerous schemes but does **not** validate hostnames or origins. A stylesheet from a trusted-looking but attacker-controlled domain can still be used for CSS-based data exfiltration (e.g., attribute selectors that leak form values).
+
+**Origin enforcement**: Use a CSP `style-src` directive to restrict which external origins are permitted to serve stylesheets. This is the recommended layer for enforcing allowed hosts:
+
+```http
+Content-Security-Policy: style-src 'self' https://fonts.googleapis.com https://cdn.example.com;
+```
+
+**Consumer responsibility**: Validate that all stylesheet hrefs use allowed protocols and trusted hosts before passing them to `renderToString`:
 
 ```ts
-// ❌ Vulnerable
+// ❌ Vulnerable — unvalidated user input reaches metadata
 const sheets = [req.query.css];
 
-// ✅ Safe
-const ALLOWED = /^https:\/\/cdn\.example\.com\//;
+// ✅ Safe — allowlist both scheme and host
+const ALLOWED = /^https:\/\/(cdn\.example\.com|fonts\.googleapis\.com)\//;
 const sheets = userSheets.filter((href) => ALLOWED.test(href));
 await renderToString(app, { metadata: { stylesheets: sheets } });
 ```
+
+The framework provides a safety floor; CSP `style-src` and host-level consumer validation are required for full origin trust and CSS exfiltration defence.
 
 ### Metadata Key Injection
 
@@ -151,17 +161,17 @@ See also [Plugin Lifecycle Risks](#plugin-lifecycle-risks) for additional SSR co
 
 ### Inline CSS via bodyStyle
 
-`SSRRenderOptions.metadata.bodyStyle` is rendered as the `style` attribute on `<body>`. Axiom applies **best-effort** sanitization: it strips dangerous CSS constructs (`url()`, `@import`, `expression()`, `behavior:`, `javascript:`) by re-running the filter until the string stabilizes, and then HTML-escapes the result so it cannot break out of the `style="..."` attribute.
+`SSRRenderOptions.metadata.bodyStyle` is rendered as the `style` attribute on `<body>`. Axiom calls `escapeStyleText()` to prevent CSS-based attacks (same function used for `inlineStyles`).
 
-**Risk**: Best-effort stripping is not a full CSS parser. An attacker controlling `bodyStyle` may still craft CSS that survives the filters (for example, novel data-exfiltration vectors). HTML-escaping prevents attribute breakout (XSS), but it does not make arbitrary untrusted CSS safe.
+**Risk**: An attacker controlling `bodyStyle` can inject CSS `url()` expressions to exfiltrate data or `@import` external stylesheets.
 
-**Consumer responsibility**: Treat Axiom's sanitization as defense-in-depth, not a substitute for validating untrusted CSS before passing it to `renderToString`:
+**Consumer responsibility**: Sanitize all CSS before passing it to `renderToString`:
 
 ```ts
-// ⚠️ Axiom sanitizes best-effort, but do not feed it raw untrusted CSS
+// ❌ Vulnerable — CSS from untrusted source
 await renderToString(app, { metadata: { bodyStyle: userCss } });
 
-// ✅ Recommended — validate/sanitize untrusted CSS first
+// ✅ Safe — sanitize first (example using a CSS sanitizer library)
 const safeCss = sanitizeCss(userCss); // strip url(), @import, etc.
 await renderToString(app, { metadata: { bodyStyle: safeCss } });
 ```
@@ -170,15 +180,15 @@ await renderToString(app, { metadata: { bodyStyle: safeCss } });
 
 The `corsHeaders()` function in the core server (`src/server.ts`) reflects the `Origin` request header back as `Access-Control-Allow-Origin` only when it matches an entry in the `allowedOrigins` allowlist configured via `AxiomServerOptions`.
 
-**Risk**: If an attacker-controlled origin were echoed back as `Access-Control-Allow-Origin`, browsers would let that origin read cross-origin responses. Axiom does **not** set `Access-Control-Allow-Credentials`, so cookies/credentials are not included in these cross-origin requests by default; the exposure is limited to unintended reads of response bodies, not credentialed access.
+**Risk**: An attacker-controlled origin can be echoed back as `Access-Control-Allow-Origin`, allowing arbitrary cross-origin requests (including with credentials).
 
 **Consumer responsibility**: Configure `allowedOrigins` with the exact origins that should be allowed:
 
 ```ts
-// Default — deny-by-default: no Access-Control-Allow-Origin header is returned
+// ❌ Vulnerable — reflects any origin
 createServer({ routes, port: 3000 });
 
-// ✅ Safe — explicit allowlist
+// ✅ Safe — allowlist pattern
 createServer({
   routes,
   port: 3000,

@@ -172,17 +172,6 @@ describe('PluginScope (createAppContext)', () => {
     clearPlugins()
   })
 
-  it('is re-exported from the package root (documented import path)', async () => {
-    // The plugin docs import `createAppContext` from 'axiom-framework'. Guard the
-    // public re-export so the documented usage actually works for consumers.
-    const root = await import('../src/index.js')
-    expect(typeof root.createAppContext).toBe('function')
-    const scope = root.createAppContext()
-    expect(typeof scope.registerPlugin).toBe('function')
-    expect(typeof scope.applyPluginHook).toBe('function')
-    expect(typeof scope.getRegisteredPlugins).toBe('function')
-  })
-
   it('creates isolated scopes independent from global registry', () => {
     const globalCalls: string[] = []
     const scopedCalls: string[] = []

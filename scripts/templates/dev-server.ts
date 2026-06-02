@@ -109,7 +109,7 @@ function serveStaticFile(filePath: string, req: Request): Response {
 	});
 }
 
-const ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const ALLOWED_ORIGINS = ["http://localhost:5173"];
 
 function corsHeaders(req: Request): Record<string, string> {
 	const origin = req.headers.get("Origin") ?? "";
@@ -120,6 +120,8 @@ function corsHeaders(req: Request): Record<string, string> {
 	} catch {
 		return {};
 	}
+
+	if (origin === "*") return {};
 
 	if (!ALLOWED_ORIGINS.includes(origin)) {
 		return {};

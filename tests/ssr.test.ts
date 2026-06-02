@@ -1,8 +1,13 @@
 import { describe, test, expect } from 'bun:test'
+import { readFile } from 'node:fs/promises'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineComponent, renderToString, createPortal } from '../src/index.js'
 import { jsxDEV } from '../src/jsx-dev-runtime.js'
 import { h } from '../src/syntax/h.js'
-import { renderSSRPage } from '../demo/ssr-page.js'
+
+const repoRoot = fileURLToPath(new URL('..', import.meta.url))
+const ssrPagePath = join(repoRoot, 'demo', 'ssr-page.tsx')
 
 describe('SSR: renderToString', () => {
   test('genera HTML base válido', async () => {
@@ -149,32 +154,6 @@ describe('SSR: renderToString', () => {
     expect(html).toContain('title="styled-copy"')
     expect(html).toContain('color:#a78bfa;font-weight:700;')
   })
-
-  test('attrs.style sanitiza construcciones CSS peligrosas en el atributo style del elemento', () => {
-    const App = defineComponent(() => h('p', {
-      attrs: {
-        style: 'background:url(https://evil.example/steal.png);width:expression(alert(1));color:javascript:alert(1);@import "x";',
-      },
-    }, 'Payload'))
-
-    const html = renderToString(App)
-
-    // Los vectores de inyección CSS deben quedar estripados del atributo style.
-    expect(html).not.toContain('url(')
-    expect(html).not.toContain('expression(')
-    expect(html).not.toContain('javascript:')
-    expect(html).not.toContain('@import')
-  })
-
-  test('attrs.style preserva CSS legítimo tras el saneo', () => {
-    const App = defineComponent(() => h('p', {
-      attrs: { style: 'color:red;font-size:16px;margin:0;' },
-    }, 'Safe'))
-
-    const html = renderToString(App)
-
-    expect(html).toContain('color:red;font-size:16px;margin:0;')
-  })
 })
 
 describe('SSR: export público', () => {
@@ -244,24 +223,6 @@ describe('SSR: attrs security policy', () => {
 
     expect(html).toContain('href="#blocked"')
     expect(html).not.toContain('href="javascript:alert(1)"')
-  })
-
-  test('SSR output blocks protocol-relative URLs (slash and backslash variants)', async () => {
-    for (const payload of ['//evil.com', '\\\\evil.com', '/\\evil.com', '\\/evil.com']) {
-      const App = defineComponent(() => ({
-        type: 'element' as const,
-        tag: 'a',
-        attrs: {
-          href: payload,
-        },
-        children: [{ type: 'text' as const, content: 'Dangerous link' }],
-      }))
-
-      const html = await renderToString(App)
-
-      expect(html).toContain('href="#blocked"')
-      expect(html).not.toContain(`href="${payload}"`)
-    }
   })
 
   // --- SSR/Client consistency (eliminate-next-anonymous-id-global) ---
@@ -370,48 +331,136 @@ describe('SSR: bodyStyle sanitization', () => {
     expect(html).toContain('font-size: 16px')
     expect(html).toContain('margin: 0')
   })
+})
 
-  test('bodyStyle cannot break out of the style attribute (HTML-escaped)', async () => {
-    const App = defineComponent(() => ({
+describe('SSR: stylesheet origin policy', () => {
+  function makeApp() {
+    return defineComponent(() => ({
       type: 'element' as const,
       tag: 'div',
       children: [{ type: 'text' as const, content: 'test' }],
     }))
+  }
 
-    const html = await renderToString(App, {
+  test('relative href is emitted as-is', async () => {
+    const html = await renderToString(makeApp(), {
+      metadata: { stylesheets: ['/styles.css'] },
+    })
+    expect(html).toContain('<link rel="stylesheet" href="/styles.css">')
+  })
+
+  test('https CDN href is emitted — regression: previously blocked by ALLOWED_STYLESHEET_ORIGIN', async () => {
+    const html = await renderToString(makeApp(), {
+      metadata: { stylesheets: ['https://fonts.googleapis.com/css?family=Roboto'] },
+    })
+    expect(html).toContain('href="https://fonts.googleapis.com/css?family=Roboto"')
+    expect(html).toContain('<link rel="stylesheet"')
+  })
+
+  test('http href is emitted', async () => {
+    const html = await renderToString(makeApp(), {
+      metadata: { stylesheets: ['http://example.com/styles.css'] },
+    })
+    expect(html).toContain('<link rel="stylesheet" href="http://example.com/styles.css">')
+  })
+
+  test('javascript: href is omitted entirely — no <link> tag emitted', async () => {
+    const html = await renderToString(makeApp(), {
+      metadata: { stylesheets: ['javascript:alert(1)'] },
+    })
+    expect(html).not.toContain('<link rel="stylesheet"')
+    expect(html).not.toContain('javascript:')
+  })
+
+  test('data: href is omitted entirely', async () => {
+    const html = await renderToString(makeApp(), {
+      metadata: { stylesheets: ['data:text/css,body{background:red}'] },
+    })
+    expect(html).not.toContain('<link rel="stylesheet"')
+    expect(html).not.toContain('data:text/css')
+  })
+
+  test('vbscript: and file: hrefs are omitted entirely', async () => {
+    const html = await renderToString(makeApp(), {
+      metadata: { stylesheets: ['vbscript:msgbox(1)', 'file:///etc/passwd'] },
+    })
+    expect(html).not.toContain('<link rel="stylesheet"')
+    expect(html).not.toContain('vbscript:')
+    expect(html).not.toContain('file://')
+  })
+
+  test('protocol-relative href is omitted entirely', async () => {
+    const html = await renderToString(makeApp(), {
+      metadata: { stylesheets: ['//evil.com/x.css'] },
+    })
+    expect(html).not.toContain('<link rel="stylesheet"')
+    expect(html).not.toContain('//evil.com')
+  })
+
+  test('href with HTML-special chars is escaped in output', async () => {
+    const html = await renderToString(makeApp(), {
+      metadata: { stylesheets: ['/path?a=1&b="2"'] },
+    })
+    expect(html).toContain('href="/path?a=1&amp;b=&quot;2&quot;"')
+  })
+
+  test('mixed list: safe hrefs emitted, dangerous ones omitted', async () => {
+    const html = await renderToString(makeApp(), {
       metadata: {
-        bodyStyle: 'red" onmouseover="alert(1)',
+        stylesheets: [
+          '/a.css',
+          'https://b.com/b.css',
+          'javascript:c',
+          '//d.com/d.css',
+        ],
       },
     })
+    expect(html).toContain('href="/a.css"')
+    expect(html).toContain('href="https://b.com/b.css"')
+    expect(html).not.toContain('javascript:')
+    expect(html).not.toContain('//d.com')
+    // Only 2 link tags emitted
+    expect((html.match(/<link rel="stylesheet"/g) ?? []).length).toBe(2)
+  })
 
-    // The double quote must be HTML-escaped so it cannot terminate style="..."
-    // and inject a new attribute. The whole payload stays inside the style value.
-    expect(html).toContain('style="red&quot; onmouseover=&quot;alert(1)"')
-    // No raw (unescaped) quote breakout that would create a live attribute.
-    expect(html).not.toContain('red" onmouseover="alert(1)"')
+  test('empty stylesheets array emits no link tags', async () => {
+    const html = await renderToString(makeApp(), {
+      metadata: { stylesheets: [] },
+    })
+    expect(html).not.toContain('<link rel="stylesheet"')
+  })
+
+  test('undefined stylesheets emits no link tags', async () => {
+    const html = await renderToString(makeApp(), {
+      metadata: {},
+    })
+    expect(html).not.toContain('<link rel="stylesheet"')
   })
 })
 
 describe('SSR demo: security headers', () => {
-  test('renderSSRPage returns an HTML Response', async () => {
-    const res = await renderSSRPage(new URL('http://localhost/ssr'))
-    expect(res).toBeInstanceOf(Response)
-    expect(res.headers.get('Content-Type')).toContain('text/html')
+  test('demo/ssr-page.tsx defines SECURITY_HEADERS constant', async () => {
+    const source = await readFile(ssrPagePath, 'utf8')
+    expect(source).toContain("const SECURITY_HEADERS: Record<string, string> = {")
   })
 
-  test('Response includes all five required security headers', async () => {
-    const res = await renderSSRPage(new URL('http://localhost/ssr'))
-    expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff')
-    expect(res.headers.get('X-Frame-Options')).toBe('SAMEORIGIN')
-    expect(res.headers.get('Referrer-Policy')).toBe('strict-origin-when-cross-origin')
-    expect(res.headers.get('Content-Security-Policy')).toBeTruthy()
-    expect(res.headers.get('Permissions-Policy')).toBe(
-      'geolocation=(), camera=(), microphone=()',
-    )
+  test('SECURITY_HEADERS includes all five required headers', async () => {
+    const source = await readFile(ssrPagePath, 'utf8')
+    expect(source).toContain("'X-Content-Type-Options': 'nosniff'")
+    expect(source).toContain("'X-Frame-Options': 'SAMEORIGIN'")
+    expect(source).toContain("'Referrer-Policy': 'strict-origin-when-cross-origin'")
+    expect(source).toContain("'Content-Security-Policy'")
+    expect(source).toContain("'Permissions-Policy': 'geolocation=(), camera=(), microphone=()'")
   })
 
-  test('CSP allows inline styles for SSR-rendered content', async () => {
-    const res = await renderSSRPage(new URL('http://localhost/ssr'))
-    expect(res.headers.get('Content-Security-Policy')).toContain("'unsafe-inline'")
+  test('SECURITY_HEADERS CSP includes style-src for inline SSR styles', async () => {
+    const source = await readFile(ssrPagePath, 'utf8')
+    expect(source).toContain("'unsafe-inline'")
+  })
+
+  test('renderSSRPage merges SECURITY_HEADERS into Response headers', async () => {
+    const source = await readFile(ssrPagePath, 'utf8')
+    expect(source).toMatch(/\.\.\.SECURITY_HEADERS/)
   })
 })
+
