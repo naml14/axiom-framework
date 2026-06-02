@@ -149,6 +149,45 @@ await renderToString(app, { metadata: { og: { title, description } } });
 
 See also [Plugin Lifecycle Risks](#plugin-lifecycle-risks) for additional SSR concerns.
 
+### Inline CSS via bodyStyle
+
+`SSRRenderOptions.metadata.bodyStyle` is rendered as the `style` attribute on `<body>`. Axiom applies **best-effort** sanitization: it strips dangerous CSS constructs (`url()`, `@import`, `expression()`, `behavior:`, `javascript:`) by re-running the filter until the string stabilizes, and then HTML-escapes the result so it cannot break out of the `style="..."` attribute.
+
+**Risk**: Best-effort stripping is not a full CSS parser. An attacker controlling `bodyStyle` may still craft CSS that survives the filters (for example, novel data-exfiltration vectors). HTML-escaping prevents attribute breakout (XSS), but it does not make arbitrary untrusted CSS safe.
+
+**Consumer responsibility**: Treat Axiom's sanitization as defense-in-depth, not a substitute for validating untrusted CSS before passing it to `renderToString`:
+
+```ts
+// ⚠️ Axiom sanitizes best-effort, but do not feed it raw untrusted CSS
+await renderToString(app, { metadata: { bodyStyle: userCss } });
+
+// ✅ Recommended — validate/sanitize untrusted CSS first
+const safeCss = sanitizeCss(userCss); // strip url(), @import, etc.
+await renderToString(app, { metadata: { bodyStyle: safeCss } });
+```
+
+### CORS Origin Reflection
+
+The `corsHeaders()` function in the core server (`src/server.ts`) reflects the `Origin` request header back as `Access-Control-Allow-Origin` only when it matches an entry in the `allowedOrigins` allowlist configured via `AxiomServerOptions`.
+
+**Risk**: If an attacker-controlled origin were echoed back as `Access-Control-Allow-Origin`, browsers would let that origin read cross-origin responses. Axiom does **not** set `Access-Control-Allow-Credentials`, so cookies/credentials are not included in these cross-origin requests by default; the exposure is limited to unintended reads of response bodies, not credentialed access.
+
+**Consumer responsibility**: Configure `allowedOrigins` with the exact origins that should be allowed:
+
+```ts
+// Default — deny-by-default: no Access-Control-Allow-Origin header is returned
+createServer({ routes, port: 3000 });
+
+// ✅ Safe — explicit allowlist
+createServer({
+  routes,
+  port: 3000,
+  allowedOrigins: ['https://example.com', 'https://app.example.com'],
+});
+```
+
+If `allowedOrigins` is not provided, CORS headers are **not returned** (deny-by-default). The template and demo servers ship with a local development allowlist (`http://localhost:3000` or `http://localhost:5173`), which must be updated for production use.
+
 ## Plugin Lifecycle Risks
 
 ### Cross-Request Pollution

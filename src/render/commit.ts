@@ -266,9 +266,27 @@ export function commitHydrate(
   const rootHeight = layout.height[0] ?? 0
   root.style.height = `${rootHeight}px`
 
-  hydrateNode(prepared)
-
-  state.domNodes = nextDomNodes
+  try {
+    hydrateNode(prepared)
+    state.domNodes = nextDomNodes
+  } catch (error) {
+    if (strict) {
+      throw error
+    }
+    // A thrown error (not a soft mismatch, which is handled inline by `fail`)
+    // aborts hydration mid-recursion, leaving `nextDomNodes` and the live DOM
+    // inconsistent: untracked ghost nodes plus missing `state.domNodes` entries
+    // that crash later reactive updates. Degrade gracefully — wipe the container
+    // and fall back to a full client-side render instead of committing a broken
+    // hydration state.
+    const message = error instanceof Error ? error.message : String(error)
+    result.mismatchCount++
+    result.warnings.push(`Hydration failed: ${message}. Falling back to full client-side render.`)
+    root.innerHTML = ''
+    state.domNodes = []
+    state.portalRoots.clear()
+    commitFull(layout, prepared, root, state, commitOpts)
+  }
 
   if (options?.debug === true) {
     ;(globalThis as any).__AXIOM_HYDRATION_DEBUG__ = {
