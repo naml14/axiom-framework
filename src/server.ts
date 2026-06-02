@@ -34,16 +34,22 @@ interface BunFileLike extends Blob {
   exists(): Promise<boolean>
 }
 
+interface BunSocketAddress {
+  address: string
+}
+
 interface BunServerInstance {
   port: number
   stop(): void
+  /** Resolves the real socket address of the connection behind a request. */
+  requestIP?(req: Request): BunSocketAddress | null
 }
 
 interface BunServerRuntime {
   file(path: string): BunFileLike
   serve(options: {
     port: number
-    fetch(req: Request): Response | Promise<Response>
+    fetch(req: Request, server: BunServerInstance): Response | Promise<Response>
   }): BunServerInstance
 }
 
@@ -157,6 +163,7 @@ const SECURITY_HEADERS: Record<string, string> = {
 const requestCounts = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 100 // req per minute
 const RATE_WINDOW = 60_000 // 1 minute
+let lastPruneAt = 0
 
 /**
  * Resolves a stable client identity for rate limiting.
@@ -165,19 +172,45 @@ const RATE_WINDOW = 60_000 // 1 minute
  * so we key on the first entry rather than the raw header value. Keying on the
  * raw string would let a caller mint a fresh bucket per request by appending
  * arbitrary hops.
+ *
+ * When no proxy headers are present we fall back to the real socket address via
+ * `server.requestIP()`. Without this fallback every direct-to-Bun connection
+ * would collapse into a single hardcoded bucket, so one abusive client could
+ * rate-limit everyone (a denial of service). `127.0.0.1` is only used as a last
+ * resort when the runtime cannot expose a peer address.
  */
-function getClientIp(req: Request): string {
+function getClientIp(req: Request, server?: BunServerInstance): string {
   const forwarded = req.headers.get('X-Forwarded-For')
   if (forwarded !== null) {
     const first = forwarded.split(',')[0]?.trim()
     if (first !== undefined && first.length > 0) return first
   }
-  return req.headers.get('cf-connecting-ip') ?? '127.0.0.1'
+  const cfIp = req.headers.get('cf-connecting-ip')
+  if (cfIp !== null && cfIp.length > 0) return cfIp
+
+  const peer = server?.requestIP?.(req)?.address
+  if (peer !== undefined && peer.length > 0) return peer
+
+  return '127.0.0.1'
 }
 
-function getRateLimiter(req: Request): boolean {
-  const ip = getClientIp(req)
+/**
+ * Drops expired buckets so the in-memory map cannot grow without bound across a
+ * long-lived process or under high-cardinality / spoofed client IPs. The sweep
+ * runs at most once per window to keep the hot path O(1) amortized.
+ */
+function pruneExpired(now: number): void {
+  if (now - lastPruneAt < RATE_WINDOW) return
+  lastPruneAt = now
+  for (const [ip, entry] of requestCounts) {
+    if (now > entry.resetAt) requestCounts.delete(ip)
+  }
+}
+
+function getRateLimiter(req: Request, server?: BunServerInstance): boolean {
+  const ip = getClientIp(req, server)
   const now = Date.now()
+  pruneExpired(now)
   let entry = requestCounts.get(ip)
   if (!entry || now > entry.resetAt) {
     entry = { count: 1, resetAt: now + RATE_WINDOW }
@@ -217,8 +250,8 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
     serve() {
       server = bun.serve({
         port: configuredPort,
-        async fetch(req: Request) {
-          if (getRateLimiter(req)) {
+        async fetch(req: Request, srv: BunServerInstance) {
+          if (getRateLimiter(req, srv)) {
             return new Response('Too Many Requests', {
               status: 429,
               headers: { ...SECURITY_HEADERS, ...corsHeaders(req, allowedOrigins) },

@@ -338,3 +338,61 @@ describe('createServer()', () => {
     }
   })
 })
+
+// ---------------------------------------------------------------------------
+// Rate limiting — per-client bucketing (regression for PR #80 review)
+// ---------------------------------------------------------------------------
+
+describe('createServer() — rate limiting', () => {
+  // Each test uses a UNIQUE X-Forwarded-For IP. getClientIp() keys on the first
+  // XFF entry, so distinct IPs land in isolated buckets — this keeps the
+  // module-global requestCounts map from leaking 429s into other tests.
+
+  test('distinct client IPs get independent rate-limit buckets', async () => {
+    // Regression: previously every request collapsed into one hardcoded
+    // 127.0.0.1 bucket, so one abusive client could rate-limit everyone.
+    const component = defineComponent(() => h('div', null, 'Home'))
+    const server = createServer({ routes: [{ path: '/', component }], port: 0 })
+
+    try {
+      server.serve()
+      const base = `http://localhost:${server.port}/`
+
+      const resA = await fetch(base, { headers: { 'X-Forwarded-For': '203.0.113.10' } })
+      const resB = await fetch(base, { headers: { 'X-Forwarded-For': '203.0.113.20' } })
+
+      expect(resA.status).toBe(200)
+      expect(resB.status).toBe(200)
+    } finally {
+      server.stop()
+    }
+  })
+
+  test('a single client IP is blocked with 429 once it exceeds RATE_LIMIT', async () => {
+    const component = defineComponent(() => h('div', null, 'Home'))
+    const server = createServer({ routes: [{ path: '/', component }], port: 0 })
+    const RATE_LIMIT = 100
+    const clientIp = '198.51.100.77'
+
+    try {
+      server.serve()
+      const base = `http://localhost:${server.port}/`
+      const headers = { 'X-Forwarded-For': clientIp }
+
+      // The first RATE_LIMIT requests are allowed.
+      for (let i = 0; i < RATE_LIMIT; i++) {
+        const res = await fetch(base, { headers })
+        expect(res.status).toBe(200)
+      }
+
+      // The request beyond the limit is rejected, and the 429 still carries
+      // the standard security headers.
+      const blocked = await fetch(base, { headers })
+      expect(blocked.status).toBe(429)
+      expect(blocked.headers.get('X-Content-Type-Options')).toBe('nosniff')
+      expect(blocked.headers.get('X-Frame-Options')).toBe('SAMEORIGIN')
+    } finally {
+      server.stop()
+    }
+  })
+})
