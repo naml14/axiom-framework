@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test'
 import { readFile } from 'node:fs/promises'
-import { join, dirname } from 'node:path'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineComponent, renderToString, createPortal } from '../src/index.js'
 import { jsxDEV } from '../src/jsx-dev-runtime.js'
@@ -153,6 +153,32 @@ describe('SSR: renderToString', () => {
     expect(html).toContain('Styled copy')
     expect(html).toContain('title="styled-copy"')
     expect(html).toContain('color:#a78bfa;font-weight:700;')
+  })
+
+  test('attrs.style sanitiza construcciones CSS peligrosas en el atributo style del elemento', () => {
+    const App = defineComponent(() => h('p', {
+      attrs: {
+        style: 'background:url(https://evil.example/steal.png);width:expression(alert(1));color:javascript:alert(1);@import "x";',
+      },
+    }, 'Payload'))
+
+    const html = renderToString(App)
+
+    // Los vectores de inyección CSS deben quedar estripados del atributo style.
+    expect(html).not.toContain('url(')
+    expect(html).not.toContain('expression(')
+    expect(html).not.toContain('javascript:')
+    expect(html).not.toContain('@import')
+  })
+
+  test('attrs.style preserva CSS legítimo tras el saneo', () => {
+    const App = defineComponent(() => h('p', {
+      attrs: { style: 'color:red;font-size:16px;margin:0;' },
+    }, 'Safe'))
+
+    const html = renderToString(App)
+
+    expect(html).toContain('color:red;font-size:16px;margin:0;')
   })
 })
 

@@ -140,11 +140,12 @@ function renderNode(
   if (!isPortalChild) {
     let style = `position:absolute;left:0px;top:0px;transform:translate(${layout.x[idx]}px,${layout.y[idx]}px) var(--animation-transform,);width:${layout.width[idx]}px;height:${layout.height[idx]}px;box-sizing:border-box;margin:0;padding:0;`
     if (attrs?.style) {
-      style += attrs.style.endsWith(';') ? ` ${attrs.style}` : ` ${attrs.style};`
+      const safeStyle = sanitizeCssProperty(attrs.style)
+      style += safeStyle.endsWith(';') ? ` ${safeStyle}` : ` ${safeStyle};`
     }
     attrPairs.push(['style', style])
   } else if (attrs?.style) {
-    attrPairs.push(['style', attrs.style])
+    attrPairs.push(['style', sanitizeCssProperty(attrs.style)])
   }
 
   // Sanitize attributes: block event handlers, validate URL schemes, validate names
