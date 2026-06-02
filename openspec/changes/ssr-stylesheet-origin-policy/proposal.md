@@ -19,7 +19,7 @@ The current implementation breaks the public `metadata.stylesheets` API contract
 
 ### Goals
 - **Fix the bug**: Remove the hardcoded placeholder regex to restore the public API contract for `metadata.stylesheets`, allowing legitimate absolute URLs.
-- **Enforce Scheme Consistency**: Apply the existing scheme-blocking logic from `attrs.ts` to stylesheet `href`s in `renderHead()`, ensuring dangerous schemes are blocked and emitted as `#blocked`.
+- **Enforce Scheme Consistency**: Apply the existing scheme-blocking logic from `attrs.ts` to stylesheet `href`s in `renderHead()`, ensuring dangerous schemes are blocked and the corresponding `<link>` tag is omitted entirely.
 - **Align Documentation**: Update `SECURITY.md` to clarify that Content Security Policy (CSP) `style-src` and consumer-level validation are the recommended mechanisms for origin trust.
 
 ### Non-Goals
@@ -42,7 +42,7 @@ The current implementation breaks the public `metadata.stylesheets` API contract
 ## 4. High-Level Approach
 
 1. **Extract/Reuse Scheme Blocker**: In `src/core/attrs.ts`, ensure the logic that blocks `javascript:`, `data:`, `vbscript:`, `file:`, and protocol-relative `//` is accessible (e.g., as a `sanitizeHref` utility).
-2. **Fix `renderHead()`**: Remove the `ALLOWED_STYLESHEET_ORIGIN` regex in `src/ssr.ts`. Iterate over `metadata.stylesheets` and pass each `href` through the scheme blocker before emitting the `<link rel="stylesheet">` tag. If blocked, emit `#blocked` (consistent with component attrs behavior).
+2. **Fix `renderHead()`**: Remove the `ALLOWED_STYLESHEET_ORIGIN` regex in `src/ssr.ts`. Iterate over `metadata.stylesheets` and pass each `href` through the scheme blocker before emitting the `<link rel="stylesheet">` tag. If blocked, omit the tag entirely (do not emit `#blocked` or any placeholder).
 3. **Documentation Update**: Amend `SECURITY.md` to name CSP `style-src` as the recommended origin-enforcement layer, while retaining the existing guidance on consumer-side validation of user-provided URLs.
 4. **Testing**: Write tests using `bun test` to assert the behavior of `renderHead` with various valid and invalid stylesheet URLs.
 
@@ -56,6 +56,6 @@ The current implementation breaks the public `metadata.stylesheets` API contract
 ## 6. Success Criteria
 
 1. Real CDN URLs (e.g., `https://fonts.googleapis.com/...`) and relative URLs correctly render in the SSR output without being dropped.
-2. Dangerous schemes (`javascript:`, `data:`, `vbscript:`, `file:`, `//`) are blocked and replaced with `#blocked` in the output.
+2. Dangerous schemes (`javascript:`, `data:`, `vbscript:`, `file:`, `//`) are blocked and the corresponding `<link>` tag is omitted from the output (no `#blocked` placeholder is emitted).
 3. `SECURITY.md` is updated to reflect the framework's stance on CSP and origin trust for stylesheets.
 4. All `bun test` suites pass, including new cases for the `renderHead` stylesheet behavior.

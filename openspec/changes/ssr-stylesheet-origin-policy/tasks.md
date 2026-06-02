@@ -7,14 +7,14 @@
 | Estimated changed lines | 140-220 |
 | Estimated implementation files | 6 |
 | 400-line budget risk | Low |
-| Chained PRs recommended | No |
-| Suggested split | single PR |
+| Chained PRs recommended | Yes |
+| Suggested split | Chained (stacked-to-main) |
 | Delivery strategy | auto-forecast |
-| Chain strategy | pending |
+| Chain strategy | stacked-to-main |
 
 Decision needed before apply: No
-Chained PRs recommended: No
-Chain strategy: pending
+Chained PRs recommended: Yes
+Chain strategy: stacked-to-main
 400-line budget risk: Low
 
 ### Suggested Work Units

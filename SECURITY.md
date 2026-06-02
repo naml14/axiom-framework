@@ -114,7 +114,7 @@ const safeCss = sanitizeCss(userCss); // strip url(), @import, etc.
 await renderToString(app, { metadata: { inlineStyles: safeCss } });
 ```
 
-### External Stylesheet SSRF
+### External Stylesheet Origin Validation
 
 `SSRRenderOptions.metadata.stylesheets` (`string[]`) are emitted as `<link rel="stylesheet">` href attributes in `<head>`.
 
