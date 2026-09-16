@@ -37,9 +37,7 @@ function pruneExpiredEntries(now: number): void {
 }
 
 function acquireFromPool(minCapacity: number): LayoutResult | undefined {
-  const now = Date.now()
-  pruneExpiredEntries(now)
-
+  // Hot path: linear scan for capacity only — no Date.now(), no pruning.
   for (let i = pool.length - 1; i >= 0; i--) {
     const candidate = pool[i]!
     if (candidate.result.x.length >= minCapacity) {

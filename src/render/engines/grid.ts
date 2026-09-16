@@ -17,6 +17,15 @@ import { resolveResponsiveLayout } from '../strategy/responsive.js'
 import { measureSimple } from './fast-path.js'
 import { measureFlex } from './flex.js'
 import { measureTextChild } from './text-measure.js'
+import {
+  acquireGridScratch,
+  releaseGridScratch,
+  takeGridPlacement,
+  takeDeferredPlacement,
+  type GridPlacementScratch,
+  type DeferredGridPlacementScratch,
+  type LocalizedSecondPassRemeasureScratch,
+} from './scratch.js'
 
 // ============================================================
 // Grid MVP (Fase 2, slice 1)
@@ -41,31 +50,7 @@ import { measureTextChild } from './text-measure.js'
 const REPEAT_COLUMNS_REGEX = /^repeat\(\s*(\d+)\s*,\s*1fr\s*\)$/i
 const PERCENT_VALUE_REGEX = /^(-?\d+(?:\.\d+)?)%$/
 
-interface GridPlacement {
-  child: PreparedComponent
-  childIdx: number
-  row: number
-  col: number
-  rowSpan: number
-  colSpan: number
-  childHeight: number
-}
 
-interface DeferredGridPlacement {
-  child: PreparedComponent
-  childIdx: number
-  childHeight: number
-  rowSpan: number
-  colSpan: number
-  fixedRow?: number
-  fixedCol?: number
-}
-
-interface LocalizedSecondPassRemeasure {
-  child: PreparedComponent
-  childWidth: number
-  childLayout: LayoutProps | undefined
-}
 
 export function measureGrid(
   prepared: PreparedComponent,
@@ -95,12 +80,18 @@ export function measureGrid(
     ? Math.max(0, (innerWidth - totalColumnGaps) / columns)
     : innerWidth
 
-  const rowHeights: number[] = []
-  const placements: GridPlacement[] = []
-  const deferredQueue: DeferredGridPlacement[] = []
-  const secondPassVerticalPercentByChildIdx = new Map<number, number>()
-  const localizedSecondPassRemeasureByChildIdx = new Map<number, LocalizedSecondPassRemeasure>()
-  const occupiedCells = new Set<string>()
+  // Scratch buffers recycled across grid calls — see ./scratch.ts.
+  // Eliminates the 6 per-call allocations (3 arrays + 2 Maps + 1 Set) that
+  // used to fight GC during the hot path.
+  const scratch = acquireGridScratch()
+  const rowHeights = scratch.rowHeights
+  const placements = scratch.placements
+  const deferredQueue = scratch.deferredQueue
+  const secondPassVerticalPercentByChildIdx = scratch.secondPassVerticalPercentByChildIdx
+  const localizedSecondPassRemeasureByChildIdx = scratch.localizedSecondPassRemeasureByChildIdx
+  const occupiedCells = scratch.occupiedCells
+
+  try {
 
   for (const child of children) {
     const childIdx = getNodeIndex(child)
@@ -209,38 +200,56 @@ export function measureGrid(
 
       if (canPlaceRectangle(occupiedCells, row, col, rowSpan, colSpan, columns)) {
         reserveRectangle(occupiedCells, row, col, rowSpan, colSpan)
-        registerPlacement(placements, rowHeights, {
-          child,
-          childIdx,
-          row,
-          col,
-          rowSpan,
-          colSpan,
-          childHeight,
-        })
+        const p = takeGridPlacement(scratch)
+        p.child = child
+        p.childIdx = childIdx
+        p.row = row
+        p.col = col
+        p.rowSpan = rowSpan
+        p.colSpan = colSpan
+        p.childHeight = childHeight
+        registerPlacement(placements, rowHeights, p)
       } else {
-        deferredQueue.push({ child, childIdx, childHeight, rowSpan, colSpan })
+        const d = takeDeferredPlacement(scratch)
+        d.child = child
+        d.childIdx = childIdx
+        d.childHeight = childHeight
+        d.rowSpan = rowSpan
+        d.colSpan = colSpan
+        d.fixedRow = undefined
+        d.fixedCol = undefined
+        deferredQueue.push(d)
       }
     } else if (explicitRow !== undefined) {
-      deferredQueue.push({
-        child,
-        childIdx,
-        childHeight,
-        rowSpan,
-        colSpan,
-        fixedRow: explicitRow - 1,
-      })
+      const d = takeDeferredPlacement(scratch)
+      d.child = child
+      d.childIdx = childIdx
+      d.childHeight = childHeight
+      d.rowSpan = rowSpan
+      d.colSpan = colSpan
+      d.fixedRow = explicitRow - 1
+      d.fixedCol = undefined
+      deferredQueue.push(d)
     } else if (explicitCol !== undefined) {
-      deferredQueue.push({
-        child,
-        childIdx,
-        childHeight,
-        rowSpan,
-        colSpan,
-        fixedCol: explicitCol - 1,
-      })
+      const d = takeDeferredPlacement(scratch)
+      d.child = child
+      d.childIdx = childIdx
+      d.childHeight = childHeight
+      d.rowSpan = rowSpan
+      d.colSpan = colSpan
+      d.fixedRow = undefined
+      d.fixedCol = explicitCol - 1
+      deferredQueue.push(d)
     } else {
-      deferredQueue.push({ child, childIdx, childHeight, rowSpan, colSpan })
+      const d = takeDeferredPlacement(scratch)
+      d.child = child
+      d.childIdx = childIdx
+      d.childHeight = childHeight
+      d.rowSpan = rowSpan
+      d.colSpan = colSpan
+      d.fixedRow = undefined
+      d.fixedCol = undefined
+      deferredQueue.push(d)
     }
   }
 
@@ -267,15 +276,15 @@ export function measureGrid(
 
     reserveRectangle(occupiedCells, location.row, location.col, queued.rowSpan, queued.colSpan)
 
-    registerPlacement(placements, rowHeights, {
-      child: queued.child,
-      childIdx: queued.childIdx,
-      row: location.row,
-      col: location.col,
-      rowSpan: queued.rowSpan,
-      colSpan: queued.colSpan,
-      childHeight: queued.childHeight,
-    })
+    const p = takeGridPlacement(scratch)
+    p.child = queued.child
+    p.childIdx = queued.childIdx
+    p.row = location.row
+    p.col = location.col
+    p.rowSpan = queued.rowSpan
+    p.colSpan = queued.colSpan
+    p.childHeight = queued.childHeight
+    registerPlacement(placements, rowHeights, p)
   }
 
   // Segundo pase vertical mínimo para rowSpan + porcentaje auto-placed.
@@ -348,6 +357,10 @@ export function measureGrid(
     const contentHeight = rowHeights.reduce((sum, h) => sum + h, 0)
     const totalRowGaps = Math.max(0, rows - 1) * rowGap
     result.height[parentIdx] = contentHeight + totalRowGaps + padding * 2
+  }
+
+  } finally {
+    releaseGridScratch(scratch)
   }
 }
 
@@ -471,8 +484,8 @@ function resolveDeterminableVerticalSpanHeight(
 
 function reconcileCoveredRowsForNormalizedSpan(
   rowHeights: number[],
-  placements: GridPlacement[],
-  placement: GridPlacement,
+  placements: GridPlacementScratch[],
+  placement: GridPlacementScratch,
   normalizedHeight: number,
   rowGap: number
 ): void {
@@ -621,9 +634,9 @@ function getSearchRowLimit(occupiedCells: Set<string>, rowSpan: number): number 
 }
 
 function registerPlacement(
-  placements: GridPlacement[],
+  placements: GridPlacementScratch[],
   rowHeights: number[],
-  placement: GridPlacement
+  placement: GridPlacementScratch
 ): void {
   placements.push(placement)
 

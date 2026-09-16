@@ -20,6 +20,7 @@ import { measureSimple } from './fast-path.js'
 import { resolveResponsiveLayout } from '../strategy/responsive.js'
 import { measureGrid } from './grid.js'
 import { measureTextChild } from './text-measure.js'
+import { acquireFlexScratch, releaseFlexScratch, takeFlexItem, type FlexLineScratch } from './scratch.js'
 
 // ============================================================
 // FlexAxis Abstraction
@@ -28,25 +29,32 @@ import { measureTextChild } from './text-measure.js'
 interface Size { width: number; height: number }
 interface Position { x: number; y: number }
 
+/**
+ * Minimal view over an item's size — used by the axis helpers so they can
+ * read either a runtime `Size` object (for parent constraints) or the flat
+ * `sizeWidth`/`sizeHeight` fields of a `FlexLineItemScratch`.
+ */
+interface ItemSize { sizeWidth: number, sizeHeight: number }
+
 interface FlexAxis {
-  main(size: Size): number
-  cross(size: Size): number
+  main(item: ItemSize): number
+  cross(item: ItemSize): number
   compose(mainPos: number, crossPos: number): Position
   mainSize(parentSize: Size): number
   crossSize(parentSize: Size): number
 }
 
 const ROW_AXIS: FlexAxis = {
-  main: (s) => s.width,
-  cross: (s) => s.height,
+  main: (s) => s.sizeWidth,
+  cross: (s) => s.sizeHeight,
   compose: (m, c) => ({ x: m, y: c }),
   mainSize: (s) => s.width,
   crossSize: (s) => s.height,
 }
 
 const COLUMN_AXIS: FlexAxis = {
-  main: (s) => s.height,
-  cross: (s) => s.width,
+  main: (s) => s.sizeHeight,
+  cross: (s) => s.sizeWidth,
   compose: (m, c) => ({ x: c, y: m }),
   mainSize: (s) => s.height,
   crossSize: (s) => s.width,
@@ -56,11 +64,9 @@ function getAxis(direction: FlexDirection): FlexAxis {
   return direction === 'row' ? ROW_AXIS : COLUMN_AXIS
 }
 
-interface FlexLine {
-  items: { child: PreparedComponent, size: Size, childIdx: number }[]
-  mainSize: number
-  crossSize: number
-}
+// ============================================================
+// Flex Layout
+// ============================================================
 
 // ============================================================
 // Flex Layout
@@ -94,8 +100,18 @@ export function measureFlex(
   const mainAxisSize = axis.mainSize(parentSize) - padding * 2
   const crossAxisSize = axis.crossSize(parentSize) - padding * 2
 
-  const lines: FlexLine[] = []
-  let currentLine: FlexLine = { items: [], mainSize: 0, crossSize: 0 }
+  // Scratch buffers recycled across flex calls — see ./scratch.ts.
+  // The linePool + currentLineIdx pattern guarantees that completed lines
+  // pushed into `lines[]` keep their own data: each line is a distinct
+  // pre-allocated object, not a single reference we reset in place.
+  const scratch = acquireFlexScratch()
+  const lines: FlexLineScratch[] = scratch.lines
+
+  function currentLine(): FlexLineScratch {
+    return scratch.linePool[scratch.currentLineIdx]!
+  }
+
+  try {
 
   for (const child of children) {
     // Portals are invisible to flex layout — skip entirely.
@@ -173,29 +189,49 @@ export function measureFlex(
       }
     }
 
-    const size = { width: result.width[childIdx], height: result.height[childIdx] }
-    const itemMainSize = axis.main(size)
-    const itemCrossSize = axis.cross(size)
+    const sizeW = result.width[childIdx]
+    const sizeH = result.height[childIdx]
+    const itemMainSize = direction === 'row' ? sizeW : sizeH
+    const itemCrossSize = direction === 'row' ? sizeH : sizeW
 
-    if (wrap !== 'nowrap' && currentLine.items.length > 0) {
-      if (currentLine.mainSize + gap + itemMainSize > mainAxisSize) {
-        lines.push(currentLine)
-        currentLine = { items: [], mainSize: 0, crossSize: 0 }
+    if (wrap !== 'nowrap' && currentLine().itemCount > 0) {
+      if (currentLine().mainSize + gap + itemMainSize > mainAxisSize) {
+        // Wrap: commit current line, advance to a fresh one in linePool.
+        // Grow linePool first if needed — initial capacity (4) only covers
+        // up to that many lines; containers with more wraps would otherwise
+        // dereference undefined.
+        lines.push(currentLine())
+        if (scratch.currentLineIdx + 1 >= scratch.linePool.length) {
+          scratch.linePool.push({ items: [], itemCount: 0, mainSize: 0, crossSize: 0 })
+        }
+        scratch.currentLineIdx++
+        const next = currentLine()
+        next.items.length = 0
+        next.itemCount = 0
+        next.mainSize = 0
+        next.crossSize = 0
       }
     }
 
-    if (currentLine.items.length > 0) {
-      currentLine.mainSize += gap
+    const line = currentLine()
+    if (line.itemCount > 0) {
+      line.mainSize += gap
     }
-    currentLine.mainSize += itemMainSize
-    if (itemCrossSize > currentLine.crossSize) {
-      currentLine.crossSize = itemCrossSize
+    line.mainSize += itemMainSize
+    if (itemCrossSize > line.crossSize) {
+      line.crossSize = itemCrossSize
     }
-    currentLine.items.push({ child, size, childIdx })
+    const item = takeFlexItem(scratch)
+    item.child = child
+    item.sizeWidth = sizeW
+    item.sizeHeight = sizeH
+    item.childIdx = childIdx
+    line.items.push(item)
+    line.itemCount++
   }
 
-  if (currentLine.items.length > 0) {
-    lines.push(currentLine)
+  if (currentLine().itemCount > 0) {
+    lines.push(currentLine())
   }
 
   // Flex behavior: If there's only one line, it stretches to fill the available cross space (align-content default).
@@ -231,45 +267,47 @@ export function measureFlex(
       mainOffset += freeSpace / 2
     } else if (justifyContent === 'end') {
       mainOffset += freeSpace
-    } else if (justifyContent === 'space-between' && line.items.length > 1) {
-      const gapBetween = freeSpace / (line.items.length - 1)
-      for (let i = 0; i < line.items.length; i++) {
+    } else if (justifyContent === 'space-between' && line.itemCount > 1) {
+      const gapBetween = freeSpace / (line.itemCount - 1)
+      for (let i = 0; i < line.itemCount; i++) {
         const item = line.items[i]!
         const pos = axis.compose(
           mainOffset,
-          crossOffset + getCrossOffset(alignItems, item.size, line.crossSize, 0, direction)
+          crossOffset + getCrossOffset(alignItems, item, line.crossSize, 0, direction)
         )
         result.x[item.childIdx] = pos.x
         result.y[item.childIdx] = pos.y
-        mainOffset += axis.main(item.size) + gap + gapBetween
+        mainOffset += axis.main(item) + gap + gapBetween
       }
       crossOffset += line.crossSize + (l < lines.length - 1 ? gap : 0)
       continue
     } else if (justifyContent === 'space-around') {
-      const spacePerItem = line.items.length > 0 ? freeSpace / line.items.length : 0
+      const spacePerItem = line.itemCount > 0 ? freeSpace / line.itemCount : 0
       mainOffset += spacePerItem / 2
-      for (const item of line.items) {
+      for (let i = 0; i < line.itemCount; i++) {
+        const item = line.items[i]!
         const pos = axis.compose(
           mainOffset,
-          crossOffset + getCrossOffset(alignItems, item.size, line.crossSize, 0, direction)
+          crossOffset + getCrossOffset(alignItems, item, line.crossSize, 0, direction)
         )
         result.x[item.childIdx] = pos.x
         result.y[item.childIdx] = pos.y
-        mainOffset += axis.main(item.size) + gap + spacePerItem
+        mainOffset += axis.main(item) + gap + spacePerItem
       }
       crossOffset += line.crossSize + (l < lines.length - 1 ? gap : 0)
       continue
     }
 
-    for (const item of line.items) {
+    for (let i = 0; i < line.itemCount; i++) {
+      const item = line.items[i]!
       const pos = axis.compose(
         mainOffset,
-        crossOffset + getCrossOffset(alignItems, item.size, line.crossSize, 0, direction)
+        crossOffset + getCrossOffset(alignItems, item, line.crossSize, 0, direction)
       )
       result.x[item.childIdx] = pos.x
       result.y[item.childIdx] = pos.y
 
-      mainOffset += axis.main(item.size) + gap
+      mainOffset += axis.main(item) + gap
     }
 
     crossOffset += line.crossSize + (l < lines.length - 1 ? gap : 0)
@@ -292,16 +330,20 @@ export function measureFlex(
       result.height[parentIdx] = totalCross + padding * 2
     }
   }
+
+  } finally {
+    releaseFlexScratch(scratch)
+  }
 }
 
 function getCrossOffset(
   alignItems: AlignItems,
-  childSize: Size,
+  child: { sizeWidth: number, sizeHeight: number },
   crossSize: number,
   padding: number,
   direction: FlexDirection
 ): number {
-  const childCross = direction === 'row' ? childSize.height : childSize.width
+  const childCross = direction === 'row' ? child.sizeHeight : child.sizeWidth
   if (alignItems === 'center' || alignItems === 'baseline') {
     return padding + (crossSize - childCross) / 2
   }

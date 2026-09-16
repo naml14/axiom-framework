@@ -104,7 +104,7 @@ describe('LayoutResult Memory Pool', () => {
     expect(reacquired.includes(released[0]!)).toBe(false)
   })
 
-  test('expired pool entries are pruned by age', () => {
+  test('expired pool entries are pruned on release (hot path stays clean)', () => {
     const realNow = Date.now
     const baseNow = 1_000_000
     let now = baseNow
@@ -115,11 +115,46 @@ describe('LayoutResult Memory Pool', () => {
       releaseLayoutResult(stale)
       expect(getLayoutPoolSize()).toBe(1)
 
+      now = baseNow + 30_001 // stale is now beyond MAX_POOLED_AGE_MS
+
+      // Acquire stays off the prune path — it may still hand back the stale
+      // buffer. That's the documented trade-off: hot path stays cheap.
+      const reused = acquireLayoutResult(8)
+      expect(reused).toBe(stale) // identity: pool reuses the only buffer
+
+      // Release triggers pruning AND refreshes releasedAt — the entry survives
+      // but is no longer considered expired.
+      releaseLayoutResult(reused)
+      expect(getLayoutPoolSize()).toBe(1)
+    } finally {
+      Date.now = realNow
+    }
+  })
+
+  test('release-time prune removes entries past MAX_POOLED_AGE_MS', () => {
+    const realNow = Date.now
+    const baseNow = 2_000_000
+    let now = baseNow
+    Date.now = () => now
+
+    try {
+      // Seed: two entries in the pool with old timestamps.
+      const stale1 = acquireLayoutResult(8)
+      const stale2 = acquireLayoutResult(8)
+      releaseLayoutResult(stale1)
+      releaseLayoutResult(stale2)
+      expect(getLayoutPoolSize()).toBe(2)
+
+      // Advance time so both entries are past MAX_POOLED_AGE_MS (30s).
       now = baseNow + 30_001
 
+      // New release triggers prune on the pool. The new entry uses the
+      // current (fresh) timestamp; the two stale ones get removed.
       const fresh = acquireLayoutResult(8)
-      expect(fresh).not.toBe(stale)
       releaseLayoutResult(fresh)
+
+      // Pool should now contain only the fresh entry; the two stale ones
+      // were pruned by the release call.
       expect(getLayoutPoolSize()).toBe(1)
     } finally {
       Date.now = realNow

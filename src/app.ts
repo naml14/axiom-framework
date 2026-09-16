@@ -381,6 +381,17 @@ export function createApp(
       }
     } catch (err) {
       releaseLayoutResult(layout)
+      // Also release the previous layout if commit threw mid-cycle; otherwise
+      // it stays referenced in state.prevLayout until the next successful
+      // performUpdate (which may never come). Clear prevPrepared too: keeping
+      // a stale topology with no layout to diff against would make the next
+      // fullDiff enter the value-change path with null prevLayout and skip
+      // coordinate updates on same-index nodes.
+      if (state.prevLayout !== null && state.prevLayout !== layout) {
+        releaseLayoutResult(state.prevLayout)
+        state.prevLayout = null
+        state.prevPrepared = null
+      }
       reportError(err, resolveContextFromPrepared('commit', cycle, prepared))
       throw err
     }
