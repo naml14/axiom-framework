@@ -309,6 +309,68 @@ describe('reflow — flex layout', () => {
     // baseline falls back to center: (100 - 40) / 2 = 30
     expect(result.y[1]).toBe(30)
   })
+
+  test('flexWrap: wrap splits overflowing children onto a new line', () => {
+    // Row with 4 children of width 60 each, parent width 200, gap 0.
+    // mainAxisSize = 200, first line fits 60+60+60 = 180 (then overflows on 240).
+    // Expected: items 0, 1, 2 on line 1 (x=0, 60, 120); item 3 wraps to line 2 (x=0, y=50).
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'row', flexWrap: 'wrap' },
+      children: [
+        { type: 'element' as const, tag: 'div', layout: { width: 60, height: 50 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 60, height: 50 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 60, height: 50 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 60, height: 50 } },
+      ],
+    }))
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const result = reflow(prepared, { maxWidth: 200, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+
+    // Items 0,1,2 fit on the first line (180 <= 200)
+    expect(result.x[1]).toBe(0)
+    expect(result.x[2]).toBe(60)
+    expect(result.x[3]).toBe(120)
+    expect(result.y[1]).toBe(0)
+    expect(result.y[2]).toBe(0)
+    expect(result.y[3]).toBe(0)
+
+    // Item 3 (index 4) wraps to a second line at y=50 (cross size of first line)
+    expect(result.x[4]).toBe(0)
+    expect(result.y[4]).toBe(50)
+  })
+
+  test('flexWrap: wrap with gap respects gap in overflow detection', () => {
+    // Row with 4 items width 50, gap 10, parent width 200.
+    // mainAxisSize = 200, first line: 50+10+50+10+50+10+50 = 230 -> overflow at item 3.
+    // Line 1: items 0,1,2; line 2: item 3.
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+      children: [
+        { type: 'element' as const, tag: 'div', layout: { width: 50, height: 40 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 50, height: 40 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 50, height: 40 } },
+        { type: 'element' as const, tag: 'div', layout: { width: 50, height: 40 } },
+      ],
+    }))
+    const prepared = prepare(comp, undefined, { textEngine: fakeTextEngine })
+    const result = reflow(prepared, { maxWidth: 200, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
+
+    // Items 0,1,2 on first line: x = 0, 60, 120 (each gap = 10)
+    expect(result.x[1]).toBe(0)
+    expect(result.x[2]).toBe(60)
+    expect(result.x[3]).toBe(120)
+    expect(result.y[1]).toBe(0)
+    expect(result.y[2]).toBe(0)
+    expect(result.y[3]).toBe(0)
+
+    // Item 3 wraps to y=50 (cross size 40 + gap 10 between lines)
+    expect(result.x[4]).toBe(0)
+    expect(result.y[4]).toBe(50)
+  })
 })
 
 describe('reflow — edge cases', () => {
