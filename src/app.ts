@@ -381,6 +381,13 @@ export function createApp(
       }
     } catch (err) {
       releaseLayoutResult(layout)
+      // Also release the previous layout if commit threw mid-cycle; otherwise
+      // it stays referenced in state.prevLayout until the next successful
+      // performUpdate (which may never come).
+      if (state.prevLayout !== null && state.prevLayout !== layout) {
+        releaseLayoutResult(state.prevLayout)
+        state.prevLayout = null
+      }
       reportError(err, resolveContextFromPrepared('commit', cycle, prepared))
       throw err
     }
