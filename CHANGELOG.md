@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.10](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.9...axiom-framework-v0.9.10) (2026-06-02)
+
+
+### Features
+
+* **create-axiom:** engine-native starter and demo onboarding redesign ([42e910a](https://github.com/naml14/axiom-framework/commit/42e910a3582939b0a5c0ca731b613567d70fae24))
+* **create-axiom:** redesign starter and demo onboarding ([c35af6b](https://github.com/naml14/axiom-framework/commit/c35af6b66de5e379324c72de8ebbfd4f40ee29da))
+* **create-axiom:** redesign starter and demo onboarding ([96800b6](https://github.com/naml14/axiom-framework/commit/96800b6f4f77ce4b5d26a81bef254cb2653cb489))
+* **create-axiom:** redesign starter to engine-native layout ([8966931](https://github.com/naml14/axiom-framework/commit/89669314b4f7fe2e7e3a47acd0bb0416af9dff22))
+* **create-axiom:** redesign starter to engine-native layout ([d2aa7ae](https://github.com/naml14/axiom-framework/commit/d2aa7aed09a5eb99412fa885a1c1bae197b7a044))
+* **plugins:** add request-scoped plugin context (createAppContext) ([5379849](https://github.com/naml14/axiom-framework/commit/5379849d2db5046c4bb36893df372089cd861a29))
+* **plugins:** add request-scoped plugin context (createAppContext) ([99ea6a0](https://github.com/naml14/axiom-framework/commit/99ea6a0c95ade9296c1d210a52c790c0d035f31e))
+* **starter-demo:** complete starter demo onboarding flow ([78526d8](https://github.com/naml14/axiom-framework/commit/78526d85750fc5914de1c167fd1895babf54fb63))
+
+
+### Bug Fixes
+
+* **animations:** add empty fallback to composed transform var ([0ba7ba4](https://github.com/naml14/axiom-framework/commit/0ba7ba4988761d1df5778144cedb51f632276db1))
+* **animations:** add empty fallback to composed transform var ([7aa6d34](https://github.com/naml14/axiom-framework/commit/7aa6d34a82593dfdcc29b1e4581f6d8f2cd0aee0))
+* **attrs+ssr:** address PR [#75](https://github.com/naml14/axiom-framework/issues/75) review comments ([2ca2bc7](https://github.com/naml14/axiom-framework/commit/2ca2bc771c19643e8a10881ad3759e106995d21b))
+* **core:** plugin context, recursion guard, hydration degrade, pool eviction, stream/router hardening ([5906d01](https://github.com/naml14/axiom-framework/commit/5906d010c832c13502d6754dcd00a697b6183c90))
+* **create-axiom:** harden project scaffolding from PR [#76](https://github.com/naml14/axiom-framework/issues/76) review ([300163a](https://github.com/naml14/axiom-framework/commit/300163a1d4a948d4a1264113949e5c6f90e35c20))
+* **demo:** apply CORS headers to /ssr GET response ([c20c8ba](https://github.com/naml14/axiom-framework/commit/c20c8ba6a5e8304e2e2f827ce25e7a44294ec3f2))
+* **demo:** externalize launcher and align SSR render ([1f031d4](https://github.com/naml14/axiom-framework/commit/1f031d45a7fea41905d4683966f78f5c79fda0c5))
+* **demo:** externalize launcher and align SSR render ([fff686d](https://github.com/naml14/axiom-framework/commit/fff686d90429fda80eb464ce1e892a58202b4ddb))
+* **dev-server:** harden CORS allowlist for scaffolded projects ([78ef0b2](https://github.com/naml14/axiom-framework/commit/78ef0b213f702af0d03d852662ace04713737cbe))
+* **hydration:** degrade gracefully on hydrate errors in non-strict mode ([cff82e1](https://github.com/naml14/axiom-framework/commit/cff82e16f0433e4cbf00b3134e35075ee98597c5))
+* **hydration:** degrade gracefully on hydrate errors in non-strict mode ([7757b09](https://github.com/naml14/axiom-framework/commit/7757b0988b46a65a3018e733ff04bc1d542a46cf))
+* **hydration:** degrade to full client render on unexpected hydrate error ([a9381bc](https://github.com/naml14/axiom-framework/commit/a9381bc1a9c3eca0b1ad47eca2acafaf5d3480a4))
+* **openspec:** align proposal and tasks with implemented omit behavior ([d7180d1](https://github.com/naml14/axiom-framework/commit/d7180d17ba639c3b9773edde1ca94a6258461b88))
+* **plugins:** re-export createAppContext from package root ([9c6a863](https://github.com/naml14/axiom-framework/commit/9c6a863a0095ff8e31b7ac87a91b073d383630d3))
+* **reactivity:** guard against runaway computed recursion depth ([55b1a00](https://github.com/naml14/axiom-framework/commit/55b1a002b568110350ef7d1d84aa482c94a9938c))
+* **reactivity:** guard against runaway computed recursion depth ([42bb2e0](https://github.com/naml14/axiom-framework/commit/42bb2e076754cb4c1ef3a5647e501c57220fff03))
+* **router:** surface async component load errors via global hook ([bc6333f](https://github.com/naml14/axiom-framework/commit/bc6333f4142928ecce435ed845b153e4964d1e85))
+* **router:** surface async component load errors via global hook ([e7cb5aa](https://github.com/naml14/axiom-framework/commit/e7cb5aa8493f093c6c5258f01e5915e993d19dd9))
+* **router:** surface async load errors via errorFallback option ([3985764](https://github.com/naml14/axiom-framework/commit/3985764a2f53c072432ce1e2555f8e5dbd83440b))
+* **security:** block protocol-relative URLs in attribute sanitizer ([7e2ecd6](https://github.com/naml14/axiom-framework/commit/7e2ecd60c1a59f9ef1605a9a0e630b679e8bbfbf))
+* **security:** block protocol-relative URLs in attribute sanitizer ([80bd5e7](https://github.com/naml14/axiom-framework/commit/80bd5e7d75d03f65ae0581dabf3366b0dfea7a84))
+* **security:** deny-by-default CORS allowlist ([40e75bb](https://github.com/naml14/axiom-framework/commit/40e75bb80fd9512a5fc44b0771c2c740dc881216))
+* **security:** deny-by-default CORS allowlist ([ea3e5d0](https://github.com/naml14/axiom-framework/commit/ea3e5d0b5538b626e42c25f4263d2724f5068c8a))
+* **security:** sanitize bodyStyle CSS injection and add demo SSR headers ([709c7d2](https://github.com/naml14/axiom-framework/commit/709c7d2102301faaab6f4e1bd227d19921a5c4c8))
+* **security:** sanitize bodyStyle CSS injection and add demo SSR headers ([4bc71b3](https://github.com/naml14/axiom-framework/commit/4bc71b331a05bc889d68002b7f53dc9386975df2))
+* **server:** address PR [#84](https://github.com/naml14/axiom-framework/issues/84) review comments ([eb1e621](https://github.com/naml14/axiom-framework/commit/eb1e62184eba51703f0b5d13c7894ba5468e3835))
+* **server:** harden CORS allowlist, CSP, and rate limiting ([4db5f6f](https://github.com/naml14/axiom-framework/commit/4db5f6f49944fff259b56bc4d79ce97b87db4357))
+* **server:** harden rate limiting and SSR CORS/headers (PR [#80](https://github.com/naml14/axiom-framework/issues/80) review) ([2d40c15](https://github.com/naml14/axiom-framework/commit/2d40c15ad608ba5838dfa404ad2c0ac96d05d232))
+* **server:** rate-limit per real client IP and prune stale buckets ([81fcd06](https://github.com/naml14/axiom-framework/commit/81fcd066c6a33fcccec298eb397b66a735f8d60e))
+* **ssr:** accept object-form component definitions in renderToReadableStream ([170857d](https://github.com/naml14/axiom-framework/commit/170857da0aa8a8b6ad5e2a669484c3a7e78e3a96))
+* **ssr:** harden bodyStyle and URL attribute sanitization ([9eb28dd](https://github.com/naml14/axiom-framework/commit/9eb28dd6849b612908d3d55d88f9ca95216a06fb))
+* **ssr:** omit dangerous stylesheet hrefs and stop dropping valid CDN links ([d5eccaa](https://github.com/naml14/axiom-framework/commit/d5eccaae19a410458115026dfe5de01400541e42))
+* **ssr:** omit stylesheet link tags with dangerous schemes or protocol-relative hrefs ([fefd850](https://github.com/naml14/axiom-framework/commit/fefd8506f6fbb48cabddcdb241fed5f1e08f8a11))
+* **ssr:** sanitize CSS constructs in element style attribute ([fe4c5a6](https://github.com/naml14/axiom-framework/commit/fe4c5a6e16a37e454ff589404ee338f85c3b18b2))
+* **ssr:** validate component input in renderToReadableStream ([5205ebb](https://github.com/naml14/axiom-framework/commit/5205ebb4a73c8e61f940f6049d1fe46f67c74db8))
+* **ssr:** validate component input in renderToReadableStream ([6d1cf81](https://github.com/naml14/axiom-framework/commit/6d1cf81af54b28a04376fa5d4479f599bad83fd3))
+* **tests:** add SSR stylesheet href security tests for origin policy ([577886a](https://github.com/naml14/axiom-framework/commit/577886a2355eeb529999c5200d4b6bd206c190c1)), closes [#75](https://github.com/naml14/axiom-framework/issues/75)
+* **tests:** robust build exit code handling in create-axiom fixture ([55df4dd](https://github.com/naml14/axiom-framework/commit/55df4dd5c954de05af12a7d8754768f51833fc54))
+* **tests:** use inline buildStatic instead of subprocess in create-axiom fixture test ([50784a9](https://github.com/naml14/axiom-framework/commit/50784a9911a98921ed7dc6dec8a4dde253710616))
+* **tests:** use mkdtemp instead of direct tmpdir for insecure file CodeQL ([3fdb825](https://github.com/naml14/axiom-framework/commit/3fdb825a6c86ed80c5687948f287b694c233eda9))
+
+
+### Performance Improvements
+
+* **pool:** evict stale layout buffers by age ([3094585](https://github.com/naml14/axiom-framework/commit/3094585fcb5a5e7aa266491ecb6735e83543c4c4))
+* **pool:** evict stale layout buffers by age ([9d37e9f](https://github.com/naml14/axiom-framework/commit/9d37e9ff3e8e460828e9858ac7f9f52c17e85012))
+
 ## [0.9.9](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.8...axiom-framework-v0.9.9) (2026-05-18)
 
 
