@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.11](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.10...axiom-framework-v0.9.11) (2026-09-16)
+
+
+### Bug Fixes
+
+* **app:** release previous layout buffer on commit error ([32b1354](https://github.com/naml14/axiom-framework/commit/32b13541acd21cf7b2e298d2fb89dc0c185d9fad))
+* **reflow:** unify text measurement through measureTextChild ([efb487f](https://github.com/naml14/axiom-framework/commit/efb487fc56713076c8f62a1ed717fec479838def))
+* **scratch+pool:** address Sourcery review findings from PR [#85](https://github.com/naml14/axiom-framework/issues/85) ([8fc812a](https://github.com/naml14/axiom-framework/commit/8fc812a10474fd391f6227605e33ebaa563f3936))
+
+
+### Performance Improvements
+
+* **engines:** add scratch buffer pool with pre-allocated items ([cb82a17](https://github.com/naml14/axiom-framework/commit/cb82a17dae5edcdb83ae1fdc26277ed1b9df0ad8))
+* harden architectural promises (zero DOM reads, zero-alloc hot path, unified text measurement) ([20365d9](https://github.com/naml14/axiom-framework/commit/20365d9ab00688dbfd44068cfecdfb4d65317684))
+* **pool:** move pruneExpiredEntries off the acquire hot path ([79b4c43](https://github.com/naml14/axiom-framework/commit/79b4c43e27b59d820bcf9a0862187e666cd955af))
+
 ## [0.9.10](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.9...axiom-framework-v0.9.10) (2026-06-02)
 
 
