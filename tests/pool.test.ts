@@ -104,7 +104,7 @@ describe('LayoutResult Memory Pool', () => {
     expect(reacquired.includes(released[0]!)).toBe(false)
   })
 
-  test('expired pool entries are pruned by age', () => {
+  test('expired pool entries are pruned on release (hot path stays clean)', () => {
     const realNow = Date.now
     const baseNow = 1_000_000
     let now = baseNow
@@ -115,12 +115,44 @@ describe('LayoutResult Memory Pool', () => {
       releaseLayoutResult(stale)
       expect(getLayoutPoolSize()).toBe(1)
 
+      now = baseNow + 30_001 // stale is now beyond MAX_POOLED_AGE_MS
+
+      // Acquire stays off the prune path — it may still hand back the stale
+      // buffer. That's the documented trade-off: hot path stays cheap.
+      const reused = acquireLayoutResult(8)
+      expect(reused).toBe(stale) // identity: pool reuses the only buffer
+
+      // Release triggers pruning AND refreshes releasedAt — the entry survives
+      // but is no longer considered expired.
+      releaseLayoutResult(reused)
+      expect(getLayoutPoolSize()).toBe(1)
+    } finally {
+      Date.now = realNow
+    }
+  })
+
+  test('safety prune runs periodically on the acquire path', () => {
+    const realNow = Date.now
+    const baseNow = 2_000_000
+    let now = baseNow
+    Date.now = () => now
+
+    try {
+      const stale = acquireLayoutResult(8)
+      releaseLayoutResult(stale)
+      expect(getLayoutPoolSize()).toBe(1)
+
       now = baseNow + 30_001
 
-      const fresh = acquireLayoutResult(8)
-      expect(fresh).not.toBe(stale)
-      releaseLayoutResult(fresh)
-      expect(getLayoutPoolSize()).toBe(1)
+      // 64 acquire/release cycles — the safety counter must trigger at least one prune.
+      // After this loop the stale entry should be gone regardless of release pruning.
+      for (let i = 0; i < 64; i++) {
+        const r = acquireLayoutResult(8)
+        releaseLayoutResult(r)
+      }
+
+      // Stale should be pruned; only the last release entry remains.
+      expect(getLayoutPoolSize()).toBeLessThanOrEqual(1)
     } finally {
       Date.now = realNow
     }

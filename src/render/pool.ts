@@ -36,10 +36,14 @@ function pruneExpiredEntries(now: number): void {
   }
 }
 
-function acquireFromPool(minCapacity: number): LayoutResult | undefined {
-  const now = Date.now()
-  pruneExpiredEntries(now)
+// Counter used to drive occasional safety pruning on the acquire path without
+// making every acquire touch Date.now() or scan the pool. Pruning still happens
+// on every release (see releaseLayoutResult).
+let acquireCounter = 0
+const PRUNE_EVERY_N_ACQUIRES = 64
 
+function acquireFromPool(minCapacity: number): LayoutResult | undefined {
+  // Hot path: linear scan for capacity only — no Date.now(), no pruning.
   for (let i = pool.length - 1; i >= 0; i--) {
     const candidate = pool[i]!
     if (candidate.result.x.length >= minCapacity) {
@@ -71,6 +75,14 @@ export function acquireLayoutResult(minCapacity: number): LayoutResult {
     result.y.fill(0, 0, minCapacity)
     result.width.fill(0, 0, minCapacity)
     result.height.fill(0, 0, minCapacity)
+  }
+
+  // Safety pruning at low frequency — Date.now() and pool scan stay out of the
+  // per-reflow hot path. The release path is the primary pruning site.
+  acquireCounter++
+  if (acquireCounter >= PRUNE_EVERY_N_ACQUIRES) {
+    acquireCounter = 0
+    pruneExpiredEntries(Date.now())
   }
 
   return result
