@@ -131,28 +131,31 @@ describe('LayoutResult Memory Pool', () => {
     }
   })
 
-  test('safety prune runs periodically on the acquire path', () => {
+  test('release-time prune removes entries past MAX_POOLED_AGE_MS', () => {
     const realNow = Date.now
     const baseNow = 2_000_000
     let now = baseNow
     Date.now = () => now
 
     try {
-      const stale = acquireLayoutResult(8)
-      releaseLayoutResult(stale)
-      expect(getLayoutPoolSize()).toBe(1)
+      // Seed: two entries in the pool with old timestamps.
+      const stale1 = acquireLayoutResult(8)
+      const stale2 = acquireLayoutResult(8)
+      releaseLayoutResult(stale1)
+      releaseLayoutResult(stale2)
+      expect(getLayoutPoolSize()).toBe(2)
 
+      // Advance time so both entries are past MAX_POOLED_AGE_MS (30s).
       now = baseNow + 30_001
 
-      // 64 acquire/release cycles — the safety counter must trigger at least one prune.
-      // After this loop the stale entry should be gone regardless of release pruning.
-      for (let i = 0; i < 64; i++) {
-        const r = acquireLayoutResult(8)
-        releaseLayoutResult(r)
-      }
+      // New release triggers prune on the pool. The new entry uses the
+      // current (fresh) timestamp; the two stale ones get removed.
+      const fresh = acquireLayoutResult(8)
+      releaseLayoutResult(fresh)
 
-      // Stale should be pruned; only the last release entry remains.
-      expect(getLayoutPoolSize()).toBeLessThanOrEqual(1)
+      // Pool should now contain only the fresh entry; the two stale ones
+      // were pruned by the release call.
+      expect(getLayoutPoolSize()).toBe(1)
     } finally {
       Date.now = realNow
     }

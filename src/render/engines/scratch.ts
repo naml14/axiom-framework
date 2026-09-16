@@ -198,9 +198,9 @@ function createScratchPool<T>(
 
   return {
     acquire(): T {
-      const now = Date.now()
-      pruneExpiredEntries(now)
-      // Search backwards — most recently released entries tend to be warm.
+      // Hot path: linear search for a pooled buffer only — no Date.now(),
+      // no prune. Pruning is release-time only (every release prunes
+      // expired entries from any prior release).
       for (let i = pool.length - 1; i >= 0; i--) {
         const candidate = pool[i]!
         pool.splice(i, 1)
@@ -231,7 +231,12 @@ function createScratchPool<T>(
       return pool.length
     },
     clear(): void {
+      // Clear both the entry list and the strong-ref set so cleared buffers
+      // can actually be garbage-collected. Without `inPool.clear()`, every
+      // scratch buffer ever produced would stay alive forever even after
+      // `clearEnginesScratchPools()` is called.
       pool.length = 0
+      inPool.clear()
     },
   }
 }
@@ -264,6 +269,9 @@ const flexPool = createScratchPool<FlexScratch>(
   (s) => {
     s.lines.length = 0
     // Reset all lines in the pool (in case the pool grew during the call).
+    // PRESERVE itemPool — entries are overwritten in place by takeFlexItem.
+    // Truncating here would force allocations proportional to child count
+    // on every reflow and break the zero-allocation hot path promise.
     for (const line of s.linePool) {
       line.items.length = 0
       line.itemCount = 0
@@ -271,7 +279,6 @@ const flexPool = createScratchPool<FlexScratch>(
       line.crossSize = 0
     }
     s.currentLineIdx = 0
-    s.itemPool.length = 0
     s.nextItemIdx = 0
   }
 )
@@ -302,15 +309,18 @@ const gridPool = createScratchPool<GridScratch>(
     nextDeferredIdx: 0,
   }),
   (s) => {
+    // Reset only cursors and the consumer-facing arrays. PRESERVE
+    // placementPool and deferredPool — entries are overwritten in place by
+    // takeGridPlacement / takeDeferredPlacement. Truncating them here would
+    // force allocations proportional to child count on every reflow and
+    // break the zero-allocation hot path promise.
     s.rowHeights.length = 0
     s.placements.length = 0
     s.deferredQueue.length = 0
     s.secondPassVerticalPercentByChildIdx.clear()
     s.localizedSecondPassRemeasureByChildIdx.clear()
     s.occupiedCells.clear()
-    s.placementPool.length = 0
     s.nextPlacementIdx = 0
-    s.deferredPool.length = 0
     s.nextDeferredIdx = 0
   }
 )

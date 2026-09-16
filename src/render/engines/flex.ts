@@ -197,7 +197,13 @@ export function measureFlex(
     if (wrap !== 'nowrap' && currentLine().itemCount > 0) {
       if (currentLine().mainSize + gap + itemMainSize > mainAxisSize) {
         // Wrap: commit current line, advance to a fresh one in linePool.
+        // Grow linePool first if needed — initial capacity (4) only covers
+        // up to that many lines; containers with more wraps would otherwise
+        // dereference undefined.
         lines.push(currentLine())
+        if (scratch.currentLineIdx + 1 >= scratch.linePool.length) {
+          scratch.linePool.push({ items: [], itemCount: 0, mainSize: 0, crossSize: 0 })
+        }
         scratch.currentLineIdx++
         const next = currentLine()
         next.items.length = 0
