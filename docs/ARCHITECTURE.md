@@ -42,6 +42,7 @@ To guarantee consistent 60fps rendering during continuous updates, Axiom enforce
 - The `reflow` function requests buffers using `acquireLayoutResult(count)`.
 - The `app.ts` scheduler releases previous/current buffers via `releaseLayoutResult(result)` across success and error paths.
 - The pool is bounded (entry count and max retained capacity) to avoid unbounded steady-state memory growth in long-lived server processes.
+- **Engine scratch buffers** (`rowHeights`, `placements`, `deferredQueue`, occupied-cells Set, percent Maps, and flex lines) are recycled via `src/render/engines/scratch.ts`. Each engine acquires scratch at the start of its call and releases it in a `finally` block — so the hot path stays allocation-free across recursive calls (e.g. grid-in-grid, flex-in-grid) and across renders.
 
 ### Type-only boundary notes
 
@@ -54,6 +55,16 @@ To guarantee consistent 60fps rendering during continuous updates, Axiom enforce
 **`render/commit.ts` → `features/style.ts`**: Allowed for CSS application during the commit phase.  
 Decoupling requires functional refactoring (strategy pattern or callback injection) which is out of scope for the structural change.  
 Documented in [PLAN-REFACTOR-SRC-HIBRIDO.md](./PLAN-REFACTOR-SRC-HIBRIDO.md) and marked with an inline comment in `src/render/commit.ts`.
+
+## Enforcement
+
+The premises above are enforced by failing-in tests under `tests/architecture/`:
+
+- `hot-path-dom-reads.test.ts` — scans `src/render/{reflow,commit,diff,prepare,pool}.ts` and `src/render/engines/*.ts` for forbidden DOM read APIs (`getBoundingClientRect`, `getComputedStyle`, `offsetHeight`, `offsetWidth`, `clientHeight`, `clientWidth`, `scrollHeight`, `scrollWidth`, `window.getComputedStyle`). The only allowlisted pattern is `getElementsByTagName`, used by the `commitHydrate` marker scan. Comments and string literals are stripped before the scan so legitimate documentation does not trigger false positives.
+- `charwidth-unified.test.ts` — verifies that text-measurement constants (`CHAR_WIDTH = 8`, `WORD_WRAP_FACTOR = 1.4`) live only in `src/render/engines/text-measure.ts`, the single source of truth. Any other file that defines `CHAR_WIDTH` or hardcodes `charWidth = <num>` fails the build.
+- `engines-allocation-bounded.test.ts` — confirms the engines scratch pool stays bounded after many reflows (flex and grid pool sizes do not exceed `MAX_POOLED_ENTRIES = 32`, the same buffer is reused across calls, and the heap delta after 5000 reflows + forced GC stays under a 4 KB/call ceiling). A future change that leaks a scratch buffer (e.g. acquire without release) will fail this test by growing the pool past the bound or the heap linearly.
+
+If a legitimate use case requires adding to the allowlist, document it with an inline comment in the source and update the corresponding test with justification — do not weaken the test silently.
 
 ## Public API
 

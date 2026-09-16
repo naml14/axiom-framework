@@ -1,7 +1,7 @@
 # API Stability Contract
 
 Version: 1.0.0
-Last Updated: 2026-05-01
+Last Updated: 2026-09-16
 
 ## Public Surface
 
@@ -9,7 +9,7 @@ This contract applies to exports from src/index.ts and src/testing.ts.
 
 For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 
-## Stable APIs (125)
+## Stable APIs (132)
 
 | Export | Module | Since |
 |--------|--------|-------|
@@ -36,8 +36,10 @@ For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 | Route | ./router | v1.0.0 |
 | RouteState | ./router | v1.0.0 |
 | Router | ./router | v1.0.0 |
+| AsyncComponentOptions | ./router | v1.0.0 |
 | prepare | ./render/prepare | v1.0.0 |
 | reflow | ./render/reflow | v1.0.0 |
+| getLayoutPoolSize | ./render/pool | v1.0.0 |
 | resolveResponsiveLayout | ./render/strategy/responsive | v1.0.0 |
 | resolveLayoutDimension | ./render/strategy/responsive | v1.0.0 |
 | matchesBreakpoint | ./render/strategy/responsive | v1.0.0 |
@@ -67,9 +69,11 @@ For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 | getRegisteredPlugins | ./features/plugin | v1.0.0 |
 | clearPlugins | ./features/plugin | v1.0.0 |
 | applyPluginHook | ./features/plugin | v1.0.0 |
+| createAppContext | ./features/plugin | v1.0.0 |
 | AxiomPlugin | ./features/plugin | v1.0.0 |
 | PluginContext | ./features/plugin | v1.0.0 |
 | PluginHook | ./features/plugin | v1.0.0 |
+| PluginScope | ./features/plugin | v1.0.0 |
 | createContext | ./features/context | v1.0.0 |
 | withContext | ./features/context | v1.0.0 |
 | useContext | ./features/context | v1.0.0 |
@@ -124,6 +128,7 @@ For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 | Signal | ./core/types | v1.0.0 |
 | ComputedSignal | ./core/types | v1.0.0 |
 | ComponentDefinition | ./core/types | v1.0.0 |
+| ComponentOptions | ./core/types | v1.0.0 |
 | ComponentNode | ./core/types | v1.0.0 |
 | ElementNode | ./core/types | v1.0.0 |
 | TextNode | ./core/types | v1.0.0 |
@@ -135,6 +140,8 @@ For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 | LayoutProps | ./core/types | v1.0.0 |
 | ProfileEvent | ./core/types | v1.0.0 |
 | ProfileSubscriber | ./core/types | v1.0.0 |
+| TransformConflictHook | ./core/types | v1.0.0 |
+| CommitOptions | ./core/types | v1.0.0 |
 | RenderResult | ./testing.ts | v1.0.0 |
 | render | ./testing.ts | v1.0.0 |
 | fireEvent | ./testing.ts | v1.0.0 |
