@@ -61,9 +61,7 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          # prepublishOnly runs typecheck + tests + build; reuse it for the
-          # safety net, but skip prepublishOnly's own `bun publish` call by
-          # invoking publish directly.
+          bun install --frozen-lockfile
           bun run typecheck
           bun test
           bun run build
