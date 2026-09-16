@@ -12,14 +12,13 @@ import {
   getMetrics,
   getNodeType,
   getLayoutProps,
-  getTextHandle,
-  getTextContent,
   getPortalCssManaged,
 } from './prepare.js'
 
 import { measureSimple } from './engines/fast-path.js'
 import { measureFlex } from './engines/flex.js'
 import { measureGrid } from './engines/grid.js'
+import { measureTextChild } from './engines/text-measure.js'
 import { resolveResponsiveLayout } from './strategy/responsive.js'
 import { acquireLayoutResult } from './pool.js'
 
@@ -102,9 +101,10 @@ function layoutNode(
   result.height[idx] = ownHeight
 
   if (children.length === 0) {
-    // Leaf node
+    // Leaf node — text measurement delegates to the shared helper so leaf text
+    // roots use the same CHAR_WIDTH / WORD_WRAP_FACTOR as flex/grid/fast-path.
     if (nodeType === 'text') {
-      layoutText(prepared, ownWidth, result, lineHeight)
+      measureTextChild(prepared, ownWidth, result, lineHeight)
     }
     return
   }
@@ -177,28 +177,4 @@ function layoutNode(
   }
 }
 
-function layoutText(
-  prepared: PreparedComponent,
-  availableWidth: number,
-  result: LayoutResult,
-  lineHeight: number
-): void {
-  const idx = getNodeIndex(prepared)
-  const textHandle = getTextHandle(prepared)
 
-  // Resolve text content — prefer text engine handle, fallback to raw textContent
-  let text: string | undefined
-  if (textHandle !== undefined) {
-    text = (textHandle as { text: string }).text
-  } else {
-    text = getTextContent(prepared)
-  }
-
-  if (text !== undefined && text.length > 0) {
-    const charWidth = 6
-    const charsPerLine = Math.max(1, Math.floor(availableWidth / charWidth))
-    const lineCount = Math.max(1, Math.ceil(text.length / charsPerLine))
-    result.height[idx] = lineCount * lineHeight
-    result.width[idx] = availableWidth
-  }
-}
