@@ -9,6 +9,9 @@ import { initDxShowcase } from './dx-showcase.ts'
 import { initRutaBShowcase } from './ruta-b-showcase.ts'
 import { initSyntaxShowcase } from './syntax-showcase.ts'
 import { initJsxFeature } from './syntax-jsx-feature.tsx'
+import { initRouterDemo } from './router-demo.ts'
+import { initContextDemo } from './context-demo.ts'
+import { initFormsDemo } from './forms-demo.ts'
 
 // Activar modo desarrollo para que __AXIOM__ dev hook esté disponible en el demo
 ;(globalThis as { __AXIOM_DEV__?: boolean }).__AXIOM_DEV__ = true
@@ -121,6 +124,24 @@ initDxShowcase({ app })
 // ============================================================
 
 initPortalDemo()
+
+// ============================================================
+// Router Demo — createRouter + defineAsyncComponent
+// ============================================================
+
+initRouterDemo()
+
+// ============================================================
+// Context API Demo — createContext + createStore
+// ============================================================
+
+initContextDemo()
+
+// ============================================================
+// Forms Demo — bind() + validate()
+// ============================================================
+
+initFormsDemo()
 
 // ============================================================
 // Ruta B Showcase — Grid, Responsive, Style, Animation, Plugin
