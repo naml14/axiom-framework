@@ -413,6 +413,72 @@ describe('validate', () => {
     expect(asyncRuleCalled).toBe(false)
     result.dispose()
   })
+
+  test('accepts a custom scheduler (C-7)', async () => {
+    // El test usa un fake scheduler que ejecuta el callback de inmediato,
+    // sin usar setTimeout real. Esto permite verificar que la opción
+    // `scheduler` se respeta sin depender del reloj del runtime.
+    const calls: string[] = []
+    let pendingCancel: (() => void) | null = null
+    const fakeScheduler = (cb: () => void, _ms: number): (() => void) => {
+      calls.push('scheduled')
+      cb()
+      pendingCancel = () => calls.push('cancelled')
+      return pendingCancel
+    }
+
+    const asyncRule = async (v: string): Promise<string | null> => {
+      await new Promise((r) => setTimeout(r, 1))
+      return v.length < 3 ? 'too short' : null
+    }
+
+    const source = signal('ab')
+    const result = validate(source, [asyncRule], {
+      debounceMs: 50,
+      scheduler: fakeScheduler,
+    })
+
+    // El scheduler se ejecutó (no setTimeout real).
+    expect(calls).toContain('scheduled')
+
+    // Esperar a que el async rule termine.
+    await new Promise((r) => setTimeout(r, 20))
+    expect(result.value.valid).toBe(false)
+    expect(result.value.errors).toEqual(['too short'])
+
+    // Después de completar el callback, cancelPending es null, pero el
+    // fake scheduler sigue guardando su cancel fn. dispose() debe llamarla
+    // cuando hay una programación pendiente (no en este caso). Verificamos
+    // que dispose() no crashea:
+    result.dispose()
+  })
+
+  test('cancel from custom scheduler prevents async rule from firing', async () => {
+    let cancelled = false
+    const fakeScheduler = (cb: () => void, _ms: number): (() => void) => {
+      return () => { cancelled = true }
+    }
+
+    const asyncRuleCalled = { value: false }
+    const asyncRule = async (v: string): Promise<string | null> => {
+      asyncRuleCalled.value = true
+      return null
+    }
+
+    const source = signal('hello')
+    const result = validate(source, [asyncRule], {
+      debounceMs: 50,
+      scheduler: fakeScheduler,
+    })
+
+    // El cancel debe ejecutarse al cambiar source de nuevo o al dispose.
+    source.value = 'world'
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    expect(cancelled).toBe(true)
+    expect(asyncRuleCalled.value).toBe(false)
+
+    result.dispose()
+  })
 })
 
 // ============================================================
