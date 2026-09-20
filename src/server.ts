@@ -154,37 +154,16 @@ const SECURITY_HEADERS: Record<string, string> = {
 // ============================================================
 // Rate Limiting
 // ============================================================
+//
+// Rate-limit state lives INSIDE createServer() so each server instance is
+// independent. Previously this state was module-scope, which:
+//   1. Started a setInterval at module-import time even if createServer
+//      was never called, blocking Node.js shutdown in some runtimes.
+//   2. Shared request counts across multiple server instances, defeating
+//      per-instance rate limits.
 
-const requestCounts = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 100 // req per minute
 const RATE_WINDOW = 60_000 // 1 minute
-
-// Prune expired buckets off the request hot path so no single request pays
-// for a full-map sweep, even under high client-IP cardinality.
-const pruneTimer = setInterval(() => {
-  const now = Date.now()
-  for (const [ip, entry] of requestCounts) {
-    if (now > entry.resetAt) requestCounts.delete(ip)
-  }
-}, RATE_WINDOW)
-
-function getRateLimiter(req: Request): boolean {
-  const forwarded = req.headers.get('X-Forwarded-For')
-  const firstIp = forwarded?.split(',')[0]?.trim()
-  const ip = req.headers.get('cf-connecting-ip') ?? firstIp ?? '127.0.0.1'
-  const now = Date.now()
-  let entry = requestCounts.get(ip)
-  if (!entry || now > entry.resetAt) {
-    entry = { count: 1, resetAt: now + RATE_WINDOW }
-    requestCounts.set(ip, entry)
-    return false
-  }
-  entry.count++
-  if (entry.count > RATE_LIMIT) {
-    return true // rate limited
-  }
-  return false
-}
 
 // ============================================================
 // createServer
@@ -206,6 +185,36 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
 
   // Track actual port (Bun may assign a random one if port is 0).
   let actualPort = configuredPort
+
+  // Per-instance rate limit state — isolated from any other createServer() call.
+  const requestCounts = new Map<string, { count: number; resetAt: number }>()
+
+  // Prune expired buckets off the request hot path so no single request pays
+  // for a full-map sweep, even under high client-IP cardinality.
+  const pruneTimer = setInterval(() => {
+    const now = Date.now()
+    for (const [ip, entry] of requestCounts) {
+      if (now > entry.resetAt) requestCounts.delete(ip)
+    }
+  }, RATE_WINDOW)
+
+  function getRateLimiter(req: Request): boolean {
+    const forwarded = req.headers.get('X-Forwarded-For')
+    const firstIp = forwarded?.split(',')[0]?.trim()
+    const ip = req.headers.get('cf-connecting-ip') ?? firstIp ?? '127.0.0.1'
+    const now = Date.now()
+    let entry = requestCounts.get(ip)
+    if (!entry || now > entry.resetAt) {
+      entry = { count: 1, resetAt: now + RATE_WINDOW }
+      requestCounts.set(ip, entry)
+      return false
+    }
+    entry.count++
+    if (entry.count > RATE_LIMIT) {
+      return true // rate limited
+    }
+    return false
+  }
 
   const api: AxiomServer = {
     get port() { return actualPort },
@@ -267,6 +276,10 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
     },
     stop() {
       clearInterval(pruneTimer)
+      // Drop the per-instance rate-limit counters so the next createServer()
+      // starts fresh. Without this, request counts would accumulate across
+      // server restarts and the new instance could start already rate-limited.
+      requestCounts.clear()
       server?.stop()
       server = null
     },

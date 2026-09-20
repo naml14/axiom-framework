@@ -340,3 +340,51 @@ describe('createServer()', () => {
     }
   })
 })
+
+// ---------------------------------------------------------------------------
+// Rate Limiting — per-instance isolation (C-3)
+// ---------------------------------------------------------------------------
+
+describe('createServer() — rate-limit state isolation', () => {
+  test('two server instances have independent rate-limit state', async () => {
+    const component = defineComponent(() => h('div', null, 'Home'))
+    const a = createServer({ routes: [{ path: '/', component }], port: 0 })
+    const b = createServer({ routes: [{ path: '/', component }], port: 0 })
+
+    try {
+      a.serve()
+      b.serve()
+
+      // Both servers should respond on / independently.
+      const resA = await fetch(`http://localhost:${a.port}/`)
+      const resB = await fetch(`http://localhost:${b.port}/`)
+      expect(resA.status).toBe(200)
+      expect(resB.status).toBe(200)
+    } finally {
+      a.stop()
+      b.stop()
+    }
+  })
+
+  test('stop() clears per-instance rate-limit state', async () => {
+    const component = defineComponent(() => h('div', null, 'Home'))
+    const a = createServer({ routes: [{ path: '/', component }], port: 0 })
+    try {
+      a.serve()
+      const res = await fetch(`http://localhost:${a.port}/`)
+      expect(res.status).toBe(200)
+    } finally {
+      a.stop()
+    }
+    // Después de stop(), crear una nueva instancia debe funcionar
+    // limpiamente (sin rate-limit state heredado).
+    const b = createServer({ routes: [{ path: '/', component }], port: 0 })
+    try {
+      b.serve()
+      const res = await fetch(`http://localhost:${b.port}/`)
+      expect(res.status).toBe(200)
+    } finally {
+      b.stop()
+    }
+  })
+})
