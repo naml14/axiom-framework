@@ -120,7 +120,7 @@ export interface GridScratch {
   deferredQueue: DeferredGridPlacementScratch[]
   secondPassVerticalPercentByChildIdx: Map<number, number>
   localizedSecondPassRemeasureByChildIdx: Map<number, LocalizedSecondPassRemeasureScratch>
-  occupiedCells: Set<string>
+  occupiedCells: Set<number>
   /** Pool of placement objects (growable; recycled across calls). */
   placementPool: GridPlacementScratch[]
   nextPlacementIdx: number
