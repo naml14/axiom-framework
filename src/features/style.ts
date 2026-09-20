@@ -195,7 +195,11 @@ export function resolveStyleTokens(
   theme: Theme
 ): SafeStyleProps {
   const resolved: SafeStyleProps = {}
-  for (const [key, value] of Object.entries(props)) {
+  // Object.keys avoids Object.entries' per-call tuple array allocation.
+  // Object.keys returns own enumerable properties only — same prototype-chain
+  // safety as the C-2 fix in src/syntax/h.ts.
+  for (const key of Object.keys(props)) {
+    const value = (props as Record<string, string | undefined>)[key]
     if (value !== undefined) {
       ;(resolved as Record<string, string>)[key] = theme.resolve(value)
     }
@@ -217,7 +221,9 @@ export function resolveStyleTokens(
  * (e.g., in development mode). In production, assume props are pre-validated.
  */
 export function applyStyleToElement(el: HTMLElement, props: SafeStyleProps): void {
-  for (const [key, value] of Object.entries(props)) {
+  // Object.keys avoids Object.entries' per-call tuple array allocation.
+  for (const key of Object.keys(props)) {
+    const value = (props as Record<string, string | undefined>)[key]
     if (value !== undefined) {
       // CSSStyleDeclaration supports index access by property name
       ;(el.style as unknown as Record<string, unknown>)[key] = value
