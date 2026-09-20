@@ -9,31 +9,32 @@ import type { ComponentNode, PortalNode } from '../core/types.js'
  * Renders `children` into `target` — a DOM element outside the main app root —
  * while keeping them part of the component tree for reactivity and lifecycle.
  *
- * ## CSS-managed behavior (current default)
+ * ## CSS-managed vs framework-managed children
  *
- * Portal children are **CSS-managed by default**: Axiom inserts them into the
- * DOM but does NOT apply `position`, `transform`, `width`, or `height` inline
- * styles. The user's CSS controls layout entirely.
+ * The `cssManaged` option (added in v0.9.11) controls whether Axiom applies
+ * layout styles to the portal's children:
  *
- * This is intentional for the common cases (modals, tooltips, drawers,
- * notifications) where components rely on `position: fixed`, `display: flex`,
- * or `backdrop-filter` — styles that Axiom's absolute positioning would override.
+ * - **`cssManaged: true`** (default) — portal children are inserted into the
+ *   DOM but Axiom does NOT apply `position`, `transform`, `width`, or `height`
+ *   inline styles. The user's CSS controls layout entirely. This is the
+ *   right choice for modals, tooltips, drawers, and notifications that rely
+ *   on `position: fixed`, `display: flex`, or `backdrop-filter` — styles that
+ *   Axiom's absolute positioning would otherwise override.
  *
- * ## Future: `cssManaged` flag (not yet implemented — see issue #9)
+ *   ```ts
+ *   const modal = createPortal([...children], modalRoot)
+ *   ```
  *
- * For portals that render into a layout-controlled container (e.g., a carousel
- * track, virtual list viewport, split-pane panel) and need Axiom's two-phase
- * layout engine to calculate positions and sizes, a `cssManaged: false` option
- * is planned:
+ * - **`cssManaged: false`** — Axiom applies `position: absolute` and
+ *   `transform: translate(x,y)` to portal children exactly like regular
+ *   elements. Use this for portals that render into a layout-controlled
+ *   container (e.g., a carousel track, virtual list viewport, split-pane
+ *   panel) where you want Axiom's two-phase layout engine to calculate
+ *   positions and sizes.
  *
- * ```ts
- * // Future API (not available yet):
- * createPortal(children, target, { cssManaged: false })
- * ```
- *
- * When `cssManaged: false`, Axiom would apply `position: absolute` and
- * `transform: translate(x,y)` to portal children exactly like regular elements.
- * Track progress at: https://github.com/naml14/axiom-framework/issues/9
+ *   ```ts
+ *   const track = createPortal([...children], trackRoot, { cssManaged: false })
+ *   ```
  *
  * ## Recommended usage
  *
@@ -43,8 +44,10 @@ import type { ComponentNode, PortalNode } from '../core/types.js'
  *
  * ```ts
  * const modalRoot = document.getElementById('modal-root')!
- * const modal = createPortal([...children], modalRoot)
+ * const modal = createPortal([...children], modalRoot)  // cssManaged: true
  * ```
+ *
+ * See CHANGELOG.md (v0.9.11) for the commit that introduced the option.
  */
 export function createPortal(
   children: ComponentNode[],
