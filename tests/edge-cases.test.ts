@@ -415,6 +415,25 @@ describe('security: attribute sanitization module', () => {
       expect(sanitizeAttrs(attrs)).toBe(attrs)
     })
 
+    test('returns original object when only safe URL attrs present (C-6)', () => {
+      // El caso común: attrs que NO requieren sanitización. Antes de C-6, el
+      // código allocaba un `result: Record<string, string> = {}` y luego lo
+      // descartaba si no había cambios. Ahora el primer pass detecta que no
+      // hay cambios y retorna el objeto original sin allocar nada.
+      const attrs = {
+        href: 'https://example.com/page',
+        src: 'https://cdn.example.com/img.png',
+        alt: 'Example image',
+        title: 'A safe title',
+      }
+      expect(sanitizeAttrs(attrs)).toBe(attrs)
+    })
+
+    test('returns original object when value normalization is a no-op', () => {
+      const attrs = { 'data-foo': 'bar', 'aria-label': 'baz' }
+      expect(sanitizeAttrs(attrs)).toBe(attrs)
+    })
+
     test('removes event handler attributes', () => {
       const result = sanitizeAttrs({
         class: 'btn',
