@@ -29,8 +29,13 @@ export function measureSimple(
   const gap = layout?.gap ?? 0
   let offsetY = 0
 
-  // Count non-portal children for gap calculation
-  const realChildren = children.filter(c => getNodeType(c) !== 'portal')
+  // Count non-portal children in a single pass so we can apply the gap only
+  // between real siblings (not before/after portals). Previously this used
+  // children.filter() which allocated a fresh array on every measureSimple call.
+  let nonPortalCount = 0
+  for (const c of children) {
+    if (getNodeType(c) !== 'portal') nonPortalCount++
+  }
   let realIdx = 0
 
   for (const child of children) {
@@ -52,7 +57,7 @@ export function measureSimple(
     layoutChild(child, childWidth, result, lineHeight)
 
     offsetY += result.height[childIdx] ?? 0
-    if (realIdx < realChildren.length - 1) {
+    if (realIdx < nonPortalCount - 1) {
       offsetY += gap
     }
     realIdx++
