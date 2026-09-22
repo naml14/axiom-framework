@@ -16,6 +16,7 @@ import { isAbsolute, join, relative, resolve } from 'path'
 
 import { doBuild, setupWatch } from './build.js'
 import { renderSSRPage } from './ssr-page.js'
+import { renderStreamingSSRPage } from './streaming-route.js'
 
 // ---------------------------------------------------------------------------
 // Start-up flags
@@ -128,6 +129,16 @@ serve({
       return res
     }
 
+    // Streaming SSR demo route
+    if (url.pathname === '/ssr-stream') {
+      const res = await renderStreamingSSRPage(url)
+      const cors = corsHeaders(req)
+      for (const [key, value] of Object.entries(cors)) {
+        res.headers.set(key, value)
+      }
+      return res
+    }
+
     // Static file serving — map `/` to `index.html`
     const rawPath  = url.pathname === '/' ? '/index.html' : url.pathname
     const filePath = resolve(join(DEMO_DIR, rawPath))
@@ -153,3 +164,4 @@ serve({
 console.log('🚀 Axiom Demo Launcher → http://localhost:3000')
 console.log('🧱 Static demo → http://localhost:3000/static.html')
 console.log('🧪 SSR demo → http://localhost:3000/ssr?name=Dev&width=960&root=ssr-root')
+console.log('🌀 Streaming SSR demo → http://localhost:3000/ssr-stream')
