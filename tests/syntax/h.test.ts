@@ -334,3 +334,48 @@ describe('layout shortcuts: space-around + baseline validation', () => {
     }
   })
 })
+
+// ─── Seguridad: prototype pollution XSS (C-2) ───────────────────────────────
+describe('h() — seguridad: prototype pollution', () => {
+  test('attrs vía __proto__ no se filtran al DOM', () => {
+    // Crea un objeto con __proto__ malicioso. Object.keys() debe excluirlo.
+    const malicious = Object.create(null) as Record<string, string>
+    malicious['aria-hidden'] = 'true'
+    malicious['data-evil'] = '1'
+    // Cast a `never` porque malicious es Record<string, string> y el JSDoc de
+    // ExplicitAttrs es más estricto. La prueba es que Object.keys() excluye
+    // atributos heredados del prototype null.
+    const node = h('div', { attrs: malicious as unknown as never })
+    // Solo aria-* y data-* propios deben aplicarse.
+    expect(node.attrs?.['aria-hidden']).toBe('true')
+    expect(node.attrs?.['data-evil']).toBe('1')
+    // on* no deben aparecer — no hay handlers en props.
+    expect(node.on).toBeUndefined()
+  })
+
+  test('on* handlers vía prototype chain no se aplican', () => {
+    // Si una librería externa contamina Object.prototype con onClick,
+    // h() no debe capturarlo.
+    const proto = Object.prototype as Record<string, unknown>
+    proto['onClick'] = () => {}
+    try {
+      const node = h('button', null, 'click me')
+      // Object.keys({}) no incluye onClick heredado.
+      expect(node.on).toBeUndefined()
+    } finally {
+      delete proto['onClick']
+    }
+  })
+
+  test('Object.keys() excluye propiedades del prototype chain', () => {
+    // Construye un objeto con prototype explícito (no class fields, que
+    // TypeScript compila como own properties en cada instancia).
+    const proto = { inheritedProp: 'inherited', onClick: () => 'inherited' }
+    const instance = Object.create(proto) as Record<string, unknown>
+    instance['ownProp'] = 'own'
+    const ownKeys = Object.keys(instance)
+    expect(ownKeys).toContain('ownProp')
+    expect(ownKeys).not.toContain('inheritedProp')
+    expect(ownKeys).not.toContain('onClick')
+  })
+})
