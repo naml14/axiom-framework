@@ -352,34 +352,36 @@ export function sanitizeAttrs(
   const keys = Object.keys(attrs)
   if (keys.length === 0) return attrs
 
+  // Two-pass design: the first pass detects whether any key needs changing.
+  // Only allocate the result object if at least one key actually changes —
+  // this avoids paying for a fresh empty object every time sanitizeAttrs is
+  // called with already-clean attributes (the common case in the hot path).
   let hasChanges = false
-  const result: Record<string, string> = {}
-
   for (const key of keys) {
-    // Skip invalid attribute names
     if (!isValidAttrName(key)) {
       hasChanges = true
-      continue
+      break
     }
-
     const value = attrs[key]
     if (value === undefined) continue
-
     const sanitized = sanitizeAttrValue(key, value)
-
-    if (sanitized === undefined) {
-      // Attribute should be removed
+    if (sanitized === undefined || sanitized !== value) {
       hasChanges = true
-      continue
+      break
     }
+  }
 
-    if (sanitized !== value) {
-      hasChanges = true
-    }
+  if (!hasChanges) return attrs
 
+  const result: Record<string, string> = {}
+  for (const key of keys) {
+    if (!isValidAttrName(key)) continue
+    const value = attrs[key]
+    if (value === undefined) continue
+    const sanitized = sanitizeAttrValue(key, value)
+    if (sanitized === undefined) continue
     result[key] = sanitized
   }
 
-  // Return original object if no changes were made (optimization)
-  return hasChanges ? result : attrs
+  return result
 }
