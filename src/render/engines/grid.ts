@@ -342,7 +342,8 @@ export function measureGrid(
     }
   }
 
-  const rowOffsets = buildRowOffsets(rowHeights, rowGap, padding)
+  const rowOffsets = scratch.rowOffsets
+  buildRowOffsets(rowHeights, rowGap, padding, rowOffsets)
 
   for (const placement of placements) {
     const x = padding + placement.col * (columnWidth + columnGap)
@@ -665,14 +666,16 @@ function registerPlacement(
   }
 }
 
-function buildRowOffsets(rowHeights: number[], rowGap: number, padding: number): number[] {
-  const offsets: number[] = []
+function buildRowOffsets(
+  rowHeights: number[],
+  rowGap: number,
+  padding: number,
+  out: number[]
+): void {
   let current = padding
 
   for (let row = 0; row < rowHeights.length; row++) {
-    offsets[row] = current
+    out[row] = current
     current += (rowHeights[row] ?? 0) + rowGap
   }
-
-  return offsets
 }
