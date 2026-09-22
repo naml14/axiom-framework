@@ -158,6 +158,11 @@ export const URL_SENSITIVE_ATTRS = new Set([
 /**
  * URL schemes that can execute JavaScript or access local resources.
  * Case-insensitive matching is required.
+ *
+ * NOTE: `data:` appears here but `data:image/*`, `data:audio/*`, `data:video/*`
+ * are handled separately in `SAFE_DATA_URL_RE` and PASS sanitization. The catch-all
+ * `data:` block here covers `data:text/html`, `data:application/javascript`,
+ * `data:text/css`, etc., which can execute script in modern browsers.
  */
 const DANGEROUS_URL_SCHEME_RE = /^\s*(javascript|data|vbscript|file)\s*:/i
 
@@ -175,6 +180,52 @@ const SAFE_URL_PATTERN = /^(https?:|mailto:|tel:|#|\/|\.\/|\.\.\/)/i
  * navigation and must be blocked alongside `//evil.com`.
  */
 const PROTOCOL_RELATIVE_URL_RE = /^\s*[/\\][/\\]/
+
+/**
+ * Safe `data:` URL allowlist.
+ *
+ * Only media MIME prefixes (`image/*`, `audio/*`, `video/*`) are allowed because
+ * they cannot execute JavaScript when rendered. Anything else starting with
+ * `data:` is treated as dangerous — specifically `data:text/html`,
+ * `data:application/javascript`, `data:text/css`, etc., which can execute script
+ * or load external resources in modern browsers.
+ *
+ * IMPORTANT — SVG caveat: SVG files are XML and can contain `<script>` tags,
+ * `onload`/`onclick` handlers, `javascript:` hrefs, and external references.
+ * Inline `data:image/svg+xml,<svg>…</svg>` is therefore an XSS vector and must
+ * be BLOCKED, even though the MIME prefix looks safe. Only the base64-encoded
+ * form is allowed, because its content is treated as opaque image data by the
+ * browser:
+ *
+ *   data:image/svg+xml;base64,PHN2ZyB4bWxucz0i…  → allowed (opaque bytes)
+ *   data:image/svg+xml,<svg onload=alert(1)>    → BLOCKED (inline XSS)
+ *
+ * Examples:
+ *   data:image/png;base64,iVBORw0KGgo…               → allowed
+ *   data:image/jpeg;base64,/9j/4AAQ…                  → allowed
+ *   data:image/svg+xml;base64,PHN2ZyB4bWxucz0i…       → allowed
+ *   data:audio/mp3;base64,//uQxAAAA…                 → allowed
+ *   data:video/mp4;base64,AAAAIGZ0eXBpc29t…           → allowed
+ *   data:image/svg+xml,<svg onload="alert(1)">        → blocked
+ *   data:text/html,<script>alert(1)</script>          → blocked
+ *   data:text/plain;base64,…                          → blocked
+ *   data:application/javascript,…                     → blocked
+ */
+export const SAFE_DATA_URL_RE = /^\s*data:image\/(png|jpe?g|gif|webp|bmp|ico|avif)\s*;/i
+export const SAFE_AUDIO_DATA_URL_RE = /^\s*data:audio\//i
+export const SAFE_VIDEO_DATA_URL_RE = /^\s*data:video\//i
+// SVG is allowed ONLY with base64 encoding. The `(?=.*;base64)` lookahead
+// ensures the value declares a base64 payload; inline XML is rejected.
+export const SAFE_SVG_DATA_URL_RE = /^\s*data:image\/svg\+xml\s*;base64,/i
+
+export function isSafeDataUrl(value: string): boolean {
+  return (
+    SAFE_DATA_URL_RE.test(value) ||
+    SAFE_SVG_DATA_URL_RE.test(value) ||
+    SAFE_AUDIO_DATA_URL_RE.test(value) ||
+    SAFE_VIDEO_DATA_URL_RE.test(value)
+  )
+}
 
 /**
  * Valid HTML attribute name pattern.
@@ -233,6 +284,11 @@ export function sanitizeUrlValue(value: string): string {
     return '#blocked'
   }
   if (SAFE_URL_PATTERN.test(value)) {
+    return value
+  }
+  // Safe data: URLs (image/audio/video) pass through before the dangerous
+  // catch-all. Anything else starting with `data:` is blocked.
+  if (isSafeDataUrl(value)) {
     return value
   }
   if (hasDangerousUrlScheme(value)) {
