@@ -19,6 +19,18 @@ import {
   getPortalTarget,
   getPortalCssManaged,
 } from './prepare.js'
+import {
+  resetDiffScratch,
+  acquirePrevByIndex,
+  acquireNewByIndex,
+  acquirePortalMap,
+  acquirePrevByKey,
+  acquireNewByKey,
+  acquirePrevIndices,
+  acquireNewIndices,
+  acquireLayoutChangedSet,
+  acquireAllChangedSet,
+} from './diff-scratch.js'
 
 // ============================================================
 // DOM Operation Types
@@ -86,8 +98,7 @@ interface PortalMapEntry {
   cssManaged: boolean
 }
 
-function buildPortalMap(prepared: PreparedComponent): Map<number, PortalMapEntry> {
-  const map = new Map<number, PortalMapEntry>()
+function buildPortalMap(prepared: PreparedComponent, map: Map<number, PortalMapEntry>): void {
   function walk(node: PreparedComponent, currentEntry?: PortalMapEntry): void {
     const nodeType = getNodeType(node)
     if (nodeType === 'portal') {
@@ -109,7 +120,6 @@ function buildPortalMap(prepared: PreparedComponent): Map<number, PortalMapEntry
     }
   }
   walk(prepared)
-  return map
 }
 
 function applyPortalMetadata(
@@ -171,9 +181,14 @@ export function fullDiff(
 ): DOMOperation[] {
   const ops: DOMOperation[] = []
 
+  // Reset the scratch pool once per fullDiff call. All Maps/Sets below
+  // come from the pool — cleared, not re-allocated.
+  resetDiffScratch()
+
   // First render — all inserts
   if (prevPrepared === null) {
-    const portalMap = buildPortalMap(newPrepared)
+    const portalMap = acquirePortalMap()
+    buildPortalMap(newPrepared, portalMap)
     forEachNode(newPrepared, (node) => {
       const idx = getNodeIndex(node)
       const op: DOMInsertOp = { type: 'insert', index: idx }
@@ -199,14 +214,21 @@ export function fullDiff(
 
   // Same nodeCount — value change only, use fastDiff + text check
   if (prevLayout !== null && prevLayout.nodeCount === newLayout.nodeCount) {
-    const prevByIndex = buildIndexMap(prevPrepared)
-    const newByIndex = buildIndexMap(newPrepared)
-    const portalMap = buildPortalMap(newPrepared)
+    const prevByIndex = acquirePrevByIndex()
+    const newByIndex = acquireNewByIndex()
+    const portalMap = acquirePortalMap()
+    buildIndexMap(prevPrepared, prevByIndex)
+    buildIndexMap(newPrepared, newByIndex)
+    buildPortalMap(newPrepared, portalMap)
 
     const layoutChangedIndices = fastDiff(prevLayout, newLayout)
-    const layoutChangedSet = new Set<number>(layoutChangedIndices)
+    // Re-seed the scratch sets from layoutChangedIndices. The previous call
+    // left them empty after resetDiffScratch().
+    const layoutChangedSet = acquireLayoutChangedSet()
+    for (const idx of layoutChangedIndices) layoutChangedSet.add(idx)
     const allChanged = [...layoutChangedIndices]
-    const allChangedSet = new Set<number>(layoutChangedIndices)
+    const allChangedSet = acquireAllChangedSet()
+    for (const idx of layoutChangedIndices) allChangedSet.add(idx)
     const markChanged = (idx: number): void => {
       if (!allChangedSet.has(idx)) {
         allChangedSet.add(idx)
@@ -309,20 +331,24 @@ function fullTreeDiff(
   const ops: DOMOperation[] = []
 
   // Build portal map to propagate portalTarget to insert ops
-  const portalMap = buildPortalMap(newPrepared)
+  const portalMap = acquirePortalMap()
+  buildPortalMap(newPrepared, portalMap)
 
   // Build key maps for reconciliation
-  const prevByKey = buildKeyMap(prevPrepared)
-  const newByKey = buildKeyMap(newPrepared)
-  const prevByIndex = buildIndexMap(prevPrepared)
+  const prevByKey = acquirePrevByKey()
+  const newByKey = acquireNewByKey()
+  buildKeyMap(prevPrepared, prevByKey)
+  buildKeyMap(newPrepared, newByKey)
+  const prevByIndex = acquirePrevByIndex()
+  buildIndexMap(prevPrepared, prevByIndex)
 
   // Build index sets
-  const prevIndices = new Set<number>()
+  const prevIndices = acquirePrevIndices()
   forEachNode(prevPrepared, (node) => {
     prevIndices.add(getNodeIndex(node))
   })
 
-  const newIndices = new Set<number>()
+  const newIndices = acquireNewIndices()
   forEachNode(newPrepared, (node) => {
     newIndices.add(getNodeIndex(node))
   })
@@ -507,21 +533,17 @@ function fullTreeDiff(
   return ops
 }
 
-function buildKeyMap(prepared: PreparedComponent): Map<string, number> {
-  const map = new Map<string, number>()
+function buildKeyMap(prepared: PreparedComponent, target: Map<string, number>): void {
   forEachNode(prepared, (node) => {
     const key = getKey(node)
     if (key !== undefined) {
-      map.set(key, getNodeIndex(node))
+      target.set(key, getNodeIndex(node))
     }
   })
-  return map
 }
 
-function buildIndexMap(prepared: PreparedComponent): Map<number, PreparedComponent> {
-  const map = new Map<number, PreparedComponent>()
+function buildIndexMap(prepared: PreparedComponent, target: Map<number, PreparedComponent>): void {
   forEachNode(prepared, (node) => {
-    map.set(getNodeIndex(node), node)
+    target.set(getNodeIndex(node), node)
   })
-  return map
 }
