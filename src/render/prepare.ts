@@ -316,8 +316,17 @@ export function getTag(prepared: PreparedComponent): string | undefined {
   return unbrandPrepared(prepared).tag
 }
 
+/**
+ * Returns the children array of a prepared node.
+ *
+ * PERFORMANCE: returns the internal array directly. The brand type makes
+ * this safe at the type level — `PreparedInternal` is structurally identical to
+ * `PreparedComponent` minus the unique brand symbol. The cast is zero-cost.
+ * Returning a fresh `.map(c => brandPrepared(c))` array would allocate on
+ * every call (hot path: ~10 calls per reflow per node).
+ */
 export function getChildren(prepared: PreparedComponent): PreparedComponent[] {
-  return unbrandPrepared(prepared).children.map(c => brandPrepared(c))
+  return unbrandPrepared(prepared).children as unknown as PreparedComponent[]
 }
 
 export function getNodeIndex(prepared: PreparedComponent): number {
@@ -349,8 +358,13 @@ export function getTextHandle(prepared: PreparedComponent): unknown {
   return unbrandPrepared(prepared).textHandle
 }
 
+/**
+ * Returns the children array of a prepared node (alias of getChildren).
+ *
+ * Like getChildren, returns the internal array without copying.
+ */
 export function getPreparedChildren(prepared: PreparedComponent): PreparedComponent[] {
-  return unbrandPrepared(prepared).children.map(c => brandPrepared(c))
+  return unbrandPrepared(prepared).children as unknown as PreparedComponent[]
 }
 
 export function getKey(prepared: PreparedComponent): string | undefined {
