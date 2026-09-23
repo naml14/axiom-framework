@@ -36,6 +36,27 @@ Plantilla:
 
 ## Entradas
 
+### 2026-09-23 — Rollup de hardening: cobertura del demo, seguridad y perf del hot path
+
+- Issue: #30 (épica 1.0.0)
+- PR: #88 — rama `integration/hardening-good-rollup`
+- Verificación (candidato `5bb6fd3`, árbol limpio, bun 1.3.14, re-ejecutada de forma independiente):
+  - [x] `bun run typecheck` — 0 errores
+  - [x] `bun run test:coverage` (gate de CI) — 726 pass / 2 skip / 0 fail en 37 archivos; cobertura de líneas 97.05% ≥ umbral 85%
+  - [x] `bun run build` — sin diagnósticos
+  - [x] `bun run validate:api` — 137 exports: 132 stable, 5 experimental, 0 deprecated
+  - [x] `bun run demo:build` — framework, bundle del demo y sitio estático generados
+- Evidencia:
+  - Alcance: 15 desarrollos (Fase 0 demo, Fase 1 seguridad/correctness, Fase 2 perf de hot path) — 36 archivos, +2661/−672 sobre `main`.
+  - Smoke de navegador (Playwright, servidor en `:3000`) ejecutado el 2026-09-22 sobre el árbol de fuentes byte-idéntico a `5bb6fd3`: 9/9 invariantes estructurales y 19/19 acciones sin fallo, sin cuelgue; el único error de consola es el 404 preexistente de `/favicon.ico`.
+  - Exclusión verificada: `perf/signals-notify-no-alloc` (F2-T7) queda fuera del rollup porque iterar el `Set` vivo congela el renderer; motivo reproducido y criterio de reintento en `odd/tasks/axiom-hardening-plan.md`.
+  - Salvedades registradas: C-1 parcial (`escapeStyleText` descarta `url()` en estilos inline SSR), etiqueta `@deprecated` de `resetIndexCounter` invisible para `validate:api`, y comentario de cabecera de `src/render/diff-scratch.ts` desalineado con el número real de contenedores.
+  - archivos: `demo/*`, `src/core/attrs.ts`, `src/syntax/h.ts`, `src/server.ts`, `src/features/{forms,portal,style}.ts`, `src/render/*`, `tests/*`, `SECURITY.md`, `docs/ARCHITECTURE.md`, `odd/tasks/*`
+- Resultado: PASS (con salvedades)
+- Notas/Riesgos:
+  - `bun audit` no pudo ejecutarse en local (no hay `bun.lock` en el checkout; está gitignored). El job de Seguridad lo corre en CI tras `bun install`; este PR no toca `package.json`.
+  - Fase 3 (F3-T1..F3-T9) no iniciada; fuera del alcance de este rollup.
+
 ### 2026-05-01 — M3 — Validación integral de release v1.0.0
 
 - Issue: #30 (épica 1.0.0)
