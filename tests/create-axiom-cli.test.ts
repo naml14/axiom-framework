@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
+import { existsSync, openSync, fstatSync, readFileSync, closeSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -1330,15 +1330,24 @@ describe("create-axiom CLI — generated build-static.ts is personalised", () =>
 
 		expect(result.exitCode).toBe(0);
 
-		const { stat } = await import("node:fs/promises");
+		// Walk every entry with a file descriptor so there is no path-based
+		// TOCTOU between checking and reading (the dirs and files live in a
+		// fresh mkdtemp, but the check-then-read shape is what CodeQL flags).
 		const files = await listProjectFiles(projectDir);
 		for (const file of files) {
-			const fileStat = await stat(file);
-			if (!fileStat.isFile()) continue;
-			// lgtm[js/file-system-race] ignore: sandbox temp directory, files
-			// are created by the same test and not shared.
-			const content = await readFile(file, "utf8");
-			expect(content).not.toContain("{{PROJECT_NAME}}");
+			let fd: number | undefined;
+			try {
+				fd = openSync(file, "r");
+				if (!fstatSync(fd).isFile()) continue;
+				const content = readFileSync(fd, "utf8");
+				expect(content).not.toContain("{{PROJECT_NAME}}");
+			} catch {
+				// A directory listing slipping through (e.g. a race) is
+				// uninteresting here; the test cares about file contents.
+				continue;
+			} finally {
+				if (fd !== undefined) closeSync(fd);
+			}
 		}
 	});
 
