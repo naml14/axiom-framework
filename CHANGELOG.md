@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.13](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.12...axiom-framework-v0.9.13) (2026-09-23)
+
+
+### Bug Fixes
+
+* **ci:** publish with npm (OIDC) and move every toolchain to its latest release ([74af7d3](https://github.com/naml14/axiom-framework/commit/74af7d38c2c474f0ac8f6340eb2cadc752e7cd10))
+* **ci:** publish with npm, not bun, and move every toolchain to latest ([b4d8ac2](https://github.com/naml14/axiom-framework/commit/b4d8ac25e69477b2ce45755f6581a49b55ecf825))
+
 ## [0.9.12](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.11...axiom-framework-v0.9.12) (2026-09-23)
 
 
