@@ -163,6 +163,9 @@ Reglas de comportamiento:
 - [x] T4. Personalizar el build estático del starter (hallazgo medio de V1)
 - [x] T5. Exit 1 en fallo de install (hallazgo alto de V1)
 - [x] V2. Re-verificación del candidato congelado tras la ronda de arreglos → **PASS** (F1, F2 y los cuatro huecos de F3 cerrados; quedan 3 hallazgos *low*)
+- [x] V3. Tercera verificación sobre `df52878` → **FAIL** parcial: F5 cerrado, F4 solo parcial, más dos afirmaciones falsas del parent
+- [x] T6. Scan recursivo real (rutas relativas a la raíz) + probes que fallen contra un helper superficial
+- [ ] V4. Verificación fresca del delta de T6
 
 ## Evidencia
 
@@ -446,11 +449,14 @@ regular, y `package.json` como directorio → `EISDIR` con exit 1).
 ### Hallazgos *low* que quedan abiertos
 
 1. **Los scans de "no se escribió nada" no ven directorios vacíos**:
-   `tests/create-axiom-cli.test.ts:323,1022` devuelven solo archivos, así que la
-   afirmación no cubre directorios vacíos creados. Sin defecto observado en el CLI.
-2. **Fixture duplicado**: `tests/create-axiom-cli.test.ts:1245` duplica
-   `tests/create-axiom.test.ts:82`; hoy son equivalentes, pero pueden divergir.
-   Riesgo de mantenimiento, no de runtime.
+   `tests/create-axiom-cli.test.ts:323,1022` devolvían solo archivos. → Atendido en
+   `df52878`, pero **solo parcialmente**: ver el informe de V3, que reproduce que el
+   helper quedó superficial y que el probe no puede fallar contra él.
+2. **Fixture duplicado**: `tests/create-axiom-cli.test.ts:1245` duplicaba
+   `tests/create-axiom.test.ts:82`. → **Cerrado y verificado en V3**: extraído a
+   `tests/helpers/local-framework-fixture.ts`, inventarios de 41 archivos
+   byte a byte idénticos a las dos copias previas, y el helper no se colecta como
+   suite (40 archivos).
 3. **Atribución documental** (corregida en este mismo informe): el guard end-to-end
    del build vive en `tests/create-axiom-cli.test.ts:1339-1381`, no en
    `tests/create-axiom.test.ts`, que solo recibió comentarios.
@@ -470,3 +476,113 @@ el flushing en toda plataforma ni implementación de pipe).
 - Las mediciones históricas intermedias ya listadas (51/151, 1004 ms, 0.7 ms).
 - Temporal trabado heredado de la sonda TTY: `…/Temp/axiom-tty-VIZujv` sigue con
   `EBUSY` sin proceso atribuible; se deja como resto inofensivo.
+
+## Informe de V3 (gentle-ai-verify sobre `main...df52878`)
+
+Verdicto: **FAIL**. F5 quedó cerrado; F4 solo parcialmente cerrado. Ninguna violación
+de contrato del CLI reproducida: el fallo es de cobertura de los tests y de integridad
+de afirmaciones, no de comportamiento.
+
+### Regresión (todo PASS)
+
+`bun test` → **846 pass / 2 skip / 0 fail**, 848 tests en 40 archivos, 6099 expect,
+3.52 s. `bun run typecheck` limpio. `create-axiom-cli` 104 pass / 300 expect.
+`create-axiom` 11 pass / 62 expect. Los dos skips son la limitación de select-value de
+happy-dom.
+
+### F5 — cerrado de forma independiente
+
+Extrajo el helper compartido y las dos copias previas con `git show` y comparó los
+inventarios completos del fixture generado: **41 archivos, idénticos byte a byte**
+en los tres casos, incluida la resolución de raíz por URL propia. Suite en 40 archivos:
+el helper no se colecta como suite. Sin imports muertos ni cambio de comportamiento.
+
+### F4 — parcialmente cerrado (el núcleo del FAIL)
+
+Reproducción con un harness temporal que extrajo `listEntries` de los bytes congelados:
+
+| Contenido del workspace | `listEntries` congelado | Scan recursivo |
+| --- | --- | --- |
+| `.empty/` | `[".empty"]` | `[".empty"]` |
+| `outer/.empty/` | `["outer"]` | `["outer",".empty"]` |
+| `outer/.empty/file` | `["outer"]` | `["outer",".empty","file"]` |
+| `a/same`, `b/same` | `["a","b"]` | `["a","b","same","same"]` (sin deduplicar) |
+| junction / junction colgado | `["link"]` | `["link"]` |
+
+Frontera importante: en un workspace inicialmente vacío el scan superficial **sí**
+detecta una escritura anidada por el ancestro recién creado, así que no se reprodujo
+ninguna escritura del CLI escapando esas aserciones. Lo que sí quedó establecido:
+
+```text
+before: ["outer"]
+create outer/nested-empty and outer/nested-file
+after:  ["outer"]
+equal: true
+```
+
+Es decir: el helper **no puede** establecer que el contenido de un directorio
+preexistente quedó intacto.
+
+- RED replay: con el probe nuevo pero la implementación anterior, el probe detecta el
+  defecto del glob (`Expected: 1 / Received: 0`) — **PASS**.
+- El probe **no** detecta el reemplazo superficial: la suite pasa con él — **FAIL**.
+- Bun no deduplica basenames en su output recursivo, así que `length === 0` sigue siendo
+  seguro, pero para comparaciones de inventario hacen falta **rutas relativas a la raíz**;
+  mover `a/same` a `b/same` produce el mismo multiconjunto de basenames.
+
+### Hallazgos sobre el parent (registrados sin ablandar)
+
+- **Medio — afirmación falsa en el commit y verificación no ganada.** `df52878` afirma
+  que **ambos** scans usan `readdir(..., { recursive: true })`; los bytes congelados lo
+  contradicen: solo el scan del test de unknown flag (línea 326) es recursivo, y
+  `listEntries` quedó superficial con su comentario viejo. Causa raíz (reportada por el
+  parent y verificada la contradicción de forma independiente): una edición atómica
+  falló, se reenvió un solo bloque, y la afirmación se escribió desde la *intención* de
+  la edición fallida en vez de releer los bytes. El parent ya había afirmado lo mismo en
+  su reporte al usuario: esa frase no estaba ganada.
+- **Bajo — conteo incorrecto en el mensaje del commit.** `df52878` dice
+  "848 pass / 2 skip"; lo correcto es **846 pass / 2 skip**, 848 tests en total.
+- El documento de tareas **no** contiene esta afirmación falsa: vive solo en el mensaje
+  del commit. Se corrige con un commit posterior que la enuncia explícitamente, sin
+  reescribir la historia.
+
+### Cautelas de plataforma y UNPROVEN
+
+- `package.json` declara Node ≥22 y Bun ≥1.0; esta verificación ejercitó **Bun 1.4.2 en
+  Windows** únicamente. Compatibilidad con Bun 1.0 y otras plataformas: **UNVERIFIABLE**
+  aquí. Por eso el arreglo de T6 implementa el recorrido a mano en vez de depender de
+  `recursive: true`.
+- Junctions de Windows probados (incluido colgado); symlinks POSIX no.
+- `[y/N]` y Ctrl+D en **terminal real** siguen **UNPROVEN**, igual que el flushing de
+  stderr multiplataforma.
+- V3 **no** re-ejecutó las figuras históricas del documento (T1 34/92 y 679 bytes ×30;
+  T2 51/151 y 59/159; EOF 1004 ms / 0.7 ms; tiempos 532/540/593 ms; T3 98/274; totales
+  y tiempos de V1/V2; help de 986 bytes; stderr de 522 chars ×30; REDs de export y de
+  F1/F2). **No deben presentarse como verificados por V3.**
+
+### T6 — Evidencia (cierre del FAIL de V3)
+
+- Causa raíz: `df52878` afirmó que **ambos** scans eran recursivos; solo lo era el
+  inline del test de unknown flag. `listEntries` seguía siendo un listado de primer
+  nivel, así que un cambio anidado dentro de un directorio preexistente dejaba el
+  inventario idéntico (V3: `before: ["outer"]` / `after: ["outer"]`).
+- Arreglo: una única definición a nivel de módulo que desciende nivel por nivel con
+  `readdir(dir, { withFileTypes: true })` y devuelve **rutas relativas a la raíz**,
+  ordenadas, con `/` como separador. **No** se usa `recursive: true`: en Bun devuelve
+  basenames, que colapsan `a/same` con `b/same`, y además apoyaría el arreglo en un
+  comportamiento que este repo no verificó en Bun 1.0. Los directorios se devuelven
+  como entradas (los vacíos se ven); los symlinks se reportan pero no se descienden.
+- El scan inline duplicado del test de unknown flag ahora usa el mismo helper.
+- Probes nuevos: directorio vacío anidado, archivo anidado, y un caso de profundidad
+  que un listado de basenames no puede distinguir. El probe top-level `.empty/`
+  original se conserva.
+- **RED reproducido por el parent, de forma independiente** (espejo temporal con
+  `scripts/`, `tests/` y `package.json` copiados; nada escrito en el repo):
+  - espejo sin parche → **4 pass / 0 fail / 11 expect**;
+  - espejo con el `walk` parcheado para no descender → el probe original sigue
+    **pass** y los **3 probes nuevos fallan** (1 pass / 3 fail).
+  Es decir: el test ahora sí protege la recursividad, que era exactamente lo que la
+  versión anterior no podía hacer.
+- Suites: `create-axiom-cli` **107 pass / 0 fail / 309 expect**; `create-axiom`
+  11 pass / 62 expect; suite completa **851 tests en 40 archivos, 849 pass / 2 skip /
+  0 fail, 6108 expect**; `bun run typecheck` limpio.

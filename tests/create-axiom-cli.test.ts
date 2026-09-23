@@ -24,6 +24,29 @@ async function freshDir(label: string): Promise<string> {
 	return dir;
 }
 
+// Recursive walk: returns sorted, root-relative paths (using "/" as the
+// separator) for every entry under `cwd`, files and directories alike.
+// Implemented with per-level `readdir(..., { withFileTypes: true })` so we
+// own the path strings — `readdir({ recursive: true })` in Bun returns bare
+// basenames, which collapses `a/same` and `b/same` into one entry. Symlinks
+// are reported but not descended into (isDirectory() is false for symlinks).
+async function listEntries(cwd: string): Promise<string[]> {
+	const out: string[] = [];
+	const walk = async (dir: string, prefix: string): Promise<void> => {
+		const entries = await readdir(dir, { withFileTypes: true });
+		for (const entry of entries) {
+			const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+			out.push(relPath);
+			if (entry.isDirectory()) {
+				await walk(join(dir, entry.name), relPath);
+			}
+		}
+	};
+	await walk(cwd, "");
+	out.sort();
+	return out;
+}
+
 afterEach(async () => {
 	for (const dir of tempDirs.splice(0)) {
 		await rm(dir, { recursive: true, force: true }).catch(() => {});
@@ -317,14 +340,10 @@ describe("create-axiom CLI process", () => {
 		expect(result.exitCode).toBe(1);
 		// Error message on stderr hints at --help
 		expect(result.stderr).toContain("--help");
-		// No files written in the workspace. Recursive readdir with
-		// withFileTypes makes hidden dotfiles, nested files and empty
-		// directories all visible. A Bun.Glob("**/*") scan returns [] for a
-		// workspace whose only entry is an empty directory like `.empty/`.
-		const entries = await readdir(workspace, {
-			withFileTypes: true,
-			recursive: true,
-		});
+		// No files written in the workspace. The shared listEntries helper
+		// recurses with per-level readdir so hidden dotfiles, nested files
+		// and empty directories are all visible.
+		const entries = await listEntries(workspace);
 		// mkdtemp creates an empty temp dir; nothing should be added.
 		expect(entries.length).toBe(0);
 	});
@@ -1020,15 +1039,6 @@ describe("create-axiom CLI — name validation + template cleanup", () => {
 		return { exitCode, stdout, stderr };
 	}
 
-	async function listEntries(cwd: string): Promise<string[]> {
-		// readdir returns every top-level entry — including hidden dotfiles
-		// and empty directories. A Bun.Glob("**/*") scan silently returns
-		// [] for a workspace whose only entry is an empty directory like
-		// `.empty/` because the glob has no children to match.
-		const entries = await readdir(cwd, { withFileTypes: true });
-		return entries.map((entry) => entry.name);
-	}
-
 	test("--help still wins over an invalid project name (no error, no files written)", async () => {
 		const workspace = await freshDir("help-wins");
 
@@ -1191,6 +1201,52 @@ describe("create-axiom CLI — name validation + template cleanup", () => {
 		const entries = await listEntries(workspace);
 		expect(entries.length).toBe(1);
 		expect(entries).toContain(".empty");
+	});
+
+	test("listEntries walks into a nested empty directory", async () => {
+		// Regression probe: a top-level-only readdir cannot see `outer/.empty`
+		// because it never descends into `outer/`. The helper must return
+		// root-relative paths so an empty nested directory is visible.
+		const workspace = await freshDir("helper-nested-empty");
+		await mkdir(join(workspace, "outer", ".empty"), { recursive: true });
+		const entries = await listEntries(workspace);
+		expect(entries).toContain("outer");
+		expect(entries).toContain("outer/.empty");
+		expect(entries.length).toBe(2);
+	});
+
+	test("listEntries walks into a nested file", async () => {
+		// Regression probe: a top-level-only readdir reports `outer` but
+		// cannot see `outer/nested-file`. The helper must recurse so a file
+		// inside a pre-existing directory appears as a root-relative path.
+		const workspace = await freshDir("helper-nested-file");
+		await mkdir(join(workspace, "outer"), { recursive: true });
+		await writeFile(join(workspace, "outer", "nested-file"), "");
+		const entries = await listEntries(workspace);
+		expect(entries).toContain("outer");
+		expect(entries).toContain("outer/nested-file");
+		expect(entries.length).toBe(2);
+	});
+
+	test("listEntries distinguishes entries at different depths", async () => {
+		// Regression probe: `readdir(..., { recursive: true })` in Bun
+		// returns bare basenames, so `a/same` and `b/same` collapse to a
+		// single `same` entry — a move between directories becomes
+		// invisible. The helper must report root-relative paths so a move
+		// between depths changes the inventory.
+		const shallow = await freshDir("helper-depth-shallow");
+		await mkdir(join(shallow, "outer"), { recursive: true });
+		await writeFile(join(shallow, "outer", "nested-file"), "");
+		const deep = await freshDir("helper-depth-deep");
+		await mkdir(join(deep, "outer", "x"), { recursive: true });
+		await writeFile(join(deep, "outer", "x", "nested-file"), "");
+
+		const shallowEntries = await listEntries(shallow);
+		const deepEntries = await listEntries(deep);
+
+		expect(shallowEntries).toContain("outer/nested-file");
+		expect(deepEntries).toContain("outer/x/nested-file");
+		expect(shallowEntries).not.toEqual(deepEntries);
 	});
 });
 
