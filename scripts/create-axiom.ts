@@ -15,6 +15,19 @@ const ROOT_PACKAGE_JSON_PATH = join(__dirname, "..", "package.json");
 
 const SAFE_NAME_RE = /^[a-z0-9][a-z0-9._-]*$/i;
 
+// Windows reserved device names (with or without an extension). A directory
+// whose base name matches any of these cannot be created on Windows, so
+// reject them on every platform: a project with such a name cannot be
+// checked out cross-platform.
+const WINDOWS_RESERVED_BASES: ReadonlySet<string> = new Set([
+	"con",
+	"prn",
+	"aux",
+	"nul",
+	...Array.from({ length: 9 }, (_, i) => `com${i + 1}`),
+	...Array.from({ length: 9 }, (_, i) => `lpt${i + 1}`),
+]);
+
 // ============================================================
 // CLI surface (parser + usage)
 // ============================================================
@@ -105,6 +118,7 @@ Arguments:
   project-name      Directory to create (default: my-axiom-app).
                     Allowed characters: ASCII letters, digits, dot, dash, underscore.
                     Must start with a letter or digit.
+                    Windows reserved device names (con, prn, aux, nul, com1-9, lpt1-9) are rejected.
 
 Options:
   -f, --force       Overwrite template files in an existing project directory
@@ -121,6 +135,40 @@ Examples:
   create-axiom my-app --no-install
   create-axiom my-app --force
 `;
+
+// ============================================================
+// Project name validation (T3)
+// ============================================================
+
+export function validateProjectName(name: string): void {
+	if (!SAFE_NAME_RE.test(name)) {
+		throw new UsageError(
+			`Invalid project name: "${name}". ` +
+				`Use ASCII letters, digits, dot, dash, underscore, ` +
+				`and start with a letter or digit. Example: my-axiom-app.`,
+		);
+	}
+
+	const dotIndex = name.indexOf(".");
+	const baseName = (dotIndex === -1 ? name : name.slice(0, dotIndex)).toLowerCase();
+	if (WINDOWS_RESERVED_BASES.has(baseName)) {
+		throw new UsageError(
+			`Invalid project name: "${name}". ` +
+				`"${baseName.toUpperCase()}" is a reserved device name on Windows ` +
+				`(with or without an extension), so a directory with this name ` +
+				`cannot be created. Pick a different name, for example my-axiom-app.`,
+		);
+	}
+
+	if (name.endsWith(".") || name.endsWith(" ")) {
+		throw new UsageError(
+			`Invalid project name: "${name}". ` +
+				`A trailing dot or space is invalid because Windows strips ` +
+				`them, so the directory you would get would not match the name you typed. ` +
+				`Pick a different name, for example my-axiom-app.`,
+		);
+	}
+}
 
 // ============================================================
 // Destination directory guard (T2)
@@ -336,10 +384,15 @@ async function main(): Promise<void> {
 
 	const projectName = options.projectName;
 
-	if (!SAFE_NAME_RE.test(projectName)) {
-		throw new Error(
-			`Invalid project name: "${projectName}". Use only alphanumeric characters, dots, dashes, and underscores.`,
-		);
+	try {
+		validateProjectName(projectName);
+	} catch (err) {
+		// Surface the actionable message verbatim on stderr and exit 1.
+		// No 'Failed to create project:' prefix — the user can act on it
+		// directly, and the filesystem has not been touched yet.
+		const message = err instanceof Error ? err.message : String(err);
+		console.error(message);
+		process.exit(1);
 	}
 
 	const projectDir = join(process.cwd(), projectName);

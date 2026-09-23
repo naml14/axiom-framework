@@ -8,9 +8,6 @@
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit"
   },
-  "dependencies": {
-    "axiom-framework": "__AXIOM_FRAMEWORK_VERSION__"
-  },
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^6.0.0"
