@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.12](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.11...axiom-framework-v0.9.12) (2026-09-23)
+
+
+### Features
+
+* **demo:** cover the public API surface with new interactive demos ([a6fd53f](https://github.com/naml14/axiom-framework/commit/a6fd53fa4bb3506513b183b21ce568509c8f02c8))
+* **forms:** accept custom scheduler in validate() options ([60460b8](https://github.com/naml14/axiom-framework/commit/60460b8771d810962a59c35752427f82cf1e6b8c))
+* hardening rollup - demo API coverage, security fixes and hot-path perf ([eab19c0](https://github.com/naml14/axiom-framework/commit/eab19c05aa4d253bbae80b21bd8e177d3d7646b2))
+
+
+### Bug Fixes
+
+* **security:** allow safe data:image/ data:audio/ data:video/ URLs ([3b44167](https://github.com/naml14/axiom-framework/commit/3b44167af2af039112257d020b725578c34160c9))
+* **security:** replace for-in with Object.keys in syntax layer ([543492c](https://github.com/naml14/axiom-framework/commit/543492c35646dc01bb43450babd007997f43325b))
+* **server:** scope rate-limit state per createServer() instance ([a5d75d1](https://github.com/naml14/axiom-framework/commit/a5d75d12e9b1d4b29d5215ca477e5da855b29dd7))
+
+
+### Performance Improvements
+
+* **commit:** cache composedTransform strings in LRU module map ([197b5d4](https://github.com/naml14/axiom-framework/commit/197b5d4261832a758dab934bdb321a01a437d32e))
+* **diff:** reuse Maps and Sets via module-scope scratch pool ([7891e1b](https://github.com/naml14/axiom-framework/commit/7891e1b2ea4f2e26b4c4aef467b569e684aa9c36))
+* **fast-path:** count non-portal children without filter allocation ([286d624](https://github.com/naml14/axiom-framework/commit/286d624c51abf6a22b43588535f0dcad91fc2fdf))
+* **grid:** pack occupiedCells keys as integers, not strings ([3155613](https://github.com/naml14/axiom-framework/commit/3155613cf1941e2ea21c756e34c505bc0c683675))
+* **grid:** reuse rowOffsets array via scratch pool ([eee2465](https://github.com/naml14/axiom-framework/commit/eee24654381710b14f37b52dd7df817d1ce8fb44))
+* **prepare:** return children array directly without .map allocation ([c517a8d](https://github.com/naml14/axiom-framework/commit/c517a8d66736b64af07a402ec9cdbdeff1a363e4))
+* **security:** avoid allocation in sanitizeAttrs when no changes needed ([47f334d](https://github.com/naml14/axiom-framework/commit/47f334db39aec2294b9134639fb7634cd5e7c6fa))
+* **style:** use Object.keys() in style helpers to avoid entries allocation ([98742c0](https://github.com/naml14/axiom-framework/commit/98742c0ade42c7ddb87c63ff2b80c052a1dba3d5))
+
 ## [0.9.11](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.10...axiom-framework-v0.9.11) (2026-09-16)
 
 
