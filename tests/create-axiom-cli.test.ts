@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
@@ -12,6 +12,7 @@ import {
 	UsageError,
 	validateProjectName,
 } from "../scripts/create-axiom.ts";
+import { installLocalFrameworkFixture } from "./helpers/local-framework-fixture.ts";
 
 const repoRoot = join(import.meta.dir, "..");
 const scriptPath = join(repoRoot, "scripts", "create-axiom.ts");
@@ -316,12 +317,14 @@ describe("create-axiom CLI process", () => {
 		expect(result.exitCode).toBe(1);
 		// Error message on stderr hints at --help
 		expect(result.stderr).toContain("--help");
-		// No files written in the workspace. The scan uses `dot: true`
-		// so a hidden dotfile would also be caught — `Bun.Glob("*")` on
-		// its own would silently miss one.
-		const entries = await Array.fromAsync(
-			new Bun.Glob("**/*").scan({ cwd: workspace, dot: true }),
-		);
+		// No files written in the workspace. Recursive readdir with
+		// withFileTypes makes hidden dotfiles, nested files and empty
+		// directories all visible. A Bun.Glob("**/*") scan returns [] for a
+		// workspace whose only entry is an empty directory like `.empty/`.
+		const entries = await readdir(workspace, {
+			withFileTypes: true,
+			recursive: true,
+		});
 		// mkdtemp creates an empty temp dir; nothing should be added.
 		expect(entries.length).toBe(0);
 	});
@@ -1018,8 +1021,12 @@ describe("create-axiom CLI — name validation + template cleanup", () => {
 	}
 
 	async function listEntries(cwd: string): Promise<string[]> {
-		// dot: true so a hidden dotfile would also be visible to the assertion.
-		return Array.fromAsync(new Bun.Glob("**/*").scan({ cwd, dot: true }));
+		// readdir returns every top-level entry — including hidden dotfiles
+		// and empty directories. A Bun.Glob("**/*") scan silently returns
+		// [] for a workspace whose only entry is an empty directory like
+		// `.empty/` because the glob has no children to match.
+		const entries = await readdir(cwd, { withFileTypes: true });
+		return entries.map((entry) => entry.name);
 	}
 
 	test("--help still wins over an invalid project name (no error, no files written)", async () => {
@@ -1171,6 +1178,20 @@ describe("create-axiom CLI — name validation + template cleanup", () => {
 			"axiom-framework",
 		]);
 	});
+
+	test("listEntries sees a workspace that holds only an empty directory", async () => {
+		// F4 regression probe: the previous helper used Bun.Glob("**/*"),
+		// which silently returns [] for a workspace whose only entry is an
+		// empty directory like `.empty/` — so a test asserting "nothing was
+		// written" could not catch a leaked empty directory. The helper now
+		// uses readdir with withFileTypes so empty directories and hidden
+		// entries are visible.
+		const workspace = await freshDir("helper-blind-spot");
+		await mkdir(join(workspace, ".empty"));
+		const entries = await listEntries(workspace);
+		expect(entries.length).toBe(1);
+		expect(entries).toContain(".empty");
+	});
 });
 
 // ------------------------------------------------------------
@@ -1241,35 +1262,6 @@ describe("create-axiom CLI — install failure propagates as exit 1", () => {
 // the static build script must emit a site title and `<h1>` that use
 // the project name, not the hardcoded "My Axiom Site" the template
 // ships with.
-
-async function installLocalFrameworkFixture(projectDir: string): Promise<void> {
-	const packageDir = join(projectDir, "node_modules", "axiom-framework");
-	await mkdir(packageDir, { recursive: true });
-	const { cp, writeFile } = await import("node:fs/promises");
-	await cp(join(repoRoot, "src"), join(packageDir, "src"), {
-		recursive: true,
-	});
-	await writeFile(
-		join(packageDir, "package.json"),
-		`${JSON.stringify(
-			{
-				name: "axiom-framework",
-				version: "0.0.0-test",
-				type: "module",
-				main: "./src/index.ts",
-				module: "./src/index.ts",
-				exports: {
-					".": {
-						import: "./src/index.ts",
-					},
-				},
-			},
-			null,
-			2,
-		)}\n`,
-		"utf8",
-	);
-}
 
 async function listProjectFiles(cwd: string): Promise<string[]> {
 	const entries = await Array.fromAsync(

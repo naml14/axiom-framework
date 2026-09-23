@@ -148,8 +148,8 @@ Reglas de comportamiento:
 | Archivo | Tarea |
 | ------- | ----- |
 | `scripts/create-axiom.ts` | T1, T2, T3, T4, T5 |
-| `tests/create-axiom-cli.test.ts` (nuevo) | T1, T2, T3, T4, T5 |
-| `tests/create-axiom.test.ts` | T4 (guard end-to-end del build generado) |
+| `tests/create-axiom-cli.test.ts` (nuevo) | T1, T2, T3, T4, T5, incluido el guard end-to-end del build generado |
+| `tests/create-axiom.test.ts` | F3 (solo comentario que remite al test de propagación de fallo) |
 | `scripts/templates/package.json` | T3 |
 | `scripts/templates/build-static.ts` | T4 |
 | `README.md` | T1, T2 |
@@ -162,7 +162,7 @@ Reglas de comportamiento:
 - [x] V1. Verificación independiente → **FAIL** (1 alto, 1 medio, 4 de cobertura)
 - [x] T4. Personalizar el build estático del starter (hallazgo medio de V1)
 - [x] T5. Exit 1 en fallo de install (hallazgo alto de V1)
-- [ ] V2. Re-verificación del candidato congelado tras la ronda de arreglos
+- [x] V2. Re-verificación del candidato congelado tras la ronda de arreglos → **PASS** (F1, F2 y los cuatro huecos de F3 cerrados; quedan 3 hallazgos *low*)
 
 ## Evidencia
 
@@ -393,6 +393,9 @@ independiente del parent (la medición actual da 0.0806 ms). El `--help` de HEAD
 creció en T2 con el párrafo del prompt). Re-ejecutado en espejos temporales y **sí**
 reproducido: T1 34/92 y 679 bytes; T2 59/159 y 532 ms; T3 98/274; y los tres RED por
 export faltante (`parseArgs`, `resolveExistingDirectory`, `validateProjectName`).
+Los **tiempos exactos no son contractuales**: V2 midió 593 ms para T2 y 3.05 s para
+la suite completa donde V1 midió 532 ms y 3.65 s. Lo que se reproduce son los
+conteos de tests y aserciones, no los milisegundos.
 
 ### TTY: UNPROVEN
 
@@ -416,3 +419,54 @@ manual en una terminal real**: el prompt `[y/N]` y Ctrl+D.
   `.atl/skill-registry.md`, `.gitignore`), que son artefactos locales del parent.
 - Corregido en este informe: el documento llamaba `decideExistingDirectory` a la
   función de T2; su nombre real es `resolveExistingDirectory`.
+
+## Informe de V2 (gentle-ai-verify sobre `main...c59faee`)
+
+Verdicto: **PASS con follow-ups menores**. Sin violaciones de contrato restantes.
+Verificado en un snapshot temporal (nada escrito en el repo), con los tres paths
+sucios preexistentes intactos y los temporales borrados.
+
+### Cierre de hallazgos
+
+| Hallazgo de V1 | Verificación fresca de V2 |
+| -------------- | ------------------------- |
+| Alto — exit 0 en fallo de install | **Cerrado**: exit 1; stderr con `ConnectionRefused` + `Install failed…`; stdout sin `Ready!`, `bun dev` ni `Dependencies installed`. 30 corridas extra por pipe sin truncado (stderr estable en 522 chars). |
+| Medio — build estático sin personalizar | **Cerrado**: `dist/index.html` con `<title>real-site</title>`, `<h1>` personalizado, `<style>` retenido, cero `My Axiom Site`; sin placeholders crudos incluyendo dotfiles; 3 templates usan el placeholder y hay exactamente 3 ramas de sustitución. |
+| Cobertura — 4 huecos de F3 | **Cerrados**: scans con `dot: true` (probado con `.hidden` y `nested/.hidden`), test renombrado coherente, `YeS\n` real, y el test del instalador ya no pretende probar lo que no prueba. |
+| RED del writer (F1/F2) | **Reproducido en la forma declarada**: tests de la ronda contra el código previo `38d1733` → 100 pass / **3 fail**: `Expected 1, received 0` (F1), `My Axiom Site` presente (F2) y `<title>My Axiom Site</title>` en el end-to-end (F2). |
+
+Reconfirmado además: suite completa **845 pass / 2 skip / 0 fail** (6097 aserciones),
+typecheck limpio, 103 + 11 tests, dev server del proyecto generado con 200 en las
+tres rutas, pin exacto, inventario publicado con los siete templates, y toda la
+batería adversarial (dotfile como único contenido, `--force --no-install`, reservados
+con y sin extensión, `com0`/`lpt0`/`com10`/`console`/`commodity`/`auxiliary`/`nulll`
+aceptados, precedencia de help/version, flags repetidas, `--`, path que es archivo
+regular, y `package.json` como directorio → `EISDIR` con exit 1).
+
+### Hallazgos *low* que quedan abiertos
+
+1. **Los scans de "no se escribió nada" no ven directorios vacíos**:
+   `tests/create-axiom-cli.test.ts:323,1022` devuelven solo archivos, así que la
+   afirmación no cubre directorios vacíos creados. Sin defecto observado en el CLI.
+2. **Fixture duplicado**: `tests/create-axiom-cli.test.ts:1245` duplica
+   `tests/create-axiom.test.ts:82`; hoy son equivalentes, pero pueden divergir.
+   Riesgo de mantenimiento, no de runtime.
+3. **Atribución documental** (corregida en este mismo informe): el guard end-to-end
+   del build vive en `tests/create-axiom-cli.test.ts:1339-1381`, no en
+   `tests/create-axiom.test.ts`, que solo recibió comentarios.
+
+Conclusiones de riesgo nuevo de V2: el `bunfig.toml` del test **no** se filtra a los
+scaffolds normales (`real-site` no lo contiene; conservarlo bajo `--force` es el
+contrato); un install fallido deja los siete templates más `node_modules/.cache`, es
+decir un proyecto incompleto **claramente señalizado por exit 1**, sin rollback
+prometido; y `process.exit(1)` no truncó stderr en 30 repeticiones (lo que no prueba
+el flushing en toda plataforma ni implementación de pipe).
+
+### Sigue UNPROVEN
+
+- `[y/N]` y Ctrl+D en una **terminal real** (los tests con streams inyectados y el
+  comportamiento por pipe no lo establecen).
+- Flushing de stderr multiplataforma.
+- Las mediciones históricas intermedias ya listadas (51/151, 1004 ms, 0.7 ms).
+- Temporal trabado heredado de la sonda TTY: `…/Temp/axiom-tty-VIZujv` sigue con
+  `EBUSY` sin proceso atribuible; se deja como resto inofensivo.
