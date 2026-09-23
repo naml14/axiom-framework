@@ -62,11 +62,64 @@ const emailResult = validate(email, [required, asyncEmailFormat], {
 // Helpers
 // ============================================================
 
-function statusLabel(result: Signal<ValidationResult>): { text: string; class: string } {
+// Renderiza solo el primer error en la línea visible (no se expone el mensaje
+// completo: `src/render/diff.ts` no difiere `attrs`, así que un `title`
+// reactivo quedaría congelado en el primer render).
+function statusLabel(result: Signal<ValidationResult>): {
+  text: string
+  mod: string
+} {
   const r = result.value
-  if (r.pending) return { text: '⏳ checking…', class: 'form-status form-status--pending' }
-  if (r.valid) return { text: '✓ valid', class: 'form-status form-status--valid' }
-  return { text: `✗ ${r.errors.join('; ')}`, class: 'form-status form-status--invalid' }
+  if (r.pending) {
+    return { text: 'checking…', mod: 'form-status--pending' }
+  }
+  if (r.valid) {
+    return { text: '✓ valid', mod: 'form-status--valid' }
+  }
+  const firstError = r.errors[0] ?? 'invalid value'
+  return {
+    text: `✗ ${firstError}`,
+    mod: 'form-status--invalid',
+  }
+}
+
+// Card de campo: micro-label, input (nodo del motor — sin `attrs.style`, el
+// motor le da el ancho del contenido de la card) y status de una sola línea.
+// Hoist a module scope para no re-crear la función en cada render.
+interface FieldCardSpec {
+  label: string
+  type: 'text' | 'email'
+  inputId: string
+  placeholder: string
+  testid: string
+  status: { text: string; mod: string }
+}
+
+function FieldCard(spec: FieldCardSpec) {
+  // `<label htmlFor>` restaura el foco al click y el nombre accesible del
+  // input. `htmlFor` es prop de primer nivel → atributo `for`, y es seguro
+  // aunque `src/render/diff.ts` no difee `attrs`: la asociación label→input es
+  // estática, y solo los atributos que cambian en runtime son un problema.
+  const labelRow = h('label', { class: ['hero-badge'], htmlFor: spec.inputId, height: 20 }, spec.label)
+  const inputRow = h('input', {
+    type: spec.type,
+    id: spec.inputId,
+    class: ['demo-input'],
+    height: 30,
+    placeholder: spec.placeholder,
+    data: { testid: spec.testid },
+  })
+  const statusRow = h(
+    'div',
+    {
+      class: ['form-status', spec.status.mod],
+      height: 20,
+    },
+    spec.status.text,
+  )
+  return stack({ gap: 6, padding: 10, class: ['demo-card'] },
+    labelRow, inputRow, statusRow,
+  )
 }
 
 // ============================================================
@@ -77,50 +130,30 @@ const FormsDemoRoot = defineComponent(() => {
   const u = statusLabel(usernameResult)
   const e = statusLabel(emailResult)
 
-  return stack({ gap: 12, padding: 16 },
-    h('div', { class: ['hero-badge'] }, '📝 FORMS'),
-    h('h2', { class: ['hero-title'] }, 'Two-way binding + validation'),
-    h('p', { class: ['hero-body'] },
-      'bind(input, signal) conecta un input a un signal — los cambios en el DOM ' +
-      'se reflejan en el signal y viceversa. validate(source, rules, options) ' +
-      'retorna un Signal<ValidationResult> reactivo.',
-    ),
+  const liveStateCard = stack({ gap: 4, padding: 10, class: ['demo-card'] },
+    h('div', { class: ['hero-badge'], height: 20 }, '🧪 Live state'),
+    h('code', { class: ['demo-code'], height: 20 }, `username = "${username.value}"`),
+    h('code', { class: ['demo-code'], height: 20 }, `email = "${email.value}"`),
+  )
 
-    // Username field
-    h('div', { class: ['syntax-demo-item'], padding: 10 },
-      h('label', { class: ['hero-body'] },
-        h('strong', {}, 'Username: '),
-        h('input', {
-          type: 'text',
-          id: 'forms-username-input',
-          placeholder: '3-20 chars, alphanumeric + underscore',
-          attrs: { 'data-testid': 'username-input', style: 'padding:6px 8px;margin-left:8px' },
-        }),
-      ),
-      h('div', { class: [u.class], padding: 6 }, u.text),
-    ),
-
-    // Email field
-    h('div', { class: ['syntax-demo-item'], padding: 10 },
-      h('label', { class: ['hero-body'] },
-        h('strong', {}, 'Email: '),
-        h('input', {
-          type: 'email',
-          id: 'forms-email-input',
-          placeholder: 'name@domain.com',
-          attrs: { 'data-testid': 'email-input', style: 'padding:6px 8px;margin-left:8px' },
-        }),
-      ),
-      h('div', { class: [e.class], padding: 6 }, e.text),
-    ),
-
-    // Inspector
-    h('div', { class: ['syntax-demo-item'], padding: 8 },
-      h('strong', {}, 'Live state: '),
-      h('code', {}, `username="${username.value}"`),
-      h('br'),
-      h('code', {}, `email="${email.value}"`),
-    ),
+  return stack({ gap: 8, padding: 12 },
+    FieldCard({
+      label: '👤 Username',
+      type: 'text',
+      inputId: 'forms-username-input',
+      placeholder: 'user_name',
+      testid: 'username-input',
+      status: u,
+    }),
+    FieldCard({
+      label: '📧 Email',
+      type: 'email',
+      inputId: 'forms-email-input',
+      placeholder: 'name@domain.com',
+      testid: 'email-input',
+      status: e,
+    }),
+    liveStateCard,
   )
 })
 
