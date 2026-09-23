@@ -44,11 +44,14 @@ body { background:#080814; color:#e5e7eb; font-family:system-ui,sans-serif; padd
   width:auto !important;
   height:auto !important;
   max-width:760px;
-  margin:0 auto;
+  /* SSR inyecta margin:0;padding:0 inline en el atributo style; sin !important
+     el motor gana a cualquier regla de la hoja. Esta capa debe declarar el
+     espaciado real y el centrado de la card. */
+  margin:0 auto !important;
   display:flex;
   flex-direction:column;
   gap:12px;
-  padding:24px;
+  padding:24px !important;
   background:#12121f;
   border:1px solid #2a2a4a;
   border-radius:14px;
@@ -80,8 +83,8 @@ body { background:#080814; color:#e5e7eb; font-family:system-ui,sans-serif; padd
 .ssr-stream-shell .ssr-stream-muted { color:#94a3b8 !important; font-size:14px; }
 .ssr-stream-shell .ssr-stream-chip {
   display:inline-block;
-  padding:2px 8px;
-  margin-left:8px;
+  padding:2px 8px !important;
+  margin-left:8px !important;
   border-radius:999px;
   border:1px solid rgba(167,139,250,.35);
   background:rgba(167,139,250,.12);
@@ -99,7 +102,7 @@ body { background:#080814; color:#e5e7eb; font-family:system-ui,sans-serif; padd
 .ssr-stream-shell hr {
   border:0;
   border-top:1px solid #2a2a4a;
-  margin:16px 0;
+  margin:16px 0 !important;
 }
 `
 
