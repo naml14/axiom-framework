@@ -34,24 +34,34 @@ export interface ValidationResult {
 export interface ValidateOptions {
   debounceMs?: number
   /**
-   * Optional scheduler for the debounce delay. Receives a callback and must
-   * return a function that cancels the pending callback. Defaults to
-   * `setTimeout` when omitted.
+   * Optional scheduler for the debounce delay. Receives the callback to run
+   * and the delay in milliseconds, and must return a function that cancels
+   * the pending callback. Defaults to `setTimeout` when omitted.
    *
-   * Use this to integrate validate() with a framework scheduler (e.g., the
-   * one passed to `createApp({ scheduler })`) so debounced async validation
-   * can be cancelled deterministically on app unmount and can be tested with
-   * a fake scheduler instead of real time.
+   * This is NOT interchangeable with the render scheduler passed to
+   * `createApp({ scheduler })`: that one batches frames (`(cb) => void`) and
+   * owns neither the delay nor a cancellation handle. Handing it over does not
+   * type-check; wrap it in an adapter that implements this contract.
+   *
+   * Injecting it makes debounced async validation cancellable
+   * deterministically (including on app unmount) and testable with a fake
+   * scheduler instead of real time.
    */
-  scheduler?: SchedulerFn
+  scheduler?: DebounceSchedulerFn
 }
 
 /**
- * Schedules a callback after `delayMs`. Returns a function that cancels the
+ * Debounce scheduler contract for `ValidateOptions.scheduler`.
+ *
+ * Schedules `callback` after `delayMs` and returns a function that cancels the
  * pending callback. The default implementation uses `setTimeout`; callers can
- * inject a custom scheduler via `ValidateOptions.scheduler`.
+ * inject a custom one via `ValidateOptions.scheduler`.
+ *
+ * Deliberately not named `SchedulerFn`: that name belongs to the render
+ * scheduler in `src/scheduler.ts`, and sharing it hid the fact that the two
+ * contracts are incompatible.
  */
-export type SchedulerFn = (callback: () => void, delayMs: number) => () => void
+export type DebounceSchedulerFn = (callback: () => void, delayMs: number) => () => void
 
 type BindableElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
 
@@ -143,10 +153,10 @@ export function validate<T>(
   options?: ValidateOptions
 ): Signal<ValidationResult> & { dispose: () => void } {
   const debounceMs = options?.debounceMs ?? 300
-  // Default scheduler: setTimeout. Custom scheduler (e.g., from createApp
-  // options) overrides for testability and to plug into the framework's
-  // rAF / microtask scheduling.
-  const schedule: SchedulerFn = options?.scheduler
+  // Default debounce scheduler: setTimeout. A custom DebounceSchedulerFn
+  // overrides it so debounced validation stays cancellable and testable
+  // without real timers.
+  const schedule: DebounceSchedulerFn = options?.scheduler
     ?? ((cb: () => void, ms: number) => {
         const id = setTimeout(cb, ms)
         return () => clearTimeout(id)
