@@ -66,11 +66,14 @@ const SSR_SHELL_CSS = (width: number, rootId: string): string => [
   '  width:auto !important;',
   '  height:auto !important;',
   `  max-width:${width}px;`,
-  '  margin:0 auto;',
+  // SSR inyecta `margin:0;padding:0` inline en el atributo style; sin `!important`
+  // el motor gana a cualquier regla de la hoja. La capa que neutraliza al motor
+  // (`!important` arriba) también debe declarar el espaciado real de la card.
+  '  margin:24px auto !important;',
   '  display:flex;',
   '  flex-direction:column;',
   '  gap:12px;',
-  '  padding:24px;',
+  '  padding:24px !important;',
   '}',
   '.ssr-shell * {',
   '  position:static !important;',
@@ -118,8 +121,8 @@ const SSR_SHELL_CSS = (width: number, rootId: string): string => [
   '}',
   '.ssr-chip {',
   '  display:inline-block !important;',
-  '  padding:2px 8px;',
-  '  margin-left:8px;',
+  '  padding:2px 8px !important;',
+  '  margin-left:8px !important;',
   '  border-radius:999px;',
   '  border:1px solid rgba(167,139,250,.35);',
   '  background:rgba(167,139,250,.12);',
@@ -189,7 +192,6 @@ function buildSSRDemoTree(params: {
       class="ssr-shell card"
       attrs={{
         style: [
-          'margin:24px auto',
           `max-width:${width}px`,
           'background:#12121f',
           'border:1px solid #2a2a4a',
