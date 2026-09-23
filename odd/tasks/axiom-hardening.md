@@ -6,6 +6,14 @@
 > **Decisión de alcance**: Documentar hallazgos + planear remediación + corregir el demo
 > para que muestre TODAS las características del proyecto.
 
+> **Estado de remediación (2026-09-22)**: este documento es el **catálogo histórico** de la
+> auditoría y no se reescribe. El estado real de entrega, las exclusiones y las salvedades
+> viven en `odd/tasks/axiom-hardening-plan.md` → «Estado de ejecución»; el seguimiento de
+> esta sincronización documental, en `odd/tasks/hardening-docs-sync.md`.
+> Resumen: Fase 0 y Fase 1 entregadas (con C-1 parcial y el matiz de F1-T7), Fase 2
+> entregada salvo **H-7**, excluida porque su implementación congelaba el demo, y Fase 3
+> sin iniciar. Rama de entrega: `integration/hardening-good-rollup`.
+
 ## Premisas auditadas
 
 El proyecto axiom-framework declara:

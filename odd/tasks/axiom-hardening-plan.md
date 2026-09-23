@@ -26,6 +26,57 @@
 
 ---
 
+## ✅ Estado de ejecución (2026-09-22)
+
+**Rama**: `integration/hardening-good-rollup` — base `d964d36` (`origin/main`), un merge por
+desarrollo. Reemplaza a `integration/hardening-phase-0-1-2`, que fue eliminada.
+
+| Fase | Ítems | Estado |
+|---|---|---|
+| **Fase 0** | F0-T1 … F0-T6 | ✅ entregada (demos de router, context, forms, streaming SSR y launcher) |
+| **Fase 1** | F1-T1 … F1-T7 | ✅ entregada, con las salvedades 1 y 2 de abajo |
+| **Fase 2** | F2-T1 … F2-T6, F2-T8 | ✅ entregada |
+| **Fase 2** | **F2-T7** (H-7) | ❌ **excluida por defecto reproducido**: la implementación congelaba el demo |
+| **Fase 3** | F3-T1 … F3-T9 | ⬜ no iniciada |
+
+**Criterio global de cierre, medido en la rama**:
+
+- `bun run typecheck` → 0 errores
+- `bun test` → 726 pasan / 2 saltan / 0 fallan (37 archivos)
+- `bun run demo:build` → sin errores
+- `bun run demo` + navegador real (Playwright, 3 corridas independientes) → 9/9 invariantes
+  estructurales, 19/19 acciones sin fallo (navegación + 2 capturas + 2 sliders + portal
+  abrir/cerrar + 12 botones), sin cuelgue, 0 errores de página (el único 404 es
+  `/favicon.ico`, preexistente y también presente en `main`)
+- `bun run validate:api` → 0 errores (137 exports: 132 stable, 5 experimental, 0 deprecated)
+- `GET /`, `/static.html`, `/ssr`, `/ssr-stream` → 200; las dos rutas SSR renderizan contenido real
+
+**Salvedades que un cierre de fase no debe pasar por alto**:
+
+1. **C-1 quedó parcial.** `attrs.ts` permite `data:image|audio|video` (SVG solo en base64) y
+   bloquea el resto de `data:`. Pero `escapeStyleText()` en `src/ssr.ts` sigue eliminando
+   `url(...)` completo, así que una imagen base64 legítima dentro de un estilo inline SSR se
+   descarta. Documentado en `SECURITY.md`.
+2. **F1-T7 logró la etiqueta pero no el efecto buscado en el validador.**
+   `resetIndexCounter` está marcado `@deprecated` en `src/render/prepare.ts`, pero
+   `src/index.ts` usa exports explícitos y no lo re-exporta, y `validate-api-stability.ts`
+   solo escanea `src/index.ts` y `src/testing.ts`. El reporte seguirá mostrando
+   `Deprecated: 0`. Decisión pendiente: re-exportarlo para que entre en el contrato,
+   eliminarlo (es no-op) o aceptar la etiqueta como documentación sin efecto en el validador.
+3. **Fase 3 no se tocó**: C-4, H-9, H-10, M-1, M-2, M-10 a M-13 y L-1 a L-5 siguen abiertos.
+4. **`CHANGELOG.md` no se edita a mano**: lo genera release-please a partir de los mensajes
+   convencionales de los merges; el archivo solo tiene el marcador de inserción, sin sección
+   *Unreleased*.
+5. **El rollup descartado fue purgado.** `integration/hardening-phase-0-1-2` y el commit
+   roto `a3ffe0f` ya no existen en el repositorio (bundle de recuperación y `refs/recovery/*`
+   eliminados) después de verificar que los 15 tips sanos son ancestros de esta rama. Se
+   preservó su `PR_DESCRIPTION.md` como material para la descripción del PR nuevo. Lo único
+   que dejó de ser recuperable es el objeto del commit roto y el historial de merges del
+   rollup viejo; el defecto queda documentado en F2-T7 y el orden de integración es
+   autoexplicativo en los 15 merge commits de esta rama.
+
+---
+
 ## FASE 0 — Cobertura del demo (PRIORIDAD INMEDIATA)
 
 > **Por qué primero**: el demo es la superficie de demostración pública del proyecto.
@@ -210,11 +261,35 @@ para que `bun run validate:api` lo capture como deprecation.
 **Acción**:
 - Iterar dos veces (una para contar, otra para layout) o usar índice simple sin array
 
-### F2-T7: Reducir allocations en `notifySubscribers` (H-7)
+### F2-T7: Reducir allocations en `notifySubscribers` (H-7) — ❌ EXCLUIDA, NO REPETIR COMO ESTABA
+
+**Estado**: se implementó como `perf(signals): iterate _subs directly when size <= 8`
+(`a3ffe0f`), se midió y quedó **excluida** de `integration/hardening-good-rollup`.
 **Archivos**: `src/reactivity/signals.ts:100, 184`
-**Acción**:
-- Para `subs` con <= 4 entries, iterar directo sin copia
-- Para `tracker` en `evaluateComputed`, pool en `signals.ts` interno
+
+**Por qué se excluyó — defecto reproducido**: la implementación iteraba el `Set` vivo
+cuando `subs.size <= 8`, con el argumento de que el snapshot solo hace falta si se borra
+el elemento actual durante la iteración. El argumento es falso: un iterador de `Set`
+**también visita los elementos agregados durante la iteración**. Un efecto que se
+suscribe al mismo nodo mientras está siendo notificado agrega un elemento que el bucle
+vuelve a ejecutar, y así indefinidamente: el hilo principal del navegador queda bloqueado
+para siempre. Síntoma observado: el demo carga y renderiza una vez, y se congela en el
+primer re-render (mover el slider «Items» de 20 a 40); el renderer termina muriendo.
+
+**Evidencia medida**:
+- `main` + **solo** esa rama → se congela.
+- El rollup sin esa rama → sano (9/9 invariantes, 19/19 interacciones).
+- El rollup con la línea revertida a la instantánea → sano otra vez.
+- `bun test` sobre el rollup roto **no termina** (agotó un tope de 150 s) mientras que en
+  la rama buena termina en ~5 s: la batería sí detecta el defecto, se cuelga.
+
+**Acción correcta si se reintenta**:
+- Iterar SIEMPRE una instantánea: `const subs = [...node._subs]`. Un iterador de `Set` no
+  es seguro frente a altas durante la iteración; la copia es el precio de la semántica.
+- El ahorro real no está en evitar la copia. Medir primero (`tracker` en
+  `evaluateComputed` y el resto del hot path) y optimizar solo con evidencia.
+- Añadir test de regresión: un efecto que se suscribe al mismo nodo durante `notify` debe
+  terminar de forma acotada. Hoy `bun test` solo lo detecta colgándose.
 
 ### F2-T8: Eliminar `Object.entries` allocations (H-8)
 **Archivos**: `src/features/style.ts:187-194`, `src/render/commit.ts:608, 661, 696, 726`
