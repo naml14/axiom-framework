@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [0.9.13](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.12...axiom-framework-v0.9.13) (2026-09-23)
+
+
+### Features
+
+* **demo:** redesign the Context and Forms sidebar sections ([220965d](https://github.com/naml14/axiom-framework/commit/220965dcd698ae5c968dec01c77b4841ec94c8a9))
+* **demo:** redesign the Context and Forms sidebar sections ([e5fd423](https://github.com/naml14/axiom-framework/commit/e5fd42348b794becc0cb5965611f54acb125c0b3))
+
+
+### Bug Fixes
+
+* **ci:** publish with npm (OIDC) and move every toolchain to its latest release ([74af7d3](https://github.com/naml14/axiom-framework/commit/74af7d38c2c474f0ac8f6340eb2cadc752e7cd10))
+* **ci:** publish with npm, not bun, and move every toolchain to latest ([b4d8ac2](https://github.com/naml14/axiom-framework/commit/b4d8ac25e69477b2ce45755f6581a49b55ecf825))
+* **demo:** real inner padding on the SSR demo cards ([78830cc](https://github.com/naml14/axiom-framework/commit/78830cc7b4f90b86409a69d9392a206ab91135b6))
+* **demo:** real inner padding on the SSR demo cards ([e71602c](https://github.com/naml14/axiom-framework/commit/e71602c278dcf6d444c4fb360351623964f3bded))
+
 ## [0.9.12](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.11...axiom-framework-v0.9.12) (2026-09-23)
 
 
