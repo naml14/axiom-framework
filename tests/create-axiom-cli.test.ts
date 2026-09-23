@@ -28,8 +28,10 @@ async function freshDir(label: string): Promise<string> {
 // separator) for every entry under `cwd`, files and directories alike.
 // Implemented with per-level `readdir(..., { withFileTypes: true })` so we
 // own the path strings — `readdir({ recursive: true })` in Bun returns bare
-// basenames, which collapses `a/same` and `b/same` into one entry. Symlinks
-// are reported but not descended into (isDirectory() is false for symlinks).
+// basenames, which keeps both entries but loses their identity: `a/same` and
+// `b/same` both come back as `same`, so a move between directories is
+// invisible. Symlinks are reported but not descended into (isDirectory() is
+// false for symlinks).
 async function listEntries(cwd: string): Promise<string[]> {
 	const out: string[] = [];
 	const walk = async (dir: string, prefix: string): Promise<void> => {
@@ -1230,10 +1232,10 @@ describe("create-axiom CLI — name validation + template cleanup", () => {
 
 	test("listEntries distinguishes entries at different depths", async () => {
 		// Regression probe: `readdir(..., { recursive: true })` in Bun
-		// returns bare basenames, so `a/same` and `b/same` collapse to a
-		// single `same` entry — a move between directories becomes
-		// invisible. The helper must report root-relative paths so a move
-		// between depths changes the inventory.
+		// returns bare basenames, so `a/same` and `b/same` both come back as
+		// `same` — both entries survive but their identity is lost, so a move
+		// between directories becomes invisible. The helper must report
+		// root-relative paths so a move between depths changes the inventory.
 		const shallow = await freshDir("helper-depth-shallow");
 		await mkdir(join(shallow, "outer"), { recursive: true });
 		await writeFile(join(shallow, "outer", "nested-file"), "");

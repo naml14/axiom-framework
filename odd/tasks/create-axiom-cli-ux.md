@@ -165,7 +165,7 @@ Reglas de comportamiento:
 - [x] V2. Re-verificación del candidato congelado tras la ronda de arreglos → **PASS** (F1, F2 y los cuatro huecos de F3 cerrados; quedan 3 hallazgos *low*)
 - [x] V3. Tercera verificación sobre `df52878` → **FAIL** parcial: F5 cerrado, F4 solo parcial, más dos afirmaciones falsas del parent
 - [x] T6. Scan recursivo real (rutas relativas a la raíz) + probes que fallen contra un helper superficial
-- [ ] V4. Verificación fresca del delta de T6
+- [x] V4. Verificación fresca del delta de T6 → **PASS** (F4 cerrado por reproducción; un hallazgo *low* documental)
 
 ## Evidencia
 
@@ -586,3 +586,86 @@ preexistente quedó intacto.
 - Suites: `create-axiom-cli` **107 pass / 0 fail / 309 expect**; `create-axiom`
   11 pass / 62 expect; suite completa **851 tests en 40 archivos, 849 pass / 2 skip /
   0 fail, 6108 expect**; `bun run typecheck` limpio.
+
+## Informe de V4 (gentle-ai-verify sobre `main...fd62ab2`)
+
+Verdicto: **PASS** con un hallazgo *low* documental. F4 cerrado por reproducción
+fresca; F5 intacto. Ninguna regresión del CLI reproducida.
+
+### F4 — cerrado
+
+Extrajo `listEntries` de los bytes congelados (`git show fd62ab2:…`) y lo ejecutó en
+un harness temporal:
+
+```text
+BEFORE ["a","a/same","b","outer","outer/.empty","outer/.hidden"]
+AFTER  ["a","b","b/same","outer","outer/.empty","outer/.hidden"]
+MOVE_VISIBLE true     SAME_LENGTH true
+```
+
+Establece de forma independiente: directorios vacíos anidados detectados, archivos y
+ocultos anidados detectados, rutas relativas ordenadas con `/`, y que **mover
+`a/same` a `b/same` cambia el inventario**. Con junction de directorio, junction
+colgado y junction cíclico: todos se reportan sin traversar, y el cíclico no recursa.
+Una sola definición de `listEntries` (líneas 33-36) y un solo `readdir` por nivel.
+
+### Mutation testing — el punto que faltaba — PASS
+
+Espejo temporal desde bytes congelados, `bun test … --test-name-pattern listEntries`:
+
+| Variante del espejo | Resultado |
+| --- | --- |
+| `fd62ab2` sin modificar | **4 pass / 0 fail / 11 expect** |
+| Descenso desactivado (quitar el `await walk(...)`) | **1 pass / 3 fail / 7 expect**; el probe `.empty/` original sigue verde |
+
+Las cifras del parent reproducen exactamente. La recursividad **ahora sí** está
+protegida por tests: un helper superficial rompe la suite.
+
+### Integridad de afirmaciones — PASS
+
+| Comando | Contexto | Resultado |
+| --- | --- | --- |
+| `bun test` | espejo de `df52878` | **846 pass / 2 skip / 0 fail**, 848 totales, 40 archivos, 6099 expect |
+| `bun test` | `fd62ab2` | **849 pass / 2 skip / 0 fail**, 851 totales, 40 archivos, 6108 expect |
+| `bun run typecheck` | `fd62ab2` | limpio |
+| `create-axiom-cli` / `create-axiom` | `fd62ab2` | 107 pass / 309 expect · 11 pass / 62 expect |
+
+La corrección de `df52878` es exacta: su «ambos scans recursivos» contradecía sus
+bytes, y su «848 pass» confundía total con aprobados. **Sin discrepancias numéricas**
+en el mensaje de `fd62ab2` ni en «T6 — Evidencia». La suite sigue en **40 archivos**.
+
+End-to-end y adversarial: todos PASS (reservados con y sin extensión → exit 1 sin
+escribir; `com10`/`console` → exit 0; help/version ganan sobre nombre inválido;
+`-- -- --help` rechazado; registry rechazado → exit 1 sin `Ready!`; build generado con
+título y encabezado personalizados y estilos retenidos).
+
+### Comparaciones por longitud — límite aceptado, no bloqueante
+
+`tests/create-axiom-cli.test.ts:1085,1103,1122,1138` comparan solo `.length`, y un
+renombre que conserve la cantidad de entradas pasaría. V4 lo juzga aceptable **para
+estos tests** porque parten de workspaces vacíos, así que no hay entrada previa que
+pueda renombrarse de forma invisible. Endurecimiento mínimo si algún día importa:
+`expect(after).toEqual(before)` (y, para preservación de contenido, comparar bytes).
+
+### Hallazgo *low* — comentario inexacto (cerrado por el parent)
+
+El comentario decía que `recursive: true` «colapsa `a/same` y `b/same` en una sola
+entrada». Falso: Bun **conserva ambas entradas pero pierde su identidad**.
+
+```text
+recursive:true -> ["a","b","same","same"]
+```
+
+Corregido en los dos sitios (`tests/create-axiom-cli.test.ts:30-34` y `:1231-1236`)
+para decir que ambas sobreviven y que lo que se pierde es la identidad. **Este `low`
+lo cerró el parent con un micro-repro directo, sin ronda de verificación dedicada**:
+es un cambio de comentario, no de comportamiento, y la afirmación ahora coincide con
+los bytes medidos. Se declara así en vez de presentarlo como verificado por V4.
+
+### UNPROVEN
+
+- `[y/N]` y Ctrl+D en **terminal real**.
+- Bun **1.0**, ejecución en Node, y compatibilidad no-Windows.
+- Symlinks POSIX (los junctions de Windows sí se reprodujeron).
+- Flushing de stderr multiplataforma.
+- Las figuras históricas fuera de la evidencia de T6 no se re-ejecutaron en V4.
