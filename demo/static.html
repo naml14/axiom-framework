@@ -278,6 +278,62 @@
         <pre id="syntax-jsx-output" class="ruta-b-pre">—</pre>
       </section>
 
+      <!-- ============================================================
+            Router Demo — createRouter + defineAsyncComponent
+          ============================================================ -->
+      <section class="sidebar-section router-section" aria-label="Router Demo">
+        <h2 class="sidebar-section-title">🧭 Router — createRouter + defineAsyncComponent</h2>
+        <p class="ruta-b-desc">
+          <code>createRouter</code> con rutas estáticas, dinámicas y wildcard.
+          <code>defineAsyncComponent</code> con loader simulado.
+        </p>
+        <div class="ruta-b-actions">
+          <button id="router-nav-home" class="btn-toggle active">/</button>
+          <button id="router-nav-about" class="btn-toggle">/about</button>
+          <button id="router-nav-users" class="btn-toggle">/users</button>
+        </div>
+        <div class="ruta-b-actions">
+          <button id="router-nav-user-1" class="btn-toggle">/users/1</button>
+          <button id="router-nav-user-2" class="btn-toggle">/users/2</button>
+          <button id="router-nav-user-3" class="btn-toggle">/users/3</button>
+        </div>
+        <div class="ruta-b-actions">
+          <button id="router-nav-async" class="btn-toggle">/async (lazy)</button>
+          <button id="router-nav-404" class="btn-toggle">/404</button>
+        </div>
+        <div class="ruta-b-actions">
+          <button id="router-nav-back" class="btn-toggle">← Back</button>
+          <button id="router-nav-forward" class="btn-toggle">Forward →</button>
+          <button id="router-nav-replace" class="btn-toggle">replace</button>
+        </div>
+        <div id="router-demo-root"></div>
+        <pre id="router-output" class="ruta-b-pre">—</pre>
+      </section>
+
+      <!-- ============================================================
+            Context API Demo — createContext + createStore
+          ============================================================ -->
+      <section class="sidebar-section context-section" aria-label="Context Demo">
+        <h2 class="sidebar-section-title">🔗 Context API — createContext + Stores</h2>
+        <p class="ruta-b-desc">
+          <code>withContext</code> + <code>useContext</code> para inyección de dependencias.
+          <code>provideStore</code> + <code>injectStore</code> para state compartido.
+        </p>
+        <div id="context-demo-root"></div>
+      </section>
+
+      <!-- ============================================================
+            Forms Demo — bind() + validate()
+          ============================================================ -->
+      <section class="sidebar-section forms-section" aria-label="Forms Demo">
+        <h2 class="sidebar-section-title">📝 Forms — bind() + validate()</h2>
+        <p class="ruta-b-desc">
+          <code>bind(input, signal)</code> para two-way binding.
+          <code>validate(signal, rules, { debounceMs })</code> con sync + async rules.
+        </p>
+        <div id="forms-demo-root"></div>
+      </section>
+
     </aside>
 
     <!-- ========================================================

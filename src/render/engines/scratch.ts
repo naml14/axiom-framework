@@ -114,13 +114,15 @@ export interface LocalizedSecondPassRemeasureScratch {
 
 export interface GridScratch {
   rowHeights: number[]
+  /** Cumulative Y offsets per row, computed by buildRowOffsets. Reused across calls. */
+  rowOffsets: number[]
   /** Completed placements (refs into placementPool). */
   placements: GridPlacementScratch[]
   /** Deferred placements (refs into deferredPool). */
   deferredQueue: DeferredGridPlacementScratch[]
   secondPassVerticalPercentByChildIdx: Map<number, number>
   localizedSecondPassRemeasureByChildIdx: Map<number, LocalizedSecondPassRemeasureScratch>
-  occupiedCells: Set<string>
+  occupiedCells: Set<number>
   /** Pool of placement objects (growable; recycled across calls). */
   placementPool: GridPlacementScratch[]
   nextPlacementIdx: number
@@ -298,6 +300,7 @@ export function releaseFlexScratch(s: FlexScratch): void {
 const gridPool = createScratchPool<GridScratch>(
   () => ({
     rowHeights: [],
+    rowOffsets: [],
     placements: [],
     deferredQueue: [],
     secondPassVerticalPercentByChildIdx: new Map(),
@@ -315,6 +318,7 @@ const gridPool = createScratchPool<GridScratch>(
     // force allocations proportional to child count on every reflow and
     // break the zero-allocation hot path promise.
     s.rowHeights.length = 0
+    s.rowOffsets.length = 0
     s.placements.length = 0
     s.deferredQueue.length = 0
     s.secondPassVerticalPercentByChildIdx.clear()

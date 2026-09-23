@@ -342,7 +342,8 @@ export function measureGrid(
     }
   }
 
-  const rowOffsets = buildRowOffsets(rowHeights, rowGap, padding)
+  const rowOffsets = scratch.rowOffsets
+  buildRowOffsets(rowHeights, rowGap, padding, rowOffsets)
 
   for (const placement of placements) {
     const x = padding + placement.col * (columnWidth + columnGap)
@@ -526,12 +527,25 @@ function resolveSpannedWidth(columnWidth: number, columnGap: number, colSpan: nu
   return columnWidth * colSpan + Math.max(0, colSpan - 1) * columnGap
 }
 
-function buildCellKey(row: number, col: number): string {
-  return `${row}:${col}`
+/**
+ * Packs a (row, col) pair into a single integer key.
+ *
+ * Layout grids in Axiom are MVP (max 1000 columns is a reasonable upper bound
+ * — see docs/STABILITY.md). Packing `(row * 1024) | col` lets us use a Set<number>
+ * instead of Set<string>, eliminating per-cell string allocation.
+ *
+ * If a grid ever exceeds 1024 columns the `col & 0x3FF` decode below will
+ * return the wrong value; the layout will misbehave visibly. That's the
+ * correct failure mode — far better than a silent buffer overflow.
+ */
+const COLS_PER_PACK = 1024
+
+function packCellKey(row: number, col: number): number {
+  return ((row & 0xFFFF) << 10) | (col & 0x3FF)
 }
 
 function canPlaceRectangle(
-  occupiedCells: Set<string>,
+  occupiedCells: Set<number>,
   row: number,
   col: number,
   rowSpan: number,
@@ -543,8 +557,9 @@ function canPlaceRectangle(
   }
 
   for (let rowOffset = 0; rowOffset < rowSpan; rowOffset++) {
+    const r = row + rowOffset
     for (let colOffset = 0; colOffset < colSpan; colOffset++) {
-      if (occupiedCells.has(buildCellKey(row + rowOffset, col + colOffset))) {
+      if (occupiedCells.has(packCellKey(r, col + colOffset))) {
         return false
       }
     }
@@ -554,21 +569,22 @@ function canPlaceRectangle(
 }
 
 function reserveRectangle(
-  occupiedCells: Set<string>,
+  occupiedCells: Set<number>,
   row: number,
   col: number,
   rowSpan: number,
   colSpan: number
 ): void {
   for (let rowOffset = 0; rowOffset < rowSpan; rowOffset++) {
+    const r = row + rowOffset
     for (let colOffset = 0; colOffset < colSpan; colOffset++) {
-      occupiedCells.add(buildCellKey(row + rowOffset, col + colOffset))
+      occupiedCells.add(packCellKey(r, col + colOffset))
     }
   }
 }
 
 function findFirstFittingRectangle(
-  occupiedCells: Set<string>,
+  occupiedCells: Set<number>,
   columns: number,
   rowSpan: number,
   colSpan: number,
@@ -618,14 +634,12 @@ function findFirstFittingRectangle(
   return undefined
 }
 
-function getSearchRowLimit(occupiedCells: Set<string>, rowSpan: number): number {
+function getSearchRowLimit(occupiedCells: Set<number>, rowSpan: number): number {
   let maxRow = 0
 
   for (const key of occupiedCells) {
-    const separator = key.indexOf(':')
-    const row = Number.parseInt(key.slice(0, separator), 10)
-
-    if (Number.isFinite(row) && row > maxRow) {
+    const row = key >>> 10
+    if (row > maxRow) {
       maxRow = row
     }
   }
@@ -652,14 +666,16 @@ function registerPlacement(
   }
 }
 
-function buildRowOffsets(rowHeights: number[], rowGap: number, padding: number): number[] {
-  const offsets: number[] = []
+function buildRowOffsets(
+  rowHeights: number[],
+  rowGap: number,
+  padding: number,
+  out: number[]
+): void {
   let current = padding
 
   for (let row = 0; row < rowHeights.length; row++) {
-    offsets[row] = current
+    out[row] = current
     current += (rowHeights[row] ?? 0) + rowGap
   }
-
-  return offsets
 }

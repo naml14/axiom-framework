@@ -186,7 +186,10 @@ function applyKnownAttrs(
   state: { hasAny: boolean },
   allowRawAttrs: boolean
 ): void {
-  for (const key in source) {
+  // Object.keys() returns own enumerable properties only, excluding the
+  // prototype chain. This prevents XSS via prototype pollution: an attacker
+  // passing { __proto__: { onclick: 'evil' } } cannot reach the resulting DOM.
+  for (const key of Object.keys(source)) {
     const value = source[key]
     if (value === undefined || value === null) continue
 
@@ -268,7 +271,9 @@ function extractHandlers(
   const handlers: Record<string, EventListener> = {}
   let hasAny = false
 
-  for (const key in props) {
+  // Object.keys() excludes prototype chain properties. Same XSS hardening as
+  // applyKnownAttrs above.
+  for (const key of Object.keys(props)) {
     if (!isEventProp(key)) continue
 
     const value = (props as Record<string, unknown>)[key]

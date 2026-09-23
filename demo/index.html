@@ -102,21 +102,75 @@
         </article>
 
         <article class="launcher-demo">
-          <h2>🧪 Demo SSR</h2>
+          <h2>🧪 Demo SSR (clásico)</h2>
           <p>
-            Renderizado del lado servidor usando el endpoint <code>/ssr</code>. Solo funciona cuando el demo server está corriendo.
+            Renderizado del lado servidor usando <code>renderToString()</code> con hydration markers (<code>data-axiom-id</code>).
+            Solo funciona cuando el demo server está corriendo.
           </p>
           <div class="launcher-actions">
             <a id="launcher-ssr-link" class="btn-toggle" href="/ssr?name=Dev&width=960&root=ssr-root">Abrir /ssr</a>
           </div>
         </article>
+
+        <article class="launcher-demo">
+          <h2>🌀 Demo Streaming SSR (experimental)</h2>
+          <p>
+            Usa <code>renderToReadableStream()</code> (experimental) y emite el HTML como un <code>ReadableStream</code> en chunks.
+            Ideal para progressive rendering y async boundaries futuras.
+          </p>
+          <div class="launcher-actions">
+            <a id="launcher-stream-link" class="btn-toggle" href="/ssr-stream">Abrir /ssr-stream</a>
+          </div>
+        </article>
       </div>
+
+      <section class="launcher-section" aria-label="createServer">
+        <h2 class="launcher-section-title">⚙️ createServer — server wrapper</h2>
+        <p class="launcher-section-body">
+          El demo server usa <code>createServer()</code> (API <em>experimental</em> de <code>axiom-framework</code>) para
+          integrar <strong>SSR + static files + per-route metadata + CORS + rate limiting</strong> en una sola llamada.
+        </p>
+        <ul class="launcher-list">
+          <li><strong>Routing SSR</strong>: matchRoute() en <code>src/server.ts</code> — soporta static + dynamic.</li>
+          <li><strong>Static files</strong>: resolveStaticFilePath() con isPathInside() para prevenir path traversal.</li>
+          <li><strong>Per-route metadata</strong>: title, description, og, stylesheets, inlineStyles, bodyStyle.</li>
+          <li><strong>CORS</strong>: normalizeAllowedOrigins() — canonicaliza URLs, filtra wildcards inválidos.</li>
+          <li><strong>Rate limiting</strong>: 100 req/min por IP, pruning periódico.</li>
+        </ul>
+      </section>
 
       <p class="launcher-note" id="launcher-note">
         Tip: para SSR usa <code>bun run demo</code> y abre <code>http://localhost:3000</code>.
       </p>
     </section>
   </main>
+
+  <style>
+    .launcher-section {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .launcher-section-title {
+      margin: 0 0 8px;
+      font-size: 14px;
+      color: var(--text);
+    }
+    .launcher-section-body {
+      margin: 0 0 10px;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .launcher-list {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .launcher-list strong { color: var(--text); }
+  </style>
 
   <script src="./launcher.js"></script>
 </body>

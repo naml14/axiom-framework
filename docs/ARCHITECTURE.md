@@ -43,6 +43,9 @@ To guarantee consistent 60fps rendering during continuous updates, Axiom enforce
 - The `app.ts` scheduler releases previous/current buffers via `releaseLayoutResult(result)` across success and error paths.
 - The pool is bounded (entry count and max retained capacity) to avoid unbounded steady-state memory growth in long-lived server processes.
 - **Engine scratch buffers** (`rowHeights`, `placements`, `deferredQueue`, occupied-cells Set, percent Maps, and flex lines) are recycled via `src/render/engines/scratch.ts`. Each engine acquires scratch at the start of its call and releases it in a `finally` block — so the hot path stays allocation-free across recursive calls (e.g. grid-in-grid, flex-in-grid) and across renders.
+- **Diff scratch Maps/Sets** (prev/new index maps, prev/new key maps, portal map, prev/new index sets, layout-changed and all-changed sets) are recycled via `src/render/diff-scratch.ts`. `fullDiff()` calls `resetDiffScratch()` at the start of each pass and then works on the module-scoped containers with `.clear()` instead of re-allocating them. The module exposes one `acquire*` accessor per container plus `__clearDiffScratchForTests()` for teardown between tests.
+- **Grid cell keys are packed integers**, not strings: `occupiedCells` is keyed by a numeric encoding of `(row, col)` instead of a `` `${row}:${col}` `` template, so a grid layout no longer allocates one string per occupied cell.
+- **Signal notification always iterates a snapshot.** `notifySubscribers()` in `src/reactivity/signals.ts` does `const subs = [...node._subs]` and iterates the copy. This copy is a correctness requirement, not a missed optimisation: a `Set` iterator also visits elements **added** during iteration, so an effect that subscribes to the same node while it is being notified makes the loop unbounded and blocks the renderer forever. See `odd/tasks/axiom-hardening-plan.md` (F2-T7) before touching this loop.
 
 ### Type-only boundary notes
 

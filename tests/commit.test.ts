@@ -1,6 +1,13 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
 import { Window } from 'happy-dom'
-import { applyOps, commitFull, commitHydrate, type DOMOperation } from '../src/render/commit.js'
+import {
+  applyOps,
+  commitFull,
+  commitHydrate,
+  __clearComposedTransformCacheForTests,
+  __getComposedTransformCacheStatsForTests,
+  type DOMOperation,
+} from '../src/render/commit.js'
 import { defineComponent } from '../src/render/component.js'
 import { prepare } from '../src/render/prepare.js'
 import { reflow } from '../src/render/reflow.js'
@@ -685,5 +692,113 @@ describe('transform animations', () => {
     expect(conflictCalls[0]!.transform).toBe('scale(0.9)')
 
     app.unmount()
+  })
+})
+
+// ============================================================
+// composedTransform cache (H-1)
+// ============================================================
+
+describe('composedTransform cache', () => {
+  beforeAll(() => {
+    __clearComposedTransformCacheForTests()
+  })
+
+  test('repeated (x,y) pairs reuse the cached transform string', () => {
+    __clearComposedTransformCacheForTests()
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'column' as const, gap: 8, padding: 16 },
+      children: [
+        { type: 'element' as const, tag: 'span', children: [{ type: 'text' as const, content: 'A' }] },
+      ],
+    }))
+    const prepared = prepare(comp, undefined)
+    const constraints = { maxWidth: 800, maxHeight: 600 }
+
+    const root = document.createElement('div')
+    commitFull(reflow(prepared, constraints, { lineHeight: 20 }), prepared, root, { domNodes: [], portalRoots: new Map() })
+
+    // First commit: child gets position (16, 16). Cache should now contain "16,16".
+    const child = root.firstElementChild?.firstElementChild as HTMLElement
+    expect(child).toBeTruthy()
+    const firstTransform = child.style.transform
+    expect(firstTransform).toBe('translate(16px,16px) var(--animation-transform,)')
+
+    // Memoization is only observable through the miss counter: the cached values
+    // are primitive strings, so comparing them by identity proves nothing — `===`
+    // compares text, and that assertion held even with no cache at all.
+    const afterFirst = __getComposedTransformCacheStatsForTests()
+    expect(afterFirst.misses).toBeGreaterThan(0)
+    expect(afterFirst.size).toBeGreaterThan(0)
+
+    // Apply the same transform a second time via applyOps with the same coords.
+    const ops: DOMOperation[] = [{
+      type: 'update', index: 1, x: 16, y: 16, width: 32, height: 20,
+    }]
+    applyOps(ops, root, [root.firstElementChild as HTMLElement, child])
+
+    expect(child.style.transform).toBe(firstTransform)
+    // A hit: the same (x,y) came from the cache, so neither a new string nor a
+    // new entry was produced.
+    const afterSecond = __getComposedTransformCacheStatsForTests()
+    expect(afterSecond.misses).toBe(afterFirst.misses)
+    expect(afterSecond.size).toBe(afterFirst.size)
+
+    __clearComposedTransformCacheForTests()
+  })
+
+  test('cache stays bounded and evicts in insertion order (FIFO)', () => {
+    __clearComposedTransformCacheForTests()
+    // Drive the cache directly: simulate 300 unique (x,y) pairs being written.
+    // The cache must stay bounded under COMPOSED_TRANSFORM_CACHE_MAX (256).
+    const MAX_CACHE = 256
+
+    // Render a single element and re-position it 300 times via applyOps with
+    // distinct (x,y) values. Each applyOps call invokes composedTransform,
+    // which caches and evicts as needed.
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { width: 10, height: 10 },
+      children: [],
+    }))
+    const prepared = prepare(comp, undefined)
+    const root = document.createElement('div')
+    commitFull(
+      reflow(prepared, { maxWidth: 800, maxHeight: 600 }, { lineHeight: 20 }),
+      prepared,
+      root,
+      { domNodes: [], portalRoots: new Map() },
+    )
+    const child = root.firstElementChild as HTMLElement
+
+    for (let i = 0; i < 300; i++) {
+      const ops: DOMOperation[] = [{
+        type: 'update', index: 0, x: i * 4, y: i * 4, width: 10, height: 10,
+      }]
+      applyOps(ops, root, [child])
+    }
+
+    expect(child.style.transform).toBe('translate(1196px,1196px) var(--animation-transform,)')
+
+    // Bounded: 300 unique positions were written, at most 256 are retained.
+    const bounded = __getComposedTransformCacheStatsForTests()
+    expect(bounded.size).toBe(MAX_CACHE)
+
+    // Insertion-order eviction — the property the old "LRU" name claimed: the
+    // oldest inserted position was dropped...
+    applyOps([{ type: 'update', index: 0, x: 4, y: 4, width: 10, height: 10 }], root, [child])
+    const afterOldest = __getComposedTransformCacheStatsForTests()
+    expect(afterOldest.misses).toBe(bounded.misses + 1)
+
+    // ...while the newest one is still cached.
+    applyOps([{ type: 'update', index: 0, x: 1196, y: 1196, width: 10, height: 10 }], root, [child])
+    const afterNewest = __getComposedTransformCacheStatsForTests()
+    expect(afterNewest.misses).toBe(afterOldest.misses)
+
+    // Reset for other tests.
+    __clearComposedTransformCacheForTests()
   })
 })

@@ -681,3 +681,50 @@ function createLayoutResultFor(count: number) {
     nodeCount: count,
   }
 }
+
+// ============================================================
+// Diff scratch pool (H-3)
+// ============================================================
+
+import { __clearDiffScratchForTests } from '../src/render/diff-scratch.js'
+
+describe('diff scratch pool', () => {
+  test('fullDiff can be called repeatedly without Map/Set identity changes leaking state', () => {
+    __clearDiffScratchForTests()
+
+    // Two consecutive diffs that differ only by node text. The scratch Maps
+    // and Sets must be cleared between calls — otherwise the second diff
+    // would see stale entries from the first.
+    const buildTree = (text: string) => defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      layout: { flexDirection: 'column' as const },
+      children: [
+        { type: 'element' as const, tag: 'span', children: [{ type: 'text' as const, content: text }] },
+        { type: 'element' as const, tag: 'span', children: [{ type: 'text' as const, content: 'static' }] },
+      ],
+    }))
+
+    const tree1 = prepare(buildTree('A'), undefined)
+    const tree2 = prepare(buildTree('B'), undefined)
+    const layout = createLayoutResultFor(5)
+
+    // First diff: full insert (prev=null).
+    const ops1 = fullDiff(null, null, tree1, layout, [])
+    expect(ops1.length).toBe(5)
+    expect(ops1.filter(op => op.type === 'insert').length).toBe(5)
+
+    // Second diff: same nodeCount, text change only — exercises the value-change path.
+    const ops2 = fullDiff(tree1, layout, tree2, layout, [])
+    // The static 'span' should NOT be in ops2; the changed span should be.
+    expect(ops2.length).toBe(1)
+    expect(ops2[0]!.type).toBe('update')
+
+    // Third diff with completely different tree, to verify the scratch pool
+    // doesn't leak state from previous calls.
+    const tree3 = prepare(buildTree('C'), undefined)
+    const ops3 = fullDiff(tree2, layout, tree3, layout, [])
+    expect(ops3.length).toBe(1)
+    expect(ops3[0]!.type).toBe('update')
+  })
+})

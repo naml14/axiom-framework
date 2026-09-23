@@ -33,7 +33,35 @@ export interface ValidationResult {
 
 export interface ValidateOptions {
   debounceMs?: number
+  /**
+   * Optional scheduler for the debounce delay. Receives the callback to run
+   * and the delay in milliseconds, and must return a function that cancels
+   * the pending callback. Defaults to `setTimeout` when omitted.
+   *
+   * This is NOT interchangeable with the render scheduler passed to
+   * `createApp({ scheduler })`: that one batches frames (`(cb) => void`) and
+   * owns neither the delay nor a cancellation handle. Handing it over does not
+   * type-check; wrap it in an adapter that implements this contract.
+   *
+   * Injecting it makes debounced async validation cancellable
+   * deterministically (including on app unmount) and testable with a fake
+   * scheduler instead of real time.
+   */
+  scheduler?: DebounceSchedulerFn
 }
+
+/**
+ * Debounce scheduler contract for `ValidateOptions.scheduler`.
+ *
+ * Schedules `callback` after `delayMs` and returns a function that cancels the
+ * pending callback. The default implementation uses `setTimeout`; callers can
+ * inject a custom one via `ValidateOptions.scheduler`.
+ *
+ * Deliberately not named `SchedulerFn`: that name belongs to the render
+ * scheduler in `src/scheduler.ts`, and sharing it hid the fact that the two
+ * contracts are incompatible.
+ */
+export type DebounceSchedulerFn = (callback: () => void, delayMs: number) => () => void
 
 type BindableElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
 
@@ -125,6 +153,14 @@ export function validate<T>(
   options?: ValidateOptions
 ): Signal<ValidationResult> & { dispose: () => void } {
   const debounceMs = options?.debounceMs ?? 300
+  // Default debounce scheduler: setTimeout. A custom DebounceSchedulerFn
+  // overrides it so debounced validation stays cancellable and testable
+  // without real timers.
+  const schedule: DebounceSchedulerFn = options?.scheduler
+    ?? ((cb: () => void, ms: number) => {
+        const id = setTimeout(cb, ms)
+        return () => clearTimeout(id)
+      })
   const result = signal<ValidationResult>({
     valid: true,
     errors: [],
@@ -132,7 +168,7 @@ export function validate<T>(
   })
 
   let generation = 0
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null
+  let cancelPending: (() => void) | null = null
 
   const hasAsyncRules = rules.some((r) => isAsyncRuleDescriptor(r) || isAsyncFunctionRule(r))
 
@@ -144,9 +180,9 @@ export function validate<T>(
     const syncErrors = runSyncRules(val, rules)
     if (syncErrors.length > 0) {
       // Cancel any pending async debounce
-      if (debounceTimer !== null) {
-        clearTimeout(debounceTimer)
-        debounceTimer = null
+      if (cancelPending !== null) {
+        cancelPending()
+        cancelPending = null
       }
       result.value = { valid: false, errors: syncErrors, pending: false }
       return
@@ -155,9 +191,9 @@ export function validate<T>(
     // All sync rules passed
     if (!hasAsyncRules) {
       // No async rules — we're done
-      if (debounceTimer !== null) {
-        clearTimeout(debounceTimer)
-        debounceTimer = null
+      if (cancelPending !== null) {
+        cancelPending()
+        cancelPending = null
       }
       result.value = { valid: true, errors: [], pending: false }
       return
@@ -168,13 +204,13 @@ export function validate<T>(
     const currentGen = generation
 
     // Cancel previous debounce timer
-    if (debounceTimer !== null) {
-      clearTimeout(debounceTimer)
+    if (cancelPending !== null) {
+      cancelPending()
     }
 
     result.value = { valid: true, errors: [], pending: true }
 
-    debounceTimer = setTimeout(async () => {
+    cancelPending = schedule(async () => {
       // Stale check (generation counter — ADR-6)
       if (currentGen !== generation) return
 
@@ -188,16 +224,16 @@ export function validate<T>(
         errors: asyncErrors,
         pending: false,
       }
-      debounceTimer = null
+      cancelPending = null
     }, debounceMs)
   })
 
   // Expose dispose to allow callers to clean up the internal effect and any pending timer
   const dispose = () => {
     disposeEffect()
-    if (debounceTimer !== null) {
-      clearTimeout(debounceTimer)
-      debounceTimer = null
+    if (cancelPending !== null) {
+      cancelPending()
+      cancelPending = null
     }
   }
 

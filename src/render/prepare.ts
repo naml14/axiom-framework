@@ -60,9 +60,24 @@ function allocIndex(ctx: PrepareContext): number {
 }
 
 /**
- * @deprecated Desde v1.0.0 este método es no-op.
- * El índice ahora se aísla por invocación dentro de `prepare()`.
- * Se conserva solo por compatibilidad hacia atrás.
+ * No-op retained for backward compatibility with v0.x callers.
+ *
+ * @deprecated Since v1.0.0 this function does nothing. The index counter
+ * is now isolated per `prepare()` invocation — there is no global counter
+ * to reset. Code that depends on resetting shared state will silently fail;
+ * remove the call or migrate to the per-invocation contract.
+ *
+ * This export will be removed in v1.1.0.
+ *
+ * @example
+ * ```ts
+ * // Before (v0.x):
+ * resetIndexCounter()
+ * const prepared = prepare(component, undefined)
+ *
+ * // After (v1.0.0+): just remove the call.
+ * const prepared = prepare(component, undefined)
+ * ```
  */
 export function resetIndexCounter(): void {
   // Compatibilidad pública:
@@ -301,8 +316,17 @@ export function getTag(prepared: PreparedComponent): string | undefined {
   return unbrandPrepared(prepared).tag
 }
 
+/**
+ * Returns the children array of a prepared node.
+ *
+ * PERFORMANCE: returns the internal array directly. The brand type makes
+ * this safe at the type level — `PreparedInternal` is structurally identical to
+ * `PreparedComponent` minus the unique brand symbol. The cast is zero-cost.
+ * Returning a fresh `.map(c => brandPrepared(c))` array would allocate on
+ * every call (hot path: ~10 calls per reflow per node).
+ */
 export function getChildren(prepared: PreparedComponent): PreparedComponent[] {
-  return unbrandPrepared(prepared).children.map(c => brandPrepared(c))
+  return unbrandPrepared(prepared).children as unknown as PreparedComponent[]
 }
 
 export function getNodeIndex(prepared: PreparedComponent): number {
@@ -334,8 +358,13 @@ export function getTextHandle(prepared: PreparedComponent): unknown {
   return unbrandPrepared(prepared).textHandle
 }
 
+/**
+ * Returns the children array of a prepared node (alias of getChildren).
+ *
+ * Like getChildren, returns the internal array without copying.
+ */
 export function getPreparedChildren(prepared: PreparedComponent): PreparedComponent[] {
-  return unbrandPrepared(prepared).children.map(c => brandPrepared(c))
+  return unbrandPrepared(prepared).children as unknown as PreparedComponent[]
 }
 
 export function getKey(prepared: PreparedComponent): string | undefined {

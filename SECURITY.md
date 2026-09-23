@@ -63,7 +63,14 @@ Each environment has distinct attack surfaces documented below:
 
 1. **Attribute name validation**: `VALID_ATTR_NAME_RE` validates all attribute names match `/^[A-Za-z_][\w:.-]*$/`. Invalid names are silently dropped.
 2. **Event attribute blocking**: Inline event handlers (`onclick`, `onerror`, `onload`, etc.) in the `attrs` object are automatically removed. Use `on: { click: fn }` instead.
-3. **Dangerous URL scheme blocking**: For URL-sensitive attributes (`href`, `src`, `action`, `formaction`, `poster`, `data`, `cite`, `background`), dangerous schemes (`javascript:`, `data:`, `vbscript:`, `file:`) are neutralized to `#blocked`.
+3. **URL sanitization ladder** for URL-sensitive attributes (`href`, `src`, `action`, `formaction`, `poster`, `data`, `cite`, `background`), implemented in `sanitizeUrlValue()` (`src/core/attrs.ts`):
+   - **Protocol-relative values** (`//host/…`, `\\host\…`, `/\host\…`) are neutralized to `#blocked`. Browsers normalize backslashes to slashes, so all three forms navigate off-site.
+   - **Safe schemes and paths** (`http:`, `https:`, `mailto:`, `tel:`, fragment `#…`, and relative paths `/…`, `./…`, `../…`) pass through unchanged (still HTML-escaped in SSR).
+   - **Media `data:` allowlist** passes through: `data:image/{png,jpeg,jpg,gif,webp,bmp,ico,avif};…`, `data:audio/*`, `data:video/*`, and `data:image/svg+xml;base64,…` **only**. Inline SVG is rejected on purpose — `data:image/svg+xml,<svg onload=…>` is an XSS vector, while the base64 form is opaque image bytes.
+   - **Dangerous schemes** (`javascript:`, `vbscript:`, `file:`, and every other `data:` such as `data:text/html`, `data:application/javascript`, `data:text/css`, `data:text/plain`) are neutralized to `#blocked`.
+   - **Anything else** (e.g. an unknown custom scheme) is left untouched: this ladder blocks known-dangerous schemes and allowlists media `data:` URLs, it is not a full scheme allowlist.
+
+   **SSR inline-style asymmetry**: `escapeStyleText()` (`src/ssr.ts`) removes every `url(...)`, `@import`, `expression(...)`, `behavior:` and `javascript:` occurrence from raw style text. A legitimate base64 image inside an SSR inline style is therefore dropped — reference such images through `attrs.src` or asset URLs instead of inline CSS.
 4. **Value escaping**: In SSR, `escapeHtml()` escapes all attribute values.
 
 **Consumer responsibility**: While the framework blocks known dangerous patterns, always sanitize user input before using it in attributes:

@@ -415,6 +415,25 @@ describe('security: attribute sanitization module', () => {
       expect(sanitizeAttrs(attrs)).toBe(attrs)
     })
 
+    test('returns original object when only safe URL attrs present (C-6)', () => {
+      // El caso común: attrs que NO requieren sanitización. Antes de C-6, el
+      // código allocaba un `result: Record<string, string> = {}` y luego lo
+      // descartaba si no había cambios. Ahora el primer pass detecta que no
+      // hay cambios y retorna el objeto original sin allocar nada.
+      const attrs = {
+        href: 'https://example.com/page',
+        src: 'https://cdn.example.com/img.png',
+        alt: 'Example image',
+        title: 'A safe title',
+      }
+      expect(sanitizeAttrs(attrs)).toBe(attrs)
+    })
+
+    test('returns original object when value normalization is a no-op', () => {
+      const attrs = { 'data-foo': 'bar', 'aria-label': 'baz' }
+      expect(sanitizeAttrs(attrs)).toBe(attrs)
+    })
+
     test('removes event handler attributes', () => {
       const result = sanitizeAttrs({
         class: 'btn',
@@ -465,6 +484,40 @@ describe('security: attribute sanitization module', () => {
 
     test('blocks data: scheme', () => {
       expect(sanitizeUrlValue('data:text/css,body{background:red}')).toBe('#blocked')
+    })
+
+    test('blocks data:text/html and data:application/javascript explicitly', () => {
+      expect(sanitizeUrlValue('data:text/html,<script>alert(1)</script>')).toBe('#blocked')
+      expect(sanitizeUrlValue('data:application/javascript,alert(1)')).toBe('#blocked')
+      expect(sanitizeUrlValue('data:text/plain;base64,VGhpcw==')).toBe('#blocked')
+    })
+
+    test('allows safe data:image/* URLs (regression for C-1)', () => {
+      expect(sanitizeUrlValue('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/AAAZ4gk3AAAAAXRSTlPM0jRW/QAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII='))
+        .toBe('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/AAAZ4gk3AAAAAXRSTlPM0jRW/QAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=')
+      expect(sanitizeUrlValue('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA')).toBe('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA')
+      expect(sanitizeUrlValue('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciLz4=')).toBe('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciLz4=')
+      expect(sanitizeUrlValue('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')).toBe('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')
+    })
+
+    test('blocks inline SVG (XSS via script/onload/javascript: href)', () => {
+      // SVG inline es un vector XSS real — el browser lo renderiza como
+      // documento y ejecuta <script> y handlers. Solo base64 es seguro.
+      expect(sanitizeUrlValue('data:image/svg+xml,<svg onload="alert(1)" xmlns="http://www.w3.org/2000/svg"></svg>')).toBe('#blocked')
+      expect(sanitizeUrlValue('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>')).toBe('#blocked')
+      expect(sanitizeUrlValue('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><a xlink:href="javascript:alert(1)"><text>click</text></a></svg>')).toBe('#blocked')
+      expect(sanitizeUrlValue('  data:image/svg+xml,<svg onload="alert(1)"></svg>')).toBe('#blocked')
+    })
+
+    test('allows safe data:audio/* and data:video/* URLs', () => {
+      expect(sanitizeUrlValue('data:audio/mp3;base64,//uQxAAAAWMSL4AI')).toBe('data:audio/mp3;base64,//uQxAAAAWMSL4AI')
+      expect(sanitizeUrlValue('data:audio/ogg;base64,T2dnUwACAAAAAAAAAAA')).toBe('data:audio/ogg;base64,T2dnUwACAAAAAAAAAAA')
+      expect(sanitizeUrlValue('data:video/mp4;base64,AAAAIGZ0eXBpc29tAAAA')).toBe('data:video/mp4;base64,AAAAIGZ0eXBpc29tAAAA')
+      expect(sanitizeUrlValue('data:video/webm;base64,GkXfo59ChoEBB')).toBe('data:video/webm;base64,GkXfo59ChoEBB')
+    })
+
+    test('data:image with leading whitespace is allowed', () => {
+      expect(sanitizeUrlValue('  data:image/png;base64,iVBOR')).toBe('  data:image/png;base64,iVBOR')
     })
 
     test('blocks vbscript: scheme', () => {

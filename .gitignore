@@ -67,3 +67,12 @@ yarn-error.log*
 *.old
 *.orig
 *.rej
+# Local Pi runtime state
+.pi/
+.playwright-cli/
+.playwright-mcp/
+# Versioned on purpose: do NOT ignore .atl/ or .codegraph/.
+# .codegraph/ ships only its own .gitignore; the index database stays local.
+# Build/test artifacts from local dev
+gh-run-latest-test.log
+test_output.txt

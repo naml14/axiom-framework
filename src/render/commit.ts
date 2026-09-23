@@ -450,16 +450,62 @@ export function applyOps(
 // ============================================================
 
 /**
- * Returns the composed transform string that Axiom writes for layout positioning.
- * Animation libraries must animate `--animation-transform` instead of `transform`.
+ * Composed-transform cache for the hot path.
+ *
+ * `composedTransform()` used to allocate a fresh template-literal string for every
+ * (x,y) pair on every commit. In a 1000-node tree that updates at 60fps this
+ * generated ~60k strings/sec, all identical except for their (x,y). The cache
+ * memoizes by `${x},${y}` and evicts in insertion order (FIFO) once it reaches
+ * `COMPOSED_TRANSFORM_CACHE_MAX`, so steady-state memory stays constant however
+ * many unique positions are encountered.
+ *
+ * Eviction is insertion-ordered, not LRU: a hit returns the cached string
+ * without promoting its key, so the oldest *inserted* entry is the one dropped.
+ * That is deliberate — promoting on every hit would add two Map operations to
+ * the very path this cache exists to shorten, and for the access pattern it
+ * serves (positions swept over a working set larger than the cache) LRU and FIFO
+ * hit the same rate.
  */
+const COMPOSED_TRANSFORM_CACHE_MAX = 256
+const composedTransformCache = new Map<string, string>()
+let composedTransformCacheMisses = 0
+
 function composedTransform(x: number, y: number): string {
   // Empty fallback (`,`) keeps the `transform` declaration valid when the consumer
   // never defines `--animation-transform`. Without it, an undefined custom property
   // makes the whole `transform` invalid at computed-value time, collapsing every
   // element to translate(0,0). The fallback resolves to nothing (a no-op) and is
   // overridden the moment a CSS animation sets `--animation-transform`.
-  return `translate(${x}px,${y}px) var(--animation-transform,)`
+  const key = `${x},${y}`
+  const cached = composedTransformCache.get(key)
+  if (cached !== undefined) return cached
+
+  composedTransformCacheMisses++
+  const composed = `translate(${x}px,${y}px) var(--animation-transform,)`
+
+  // Insertion-order (FIFO) eviction: drop the oldest inserted key when full.
+  // The new key is appended by `set` below, so it is the last to be evicted.
+  if (composedTransformCache.size >= COMPOSED_TRANSFORM_CACHE_MAX) {
+    const oldestKey = composedTransformCache.keys().next().value
+    if (oldestKey !== undefined) composedTransformCache.delete(oldestKey)
+  }
+  composedTransformCache.set(key, composed)
+  return composed
+}
+
+/** Clear the composed-transform cache. Testing-only. */
+export function __clearComposedTransformCacheForTests(): void {
+  composedTransformCache.clear()
+  composedTransformCacheMisses = 0
+}
+
+/**
+ * Cache size and miss count. Testing-only: the only way to observe memoization
+ * is to count misses, because the cached values are primitive strings — `===`
+ * compares their text, never their identity.
+ */
+export function __getComposedTransformCacheStatsForTests(): { size: number; misses: number } {
+  return { size: composedTransformCache.size, misses: composedTransformCacheMisses }
 }
 
 /**
