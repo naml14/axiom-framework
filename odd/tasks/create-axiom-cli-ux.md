@@ -607,7 +607,7 @@ Establece de forma independiente: directorios vacíos anidados detectados, archi
 ocultos anidados detectados, rutas relativas ordenadas con `/`, y que **mover
 `a/same` a `b/same` cambia el inventario**. Con junction de directorio, junction
 colgado y junction cíclico: todos se reportan sin traversar, y el cíclico no recursa.
-Una sola definición de `listEntries` (líneas 33-36) y un solo `readdir` por nivel.
+Una sola definición de `listEntries` (líneas 33-36) y una llamada `readdir` por cada directorio visitado (no por «nivel» en el sentido abstracto: dos directorios hermanos en el mismo nivel producen dos llamadas).
 
 ### Mutation testing — el punto que faltaba — PASS
 
@@ -656,11 +656,13 @@ entrada». Falso: Bun **conserva ambas entradas pero pierde su identidad**.
 recursive:true -> ["a","b","same","same"]
 ```
 
-Corregido en los dos sitios (`tests/create-axiom-cli.test.ts:30-34` y `:1231-1236`)
-para decir que ambas sobreviven y que lo que se pierde es la identidad. **Este `low`
-lo cerró el parent con un micro-repro directo, sin ronda de verificación dedicada**:
-es un cambio de comentario, no de comportamiento, y la afirmación ahora coincide con
-los bytes medidos. Se declara así en vez de presentarlo como verificado por V4.
+Corregido en los dos sitios (`tests/create-axiom-cli.test.ts:30-34` y `:1233-1238`,
+que es el rango del comentario de la prueba, no `:1231-1236` como estaba citado
+anteriormente) para decir que ambas sobreviven y que lo que se pierde es la
+identidad. **Este `low` lo cerró el parent con un micro-repro directo, sin ronda de
+verificación dedicada**: es un cambio de comentario, no de comportamiento, y la
+afirmación ahora coincide con los bytes medidos. Se declara así en vez de
+presentarlo como verificado por V4.
 
 ### UNPROVEN
 
