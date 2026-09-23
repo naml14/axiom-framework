@@ -930,3 +930,84 @@ Portal Modal — Rendered by portal into #portal-modal-root
   color: var(--accent-sky);
   background: rgba(2, 132, 199, 0.06);
 }
+
+/* ============================================================
+    Secciones del sidebar: Context API + Forms
+    Scope: solo dentro de `.context-section` / `.forms-section`.
+    Reglas:
+      - el motor Axiom posiciona/inseta los nodos (props `padding`/`height`/
+        `width`); aquí solo se da estilo visual sin pelear con la geometría.
+      - `line-height: 20px` en todo texto del árbol (grid del motor).
+      - sin `padding`/`border` CSS que desplace hijos (un borde 1px es OK).
+   ============================================================ */
+
+.context-section .demo-card,
+.forms-section .demo-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+/* Solo se sobreescribe lo que la grilla del motor y el overflow exigen;
+   el look base (font-size/weight/color/letter-spacing/text-transform) lo
+   dan las reglas globales de `.hero-badge` / `.hero-body` arriba. */
+.context-section .hero-badge, .forms-section .hero-badge,
+.context-section .hero-body, .forms-section .hero-body {
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.context-section .demo-code,
+.forms-section .demo-code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 20px;
+  color: var(--accent-sky);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-section .demo-input,
+.forms-section .demo-input {
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.context-section .demo-input::placeholder,
+.forms-section .demo-input::placeholder {
+  color: var(--text-dim);
+}
+
+.context-section .demo-input:focus,
+.forms-section .demo-input:focus {
+  border-color: var(--accent-violet);
+  outline: 2px solid rgba(124, 58, 237, 0.25);
+  outline-offset: 1px;
+}
+
+.context-section .form-status,
+.forms-section .form-status {
+  font-size: 11.5px;
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-section .form-status--pending,
+.forms-section .form-status--pending { color: var(--text-muted); }
+
+.context-section .form-status--valid,
+.forms-section .form-status--valid { color: var(--accent-teal); }
+
+.context-section .form-status--invalid,
+.forms-section .form-status--invalid { color: var(--accent-rose); }
