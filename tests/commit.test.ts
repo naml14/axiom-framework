@@ -5,6 +5,7 @@ import {
   commitFull,
   commitHydrate,
   __clearComposedTransformCacheForTests,
+  __getComposedTransformCacheStatsForTests,
   type DOMOperation,
 } from '../src/render/commit.js'
 import { defineComponent } from '../src/render/component.js'
@@ -704,8 +705,7 @@ describe('composedTransform cache', () => {
   })
 
   test('repeated (x,y) pairs reuse the cached transform string', () => {
-    // Indirect test: render the same tree 10 times and check that
-    // el.style.transform === a single shared string reference.
+    __clearComposedTransformCacheForTests()
     const comp = defineComponent(() => ({
       type: 'element' as const,
       tag: 'div',
@@ -726,25 +726,34 @@ describe('composedTransform cache', () => {
     const firstTransform = child.style.transform
     expect(firstTransform).toBe('translate(16px,16px) var(--animation-transform,)')
 
+    // Memoization is only observable through the miss counter: the cached values
+    // are primitive strings, so comparing them by identity proves nothing — `===`
+    // compares text, and that assertion held even with no cache at all.
+    const afterFirst = __getComposedTransformCacheStatsForTests()
+    expect(afterFirst.misses).toBeGreaterThan(0)
+    expect(afterFirst.size).toBeGreaterThan(0)
+
     // Apply the same transform a second time via applyOps with the same coords.
-    // If the cache is working, el.style.transform reference stays identical.
     const ops: DOMOperation[] = [{
       type: 'update', index: 1, x: 16, y: 16, width: 32, height: 20,
     }]
     applyOps(ops, root, [root.firstElementChild as HTMLElement, child])
 
     expect(child.style.transform).toBe(firstTransform)
-    // Identity check: the cached string is the same instance.
-    // eslint-disable-next-line no-self-compare
-    expect(child.style.transform === firstTransform).toBe(true)
+    // A hit: the same (x,y) came from the cache, so neither a new string nor a
+    // new entry was produced.
+    const afterSecond = __getComposedTransformCacheStatsForTests()
+    expect(afterSecond.misses).toBe(afterFirst.misses)
+    expect(afterSecond.size).toBe(afterFirst.size)
+
+    __clearComposedTransformCacheForTests()
   })
 
-  test('cache evicts LRU when over MAX_COMPOSED_TRANSFORM_CACHE_ENTRIES', () => {
+  test('cache stays bounded and evicts in insertion order (FIFO)', () => {
     __clearComposedTransformCacheForTests()
     // Drive the cache directly: simulate 300 unique (x,y) pairs being written.
-    // The cache must stay bounded under MAX_COMPOSED_TRANSFORM_CACHE_ENTRIES (256).
+    // The cache must stay bounded under COMPOSED_TRANSFORM_CACHE_MAX (256).
     const MAX_CACHE = 256
-    const seenKeys = new Set<string>()
 
     // Render a single element and re-position it 300 times via applyOps with
     // distinct (x,y) values. Each applyOps call invokes composedTransform,
@@ -770,14 +779,24 @@ describe('composedTransform cache', () => {
         type: 'update', index: 0, x: i * 4, y: i * 4, width: 10, height: 10,
       }]
       applyOps(ops, root, [child])
-      seenKeys.add(`${i * 4},${i * 4}`)
     }
 
-    // El cache no puede tener más de 256 entradas. Verificamos indirectamente:
-    // el último write fue exitoso y todos los strings generados son correctos.
     expect(child.style.transform).toBe('translate(1196px,1196px) var(--animation-transform,)')
-    // Y la aplicación no crasheó con 300 entradas.
-    expect(seenKeys.size).toBe(300)
+
+    // Bounded: 300 unique positions were written, at most 256 are retained.
+    const bounded = __getComposedTransformCacheStatsForTests()
+    expect(bounded.size).toBe(MAX_CACHE)
+
+    // Insertion-order eviction — the property the old "LRU" name claimed: the
+    // oldest inserted position was dropped...
+    applyOps([{ type: 'update', index: 0, x: 4, y: 4, width: 10, height: 10 }], root, [child])
+    const afterOldest = __getComposedTransformCacheStatsForTests()
+    expect(afterOldest.misses).toBe(bounded.misses + 1)
+
+    // ...while the newest one is still cached.
+    applyOps([{ type: 'update', index: 0, x: 1196, y: 1196, width: 10, height: 10 }], root, [child])
+    const afterNewest = __getComposedTransformCacheStatsForTests()
+    expect(afterNewest.misses).toBe(afterOldest.misses)
 
     // Reset for other tests.
     __clearComposedTransformCacheForTests()
