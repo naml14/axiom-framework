@@ -141,6 +141,21 @@ Examples:
 // ============================================================
 
 export function validateProjectName(name: string): void {
+	// Check for a trailing dot or space first so the user gets a Windows-
+	// specific error message instead of the generic "ASCII characters" one
+	// that the regex would otherwise produce for trailing spaces. Without
+	// this, a name ending in a space would hit SAFE_NAME_RE before the
+	// dedicated trailing-dot/space branch and the actionable message would
+	// be lost.
+	if (name.endsWith(".") || name.endsWith(" ")) {
+		throw new UsageError(
+			`Invalid project name: "${name}". ` +
+				`A trailing dot or space is invalid because Windows strips ` +
+				`them, so the directory you would get would not match the name you typed. ` +
+				`Pick a different name, for example my-axiom-app.`,
+		);
+	}
+
 	if (!SAFE_NAME_RE.test(name)) {
 		throw new UsageError(
 			`Invalid project name: "${name}". ` +
@@ -157,15 +172,6 @@ export function validateProjectName(name: string): void {
 				`"${baseName.toUpperCase()}" is a reserved device name on Windows ` +
 				`(with or without an extension), so a directory with this name ` +
 				`cannot be created. Pick a different name, for example my-axiom-app.`,
-		);
-	}
-
-	if (name.endsWith(".") || name.endsWith(" ")) {
-		throw new UsageError(
-			`Invalid project name: "${name}". ` +
-				`A trailing dot or space is invalid because Windows strips ` +
-				`them, so the directory you would get would not match the name you typed. ` +
-				`Pick a different name, for example my-axiom-app.`,
 		);
 	}
 }

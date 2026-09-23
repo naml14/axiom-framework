@@ -945,16 +945,19 @@ describe("validateProjectName", () => {
 			expectRejection("app.", "trailing");
 		});
 
-		test("rejects names with trailing space (caught by the existing regex)", () => {
-			// SAFE_NAME_RE has no space in its character class, so the regex
-			// rejects trailing-space names before the trailing-dot check runs.
-			// The contract is still that the name is rejected and the message
-			// names the offending value.
+		test("rejects names with trailing space with the Windows-specific message", () => {
+			// The trailing-dot/space check runs before SAFE_NAME_RE so a trailing
+			// space produces the actionable "A trailing dot or space is invalid…"
+			// message instead of the generic "ASCII characters" one that the
+			// regex would produce on its own.
 			try {
 				validateProjectName("my-app ");
 			} catch (err) {
 				expect(err).toBeInstanceOf(UsageError);
 				expect((err as Error).message).toContain("my-app ");
+				expect((err as Error).message.toLowerCase()).toContain(
+					"trailing",
+				);
 				return;
 			}
 			throw new Error("Expected validateProjectName('my-app ') to throw");
