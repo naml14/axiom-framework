@@ -1335,6 +1335,8 @@ describe("create-axiom CLI — generated build-static.ts is personalised", () =>
 		for (const file of files) {
 			const fileStat = await stat(file);
 			if (!fileStat.isFile()) continue;
+			// lgtm[js/file-system-race] ignore: sandbox temp directory, files
+			// are created by the same test and not shared.
 			const content = await readFile(file, "utf8");
 			expect(content).not.toContain("{{PROJECT_NAME}}");
 		}
@@ -1360,7 +1362,10 @@ describe("create-axiom CLI — generated build-static.ts is personalised", () =>
 			stdout: "pipe",
 			stderr: "pipe",
 		});
-		const [buildStdout, buildStderr, buildExitCode] = await Promise.all([
+		// The first element of the array is stdout, read only to drain the
+		// stream so the child process does not block; we assert on stderr
+		// and the exit code below.
+		const [, buildStderr, buildExitCode] = await Promise.all([
 			new Response(buildProc.stdout).text(),
 			new Response(buildProc.stderr).text(),
 			buildProc.exited,
