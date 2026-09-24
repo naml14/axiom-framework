@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { scaffoldProject, installProjectDependencies } from "../scripts/create-axiom.ts";
-import { installLocalFrameworkFixture } from "./helpers/local-framework-fixture.ts";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const tempDirs: string[] = [];
@@ -78,6 +77,34 @@ async function startStarterDevServer(projectDir: string): Promise<number> {
 
 	await waitForServer(`http://127.0.0.1:${port}/`);
 	return port;
+}
+
+async function installLocalFrameworkFixture(projectDir: string): Promise<void> {
+	const packageDir = join(projectDir, "node_modules", "axiom-framework");
+	await mkdir(packageDir, { recursive: true });
+	await cp(join(repoRoot, "src"), join(packageDir, "src"), {
+		recursive: true,
+	});
+	await writeFile(
+		join(packageDir, "package.json"),
+		`${JSON.stringify(
+			{
+				name: "axiom-framework",
+				version: "0.0.0-test",
+				type: "module",
+				main: "./src/index.ts",
+				module: "./src/index.ts",
+				exports: {
+					".": {
+						import: "./src/index.ts",
+					},
+				},
+			},
+			null,
+			2,
+		)}\n`,
+		"utf8",
+	);
 }
 
 afterEach(async () => {
