@@ -75,11 +75,17 @@ Reglas de comportamiento:
 
 ### T2 — Guard de directorio destino
 
-- `decideExistingDirectory({ dir, force, isTTY, confirm })`: función de decisión pura
-  con `confirm` inyectable, para poder testear los tres caminos sin TTY real.
-- Prompt con `node:readline/promises` sobre `process.stdin`/`process.stdout`.
-- Tests: unitarios de la decisión + proceso real (directorio no vacío sin TTY →
-  exit 1 y **contenido previo intacto**).
+- `resolveExistingDirectory({ projectDir, force, isTTY, confirm })`: función de
+  decisión exportada y pura con respecto al terminal (`isTTY` y `confirm`
+  inyectables), para poder testear los cinco caminos sin TTY real. Devuelve un
+  outcome discriminado: `proceed` (`absent` | `empty` | `forced` | `confirmed`),
+  `cancel`, o `error` (`not-a-directory` | `non-interactive-exists`).
+- Prompt con `node:readline/promises`; `ttyConfirm(prompt, input, output)` escucha
+  `line`/`close` con un flag `settled` (ver hallazgo de EOF en la evidencia),
+  en lugar de `rl.question()`.
+- Tests: unitarios de la decisión + de `ttyConfirm` con streams inyectados +
+  proceso real (directorio no vacío sin TTY → exit 1 y **contenido previo
+  intacto**).
 
 ### T3 — Hardening de nombres + limpieza del placeholder
 
@@ -90,20 +96,62 @@ Reglas de comportamiento:
   desde `getCurrentFrameworkVersion()`.
 - Tests: tabla de nombres rechazados/aceptados + verificación del pin inyectado.
 
-### V1 — Verificación
+### T4 — Personalizar el build estático del starter
 
-- `bun test tests/create-axiom.test.ts tests/create-axiom-cli.test.ts` (0 fail).
-- `bun run typecheck`.
-- Smoke real end-to-end del CLI local: scaffold en temporal, `--no-install`, arranque
-  del dev server y `fetch` a `/`, `/src/app.ts`, `/src/styles.css`.
+- `scripts/templates/build-static.ts` hardcodeaba `"My Axiom Site"` en el `h1` y en
+  `metadata.title`: un proyecto scaffoldeado como `my-app` generaba un sitio que
+  ignoraba su nombre, aunque `index.html` y `src/app.ts` sí se personalizan.
+- Cambio: `{{PROJECT_NAME}}` en ambos sitios y sustitución en `scaffoldProject`,
+  igual que el resto de templates. Sin tocar la estructura de la página, el
+  inlining de estilos ni `minify`.
+- Guard que faltaba: ningún test ejecutaba el `build-static.ts` generado (el test
+  existente construye su propio componente inline). Se añade uno end-to-end con el
+  fixture local de `axiom-framework`.
+
+### T5 — Exit 1 en fallo de install
+
+- El contrato ya exigía exit 1 ante fallo de install, pero `main()` imprimía el
+  error y **seguía imprimiendo `Ready! Run:`** y saliendo con 0, así que un scaffold
+  roto pasaba en CI. Comportamiento preexistente, no una regresión.
+- Cambio: mensaje accionable en stderr, exit 1, y sin bloque `Ready!` cuando la
+  instalación falla. Los caminos de éxito y `--no-install` quedan igual.
+- Test de regresión determinista y sin red: `bunfig.toml` con
+  `registry = "http://127.0.0.1:1"` y `cache = false` dentro del proyecto (el
+  `cache = false` es necesario o Bun sirve el paquete desde caché).
+
+### V1 — Verificación independiente (ejecutada) → **FAIL**
+
+- Delegada a `gentle-ai-verify` sobre el rango commiteado `main...38d1733`, después
+  de que ASSESS devolviera `risk: high` (boundary de proceso) con plan
+  `independentVerifier: true`.
+- Checks que pasaron: suite completa del repo **840 pass / 2 skip / 0 fail**
+  (6073 expects, 3.65s); `bun run typecheck` limpio; 98 + 11 tests de create-axiom;
+  dev server del proyecto generado con **200** en `/`, `/src/app.ts` y
+  `/src/styles.css`; pin exacto `"axiom-framework": "0.9.13"`; inventario del
+  paquete publicado con los siete archivos de template.
+- Hallazgos: ver «Informe de V1» al final. Verdicto **FAIL** por T5 (alto) y T4
+  (medio), más cuatro debilidades de cobertura. Ningún otro camino se traga un
+  fallo en exit 0; la cancelación interactiva con exit 0 es intencional.
+- Claims históricos re-ejecutados en espejos temporales con `git show`: T1 34/92 y
+  679 bytes; T2 59/159 y 532 ms; T3 98/274; y los tres RED por export faltante
+  reproducidos. Figuras sin estado commiteado: ver «Informe de V1».
+
+### V2 — Re-verificación tras la ronda de arreglos
+
+- Cerrar T4 y T5 no se hace con la palabra del writer: hace falta una verificación
+  fresca sobre el candidato congelado (los commits de la ronda), incluyendo el
+  camino de fallo de install, el `dist/index.html` personalizado y las cuatro
+  debilidades de cobertura.
 
 ## Archivos tocados
 
 | Archivo | Tarea |
 | ------- | ----- |
-| `scripts/create-axiom.ts` | T1, T2, T3 |
-| `tests/create-axiom-cli.test.ts` (nuevo) | T1, T2, T3 |
+| `scripts/create-axiom.ts` | T1, T2, T3, T4, T5 |
+| `tests/create-axiom-cli.test.ts` (nuevo) | T1, T2, T3, T4, T5 |
+| `tests/create-axiom.test.ts` | T4 (guard end-to-end del build generado) |
 | `scripts/templates/package.json` | T3 |
+| `scripts/templates/build-static.ts` | T4 |
 | `README.md` | T1, T2 |
 
 ## Tareas
@@ -111,7 +159,10 @@ Reglas de comportamiento:
 - [x] T1. Parser de flags + `--help` / `--version` / `--no-install`
 - [x] T2. Guard de directorio destino (TTY / no-TTY / `--force` / directorio vacío)
 - [x] T3. Hardening de nombres + limpieza del placeholder del template
-- [ ] V1. Verificación completa (tests, typecheck, smoke end-to-end)
+- [x] V1. Verificación independiente → **FAIL** (1 alto, 1 medio, 4 de cobertura)
+- [x] T4. Personalizar el build estático del starter (hallazgo medio de V1)
+- [x] T5. Exit 1 en fallo de install (hallazgo alto de V1)
+- [ ] V2. Re-verificación del candidato congelado tras la ronda de arreglos
 
 ## Evidencia
 
@@ -300,3 +351,68 @@ Reglas de comportamiento:
 - Nota de diseño: `name.endsWith(" ")` es defensivo. `SAFE_NAME_RE` ya rechaza
   espacios, así que esa rama solo se activaría si el regex se relajara en el futuro;
   el test correspondiente lo dice en su nombre.
+
+## Informe de V1 (gentle-ai-verify sobre `main...38d1733`)
+
+Verdicto: **FAIL**. Sin arreglos ni escrituras en el repo por parte del verificador.
+
+### Hallazgos
+
+1. **Alto — fallo de install con exit 0** (`scripts/create-axiom.ts:439-451` → T5).
+   Reproducción: directorio existente con `bunfig.toml`
+   (`[install] registry = "http://127.0.0.1:1"`, `cache = false`) y
+   `create-axiom <dir> --force`. Observado: `ConnectionRefused downloading package
+   manifest axiom-framework`, `Install failed. Run 'bun install' manually...`, y aun
+   así el bloque `Ready! Run:` con exit 0. Comportamiento preexistente al feature.
+2. **Medio — el build estático ignora el starter** (`scripts/templates/build-static.ts:24,36`
+   → T4). Para un proyecto `smoke-app`, `dist/index.html` contiene
+   `<title>My Axiom Site</title>` y `<h1>My Axiom Site</h1>`, con
+   `BUILD_ASSERT { style: true, markup: false }`: los estilos y el mecanismo del
+   build pasan, el marcado personalizado no. **Ningún test ejecuta el
+   `build-static.ts` generado**: `tests/create-axiom.test.ts:261` importa
+   `buildStatic` y construye su propio componente, y otro test solo comprueba que
+   el script generado no esté vacío.
+
+### Debilidades de cobertura (tests que afirman más de lo que prueban)
+
+- `tests/create-axiom-cli.test.ts:321,1008`: `Bun.Glob("*")` no ve archivos ocultos,
+  así que "no se escribió nada" no queda realmente establecido.
+- `tests/create-axiom.test.ts:141`: el test del instalador solo comprueba `>= 0`, no
+  la propagación del fallo.
+- `tests/create-axiom-cli.test.ts:476`: el test bautizado "empty string" inyecta el
+  booleano `false`.
+- `tests/create-axiom-cli.test.ts:774`: el test "case-insensitive" alimenta `yes` en
+  minúsculas, que no prueba insensibilidad a mayúsculas (una sonda `YeS` sí pasó).
+
+### Figuras históricas no reproducibles
+
+Observadas en el árbol de trabajo antes del fix y sin estado commiteado: el estado
+intermedio de T2 (51/151), los 1004 ms del RED de EOF y los 0.7 ms de la sonda EOF
+independiente del parent (la medición actual da 0.0806 ms). El `--help` de HEAD mide
+986 bytes en 30 corridas, coherente con los 679 bytes históricos de T1 (el texto
+creció en T2 con el párrafo del prompt). Re-ejecutado en espejos temporales y **sí**
+reproducido: T1 34/92 y 679 bytes; T2 59/159 y 532 ms; T3 98/274; y los tres RED por
+export faltante (`parseArgs`, `resolveExistingDirectory`, `validateProjectName`).
+
+### TTY: UNPROVEN
+
+Con `COLUMNS=120`, `LINES=40`, `TERM=xterm`:
+
+- `winpty -Xplain <bun> run <script> …` → exit 1, `stdin is not a tty` (no se asigna pty).
+- `winpty -Xallow-non-tty …` y las flags combinadas → exit 3, el exacto
+  `ASSERT_CONDITION("wp != nullptr && cols > 0 && rows > 0")`, incluso forzando el tamaño.
+
+Cubierto: `ttyConfirm` con streams inyectados, `resolveExistingDirectory` con
+`isTTY`/`confirm` inyectados y el camino no-TTY de proceso. **Pendiente de verificación
+manual en una terminal real**: el prompt `[y/N]` y Ctrl+D.
+
+### Limpieza y estado del repo
+
+- Todos los árboles temporales se borraron salvo
+  `C:/Users/Andres/AppData/Local/Temp/axiom-tty-VIZujv`, que queda con `EBUSY`. La
+  inspección con `Get-CimInstance Win32_Process` filtrada por `winpty`/`winpty-agent`
+  no encontró procesos atribuibles, así que **no se terminó ningún proceso**.
+- El repo quedó con los mismos tres paths sucios preexistentes (`.atl/.skill-registry.cache.json`,
+  `.atl/skill-registry.md`, `.gitignore`), que son artefactos locales del parent.
+- Corregido en este informe: el documento llamaba `decideExistingDirectory` a la
+  función de T2; su nombre real es `resolveExistingDirectory`.

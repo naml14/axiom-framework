@@ -348,6 +348,10 @@ export async function scaffoldProject(
 			final = content.replaceAll("'{{PROJECT_NAME}}'", `'${projectName}'`)
 		}
 
+		if (src === "build-static.ts") {
+			final = content.replaceAll("{{PROJECT_NAME}}", projectName)
+		}
+
 		await writeFile(join(projectDir, dest), final, "utf8");
 		console.log(`  Created ${dest}`);
 	}
@@ -443,12 +447,17 @@ async function main(): Promise<void> {
 		const exitCode = installProjectDependencies(projectDir);
 
 		if (exitCode !== 0) {
+			// Install failed: surface the actionable stderr message and exit 1.
+			// Do NOT print the "Ready! Run:" block — telling the user to run
+			// `bun dev` against a project with missing dependencies would be
+			// misleading, and a non-zero exit code is required so CI can detect
+			// the broken scaffold.
 			console.error(
 				`  Install failed. Run 'bun install' manually in ${projectDir}`,
 			);
-		} else {
-			console.log(`  Dependencies installed`);
+			process.exit(1);
 		}
+		console.log(`  Dependencies installed`);
 	} else {
 		console.log(`\n  Skipped dependency installation.`);
 		console.log(`  Run 'bun install' inside ${projectName} when you are ready.`);
