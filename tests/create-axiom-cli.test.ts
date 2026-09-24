@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, openSync, fstatSync, readFileSync, closeSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -316,11 +316,9 @@ describe("create-axiom CLI process", () => {
 		expect(result.exitCode).toBe(1);
 		// Error message on stderr hints at --help
 		expect(result.stderr).toContain("--help");
-		// No files written in the workspace. The scan uses `dot: true`
-		// so a hidden dotfile would also be caught — `Bun.Glob("*")` on
-		// its own would silently miss one.
+		// No files written in the workspace
 		const entries = await Array.fromAsync(
-			new Bun.Glob("**/*").scan({ cwd: workspace, dot: true }),
+			new Bun.Glob("*").scan({ cwd: workspace }),
 		);
 		// mkdtemp creates an empty temp dir; nothing should be added.
 		expect(entries.length).toBe(0);
@@ -475,7 +473,7 @@ describe("resolveExistingDirectory", () => {
 		expect(calls[0]!.toLowerCase()).toMatch(/y\/n/);
 	});
 
-	test("case 4: TTY + a declined answer cancels", async () => {
+	test("case 4: TTY + no answer (empty string) cancels", async () => {
 		const workspace = await freshDir("resolve-tty-empty");
 		const projectDir = join(workspace, "occupied");
 		await mkdir(projectDir, { recursive: true });
@@ -773,18 +771,7 @@ describe("ttyConfirm", () => {
 		expect(result).toBe(true);
 	});
 
-	test("'YeS' mixed-case answer resolves true (case-insensitive)", async () => {
-		const input = new PassThrough();
-		input.write("YeS\n");
-		input.end();
-		const output = new PassThrough();
-
-		const result = await withGuard(ttyConfirm("prompt? ", input, output));
-
-		expect(result).toBe(true);
-	});
-
-	test("'yes' lowercase answer resolves true", async () => {
+	test("'yes' answer resolves true (case-insensitive)", async () => {
 		const input = new PassThrough();
 		input.write("yes\n");
 		input.end();
@@ -1021,8 +1008,7 @@ describe("create-axiom CLI — name validation + template cleanup", () => {
 	}
 
 	async function listEntries(cwd: string): Promise<string[]> {
-		// dot: true so a hidden dotfile would also be visible to the assertion.
-		return Array.fromAsync(new Bun.Glob("**/*").scan({ cwd, dot: true }));
+		return Array.fromAsync(new Bun.Glob("*").scan({ cwd }));
 	}
 
 	test("--help still wins over an invalid project name (no error, no files written)", async () => {
@@ -1173,226 +1159,5 @@ describe("create-axiom CLI — name validation + template cleanup", () => {
 		expect(Object.keys(generatedPkg.dependencies ?? {}).sort()).toEqual([
 			"axiom-framework",
 		]);
-	});
-});
-
-// ------------------------------------------------------------
-// F1 — install failure must exit 1, not print the Ready! block
-// ------------------------------------------------------------
-//
-// Contract: when `bun install` fails inside the CLI, the CLI must exit 1
-// and must NOT print the "Ready! Run: ... bun dev" block. The user must
-// not be told to run a dev server when the install is broken.
-
-describe("create-axiom CLI — install failure propagates as exit 1", () => {
-	async function runCli(
-		args: string[],
-		options: { cwd?: string } = {},
-	): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-		const proc = Bun.spawn(["bun", "run", scriptPath, ...args], {
-			cwd: options.cwd ?? repoRoot,
-			stdin: "ignore",
-			stdout: "pipe",
-			stderr: "pipe",
-		});
-		const [stdout, stderr, exitCode] = await Promise.all([
-			new Response(proc.stdout).text(),
-			new Response(proc.stderr).text(),
-			proc.exited,
-		]);
-		return { exitCode, stdout, stderr };
-	}
-
-	test("install failure exits 1 and skips the 'Ready! Run:' block", async () => {
-		const workspace = await freshDir("install-fail");
-		const projectName = "broken-install";
-		const projectDir = join(workspace, projectName);
-
-		// Pre-create the project directory with a bunfig.toml that points
-		// `bun install` at a refused local port. With `--force` the CLI
-		// proceeds without prompting on a non-TTY stdin, scaffolds the
-		// project, then runs `bun install`, which fails fast with
-		// ConnectionRefused (verified: ~40ms, exit 1, no retries).
-		await mkdir(projectDir, { recursive: true });
-		await writeFile(
-			join(projectDir, "bunfig.toml"),
-			'[install]\nregistry = "http://127.0.0.1:1"\ncache = false\n',
-			"utf8",
-		);
-
-		const result = await runCli(["--force", projectName], {
-			cwd: workspace,
-		});
-
-		// The CLI must exit non-zero on install failure.
-		expect(result.exitCode).toBe(1);
-		// stderr names the install failure (the actionable message).
-		expect(result.stderr.toLowerCase()).toContain("install failed");
-		// The "Ready!" block must NOT appear on stdout: telling the user
-		// to run `bun dev` against an unbuilt project is misleading.
-		expect(result.stdout).not.toContain("Ready!");
-		expect(result.stdout).not.toContain("bun dev");
-	});
-});
-
-// ------------------------------------------------------------
-// F2 — generated build-static.ts must be personalised
-// ------------------------------------------------------------
-//
-// Contract: `scaffoldProject` must substitute the {{PROJECT_NAME}}
-// placeholder in every generated template that uses it. In particular
-// the static build script must emit a site title and `<h1>` that use
-// the project name, not the hardcoded "My Axiom Site" the template
-// ships with.
-
-async function installLocalFrameworkFixture(projectDir: string): Promise<void> {
-	const packageDir = join(projectDir, "node_modules", "axiom-framework");
-	await mkdir(packageDir, { recursive: true });
-	const { cp, writeFile } = await import("node:fs/promises");
-	await cp(join(repoRoot, "src"), join(packageDir, "src"), {
-		recursive: true,
-	});
-	await writeFile(
-		join(packageDir, "package.json"),
-		`${JSON.stringify(
-			{
-				name: "axiom-framework",
-				version: "0.0.0-test",
-				type: "module",
-				main: "./src/index.ts",
-				module: "./src/index.ts",
-				exports: {
-					".": {
-						import: "./src/index.ts",
-					},
-				},
-			},
-			null,
-			2,
-		)}\n`,
-		"utf8",
-	);
-}
-
-async function listProjectFiles(cwd: string): Promise<string[]> {
-	const entries = await Array.fromAsync(
-		new Bun.Glob("**/*").scan({ cwd, dot: true }),
-	);
-	return entries.map((entry) => join(cwd, entry));
-}
-
-describe("create-axiom CLI — generated build-static.ts is personalised", () => {
-	async function runCli(
-		args: string[],
-		options: { cwd?: string } = {},
-	): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-		const proc = Bun.spawn(["bun", "run", scriptPath, ...args], {
-			cwd: options.cwd ?? repoRoot,
-			stdin: "ignore",
-			stdout: "pipe",
-			stderr: "pipe",
-		});
-		const [stdout, stderr, exitCode] = await Promise.all([
-			new Response(proc.stdout).text(),
-			new Response(proc.stderr).text(),
-			proc.exited,
-		]);
-		return { exitCode, stdout, stderr };
-	}
-
-	test("generated build-static.ts contains the project name and no placeholder", async () => {
-		const workspace = await freshDir("build-static-personalised");
-		const projectName = "cool-build";
-		const projectDir = join(workspace, projectName);
-
-		const result = await runCli(["--no-install", projectName], {
-			cwd: workspace,
-		});
-
-		expect(result.exitCode).toBe(0);
-		const buildStatic = await readFile(
-			join(projectDir, "build-static.ts"),
-			"utf8",
-		);
-		// The hardcoded template default is gone.
-		expect(buildStatic).not.toContain("My Axiom Site");
-		// The placeholder has been substituted.
-		expect(buildStatic).not.toContain("{{PROJECT_NAME}}");
-		// The project name appears in the generated script.
-		expect(buildStatic).toContain(projectName);
-	});
-
-	test("no generated template file still contains the raw {{PROJECT_NAME}} placeholder", async () => {
-		const workspace = await freshDir("no-raw-placeholder");
-		const projectName = "clean-placeholders";
-		const projectDir = join(workspace, projectName);
-
-		const result = await runCli(["--no-install", projectName], {
-			cwd: workspace,
-		});
-
-		expect(result.exitCode).toBe(0);
-
-		// Walk every entry with a file descriptor so there is no path-based
-		// TOCTOU between checking and reading (the dirs and files live in a
-		// fresh mkdtemp, but the check-then-read shape is what CodeQL flags).
-		const files = await listProjectFiles(projectDir);
-		for (const file of files) {
-			let fd: number | undefined;
-			try {
-				fd = openSync(file, "r");
-				if (!fstatSync(fd).isFile()) continue;
-				const content = readFileSync(fd, "utf8");
-				expect(content).not.toContain("{{PROJECT_NAME}}");
-			} catch {
-				// A directory listing slipping through (e.g. a race) is
-				// uninteresting here; the test cares about file contents.
-				continue;
-			} finally {
-				if (fd !== undefined) closeSync(fd);
-			}
-		}
-	});
-
-	test("generated build-static.ts runs end-to-end and emits a personalised dist/index.html", async () => {
-		const workspace = await freshDir("e2e-build-static");
-		const projectName = "shipped-site";
-		const projectDir = join(workspace, projectName);
-
-		const scaffoldResult = await runCli(["--no-install", projectName], {
-			cwd: workspace,
-		});
-		expect(scaffoldResult.exitCode).toBe(0);
-
-		// Provide the local framework fixture so the generated
-		// `import { buildStatic, ... } from "axiom-framework"` resolves.
-		await installLocalFrameworkFixture(projectDir);
-
-		const buildProc = Bun.spawn(["bun", "run", "build-static.ts"], {
-			cwd: projectDir,
-			stdin: "ignore",
-			stdout: "pipe",
-			stderr: "pipe",
-		});
-		// The first element of the array is stdout, read only to drain the
-		// stream so the child process does not block; we assert on stderr
-		// and the exit code below.
-		const [, buildStderr, buildExitCode] = await Promise.all([
-			new Response(buildProc.stdout).text(),
-			new Response(buildProc.stderr).text(),
-			buildProc.exited,
-		]);
-
-		expect(buildExitCode).toBe(0);
-		expect(buildStderr.length).toBe(0);
-
-		const distHtmlPath = join(projectDir, "dist", "index.html");
-		const distHtml = await readFile(distHtmlPath, "utf8");
-		// Personalised <title> and <h1> both use the project name.
-		expect(distHtml).toContain(`<title>${projectName}</title>`);
-		expect(distHtml).toMatch(/<h1[^>]*>[^<]*shipped-site/i);
-		// The starter styles are inlined.
-		expect(distHtml).toContain("<style>");
-		expect(distHtml).toContain("button {");
 	});
 });

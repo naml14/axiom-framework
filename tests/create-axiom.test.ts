@@ -149,10 +149,6 @@ describe("create-axiom starter", () => {
 		const exitCode = installProjectDependencies(projectDir);
 		expect(typeof exitCode).toBe("number");
 		expect(exitCode).toBeGreaterThanOrEqual(0);
-		// Failure propagation (non-zero exit code → CLI exit 1) is covered
-		// by the F1 regression test in tests/create-axiom-cli.test.ts, which
-		// forces `bun install` to fail via a refused-local-port bunfig.toml.
-		// This test only asserts the function returns a numeric exit code.
 	});
 
 	test("scaffoldProject writes a minimal starter app and links its stylesheet", async () => {

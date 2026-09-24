@@ -22,7 +22,7 @@ const starterStyles = await readFile(
 const HomePage = defineComponent(() =>
 	stack(
 		{ gap: 12, padding: 20 },
-		h("h1", null, "{{PROJECT_NAME}}"),
+		h("h1", null, "My Axiom Site"),
 		h("p", null, "Static site generated with axiom-framework."),
 	),
 );
@@ -33,7 +33,7 @@ const result = await buildStatic({
 			path: "/",
 			component: HomePage,
 			metadata: {
-				title: "{{PROJECT_NAME}}",
+				title: "My Axiom Site",
 				description: "Built with axiom-framework",
 				inlineStyles: starterStyles,
 			},
