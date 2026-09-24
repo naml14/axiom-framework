@@ -4,9 +4,10 @@
 // create-axiom — scaffold a new axiom-framework project
 // ============================================================
 
-import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile, readdir, stat, lstat } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createInterface } from "node:readline/promises";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = join(__dirname, "templates");
@@ -106,16 +107,190 @@ Arguments:
                     Must start with a letter or digit.
 
 Options:
-  -f, --force       Overwrite files in an existing project directory
+  -f, --force       Overwrite template files in an existing project directory
       --no-install  Skip dependency installation (run 'bun install' yourself)
   -h, --help        Show this help and exit
   -v, --version     Print the framework version and exit
 
+When the target directory already exists and is not empty, the CLI asks
+for confirmation on a TTY. In non-interactive contexts (CI, pipes) it
+aborts with exit 1 unless --force is supplied.
+
 Examples:
   create-axiom my-app
   create-axiom my-app --no-install
-  create-axiom --force
+  create-axiom my-app --force
 `;
+
+// ============================================================
+// Destination directory guard (T2)
+// ============================================================
+
+export interface ResolveExistingDirectoryArgs {
+	projectDir: string;
+	force: boolean;
+	isTTY: boolean;
+	confirm: (prompt: string) => Promise<boolean>;
+}
+
+export type ResolveExistingDirectoryOutcome =
+	| { kind: "proceed"; reason: "absent" | "empty" | "forced" | "confirmed" }
+	| { kind: "cancel" }
+	| { kind: "error"; code: "not-a-directory" | "non-interactive-exists" | "unreadable" };
+
+export async function resolveExistingDirectory(
+	args: ResolveExistingDirectoryArgs,
+): Promise<ResolveExistingDirectoryOutcome> {
+	let exists = false;
+	let isDirectory = false;
+	let isEmpty = false;
+
+	// Use lstat so symlinks are classified without dereferencing them. A
+	// dangling symlink (one whose target does not exist) is an existing
+	// path that is not a directory, so it falls through to the
+	// "not-a-directory" error rather than to "absent". Only after we know
+	// the path is a directory (or a symlink that points at one) do we
+	// follow it with stat and readdir.
+	try {
+		const linkStats = await lstat(args.projectDir);
+		exists = true;
+		isDirectory = linkStats.isDirectory();
+		if (isDirectory) {
+			try {
+				const entries = await readdir(args.projectDir);
+				isEmpty = entries.length === 0;
+			} catch (err) {
+				const code = (err as NodeJS.ErrnoException | undefined)?.code;
+				if (code !== "ENOENT") {
+					// EACCES, EPERM, etc.: the directory exists but cannot be read.
+					// Return a structured error instead of letting the rejection
+					// surface as an uncaught stack trace in main().
+					return { kind: "error", code: "unreadable" };
+				}
+				// ENOENT after lstat reported exists: a race where the path was
+				// removed between calls. Treat as absent.
+				exists = false;
+				isDirectory = false;
+			}
+		} else if (linkStats.isSymbolicLink()) {
+			// A symlink is classified by its target, not by being a link
+			// itself. stat() follows it; if the target is missing the call
+			// returns ENOENT and we want the user to see "not a directory"
+			// (the symlink itself is the entry that exists).
+			try {
+				const targetStats = await stat(args.projectDir);
+				isDirectory = targetStats.isDirectory();
+				if (isDirectory) {
+					try {
+						const entries = await readdir(args.projectDir);
+						isEmpty = entries.length === 0;
+					} catch (err) {
+						const code = (err as NodeJS.ErrnoException | undefined)?.code;
+						if (code !== "ENOENT") {
+							return { kind: "error", code: "unreadable" };
+						}
+						exists = false;
+						isDirectory = false;
+					}
+				}
+			} catch (err) {
+				const code = (err as NodeJS.ErrnoException | undefined)?.code;
+				if (code === "ENOENT") {
+					// Dangling symlink: the link exists, the target does not.
+					// Surface as "not a directory" so the contract is honoured.
+					isDirectory = false;
+				} else {
+					return { kind: "error", code: "unreadable" };
+				}
+			}
+		}
+	} catch (err) {
+		const code = (err as NodeJS.ErrnoException | undefined)?.code;
+		if (code !== "ENOENT") {
+			// EACCES, EPERM, etc. on lstat itself: the parent likely does not
+			// grant us access. Return a structured error.
+			return { kind: "error", code: "unreadable" };
+		}
+		exists = false;
+	}
+
+	// Edge case: the path exists but is not a directory (e.g. a regular file).
+	if (exists && !isDirectory) {
+		return { kind: "error", code: "not-a-directory" };
+	}
+
+	// Case 1: path does not exist.
+	if (!exists) {
+		return { kind: "proceed", reason: "absent" };
+	}
+
+	// Case 2: path exists, is empty.
+	if (isEmpty) {
+		return { kind: "proceed", reason: "empty" };
+	}
+
+	// Case 3: --force was passed.
+	if (args.force) {
+		return { kind: "proceed", reason: "forced" };
+	}
+
+	// Case 5: non-interactive context without --force.
+	if (!args.isTTY) {
+		return { kind: "error", code: "non-interactive-exists" };
+	}
+
+	// Case 4: TTY prompt.
+	const confirmed = await args.confirm(
+		`  Directory "${args.projectDir}" already exists and is not empty.\n` +
+			`  Overwrite template files? [y/N] `,
+	);
+	if (confirmed) {
+		return { kind: "proceed", reason: "confirmed" };
+	}
+	return { kind: "cancel" };
+}
+
+async function ttyConfirm(
+	prompt: string,
+	input: NodeJS.ReadableStream = process.stdin,
+	output: NodeJS.WritableStream = process.stdout,
+): Promise<boolean> {
+	const rl = createInterface({
+		input,
+		output,
+	});
+	try {
+		return await new Promise<boolean>((resolve) => {
+			// Settle at most once: either the next 'line' wins, or 'close'
+			// (EOF/Ctrl+D/closed pipe) settles as `false`. Listening on
+			// 'line' directly avoids relying on `rl.question()`, which in
+			// Bun's readline fires 'close' before the question promise can
+			// resolve on buffered input, and which never settles at all on
+			// an empty input stream.
+			let settled = false;
+			const settle = (answer: boolean) => {
+				if (settled) {
+					return;
+				}
+				settled = true;
+				resolve(answer);
+			};
+			rl.once("line", (line) => {
+				const trimmed = line.trim().toLowerCase();
+				settle(trimmed === "y" || trimmed === "yes");
+			});
+			rl.once("close", () => settle(false));
+			// Write the prompt straight to the output so it does not mix
+			// with the user's input in the 'line' event payload.
+			output.write(prompt);
+		});
+	} finally {
+		// Close exactly once. Idempotent on an already-closed interface.
+		rl.close();
+	}
+}
+
+export { ttyConfirm };
 
 async function getCurrentFrameworkVersion(): Promise<string> {
 	const rootPackage = JSON.parse(
@@ -221,6 +396,45 @@ async function main(): Promise<void> {
 	}
 
 	const projectDir = join(process.cwd(), projectName);
+
+	const outcome = await resolveExistingDirectory({
+		projectDir,
+		force: options.force,
+		isTTY: Boolean(process.stdin.isTTY),
+		confirm: ttyConfirm,
+	});
+
+	if (outcome.kind === "error") {
+		if (outcome.code === "not-a-directory") {
+			console.error(
+				`  Error: "${projectDir}" exists but is not a directory.`,
+			);
+			console.error(
+				`  Remove or rename it, then re-run create-axiom.`,
+			);
+		} else if (outcome.code === "unreadable") {
+			console.error(
+				`  Error: cannot read "${projectDir}".`,
+			);
+			console.error(
+				`  Check its permissions (or the permissions of a parent ` +
+					`directory) and try again.`,
+			);
+		} else {
+			console.error(
+				`  Error: "${projectDir}" already exists and is not empty.`,
+			);
+			console.error(
+				`  Re-run with --force to overwrite template files, or remove it first.`,
+			);
+		}
+		process.exit(1);
+	}
+
+	if (outcome.kind === "cancel") {
+		console.log("  Cancelled. No files were written.");
+		process.exit(0);
+	}
 
 	console.log(`\n  Creating Axiom project: ${projectName}\n`);
 

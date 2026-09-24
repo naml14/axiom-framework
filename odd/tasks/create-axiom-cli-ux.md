@@ -109,7 +109,7 @@ Reglas de comportamiento:
 ## Tareas
 
 - [x] T1. Parser de flags + `--help` / `--version` / `--no-install`
-- [ ] T2. Guard de directorio destino (TTY / no-TTY / `--force` / directorio vacío)
+- [x] T2. Guard de directorio destino (TTY / no-TTY / `--force` / directorio vacío)
 - [ ] T3. Hardening de nombres + limpieza del placeholder del template
 - [ ] V1. Verificación completa (tests, typecheck, smoke end-to-end)
 
@@ -130,3 +130,93 @@ Reglas de comportamiento:
   versión real (antes solo `length > 0`) y se corrigió el comentario engañoso del caso
   `--`.
 - `--force` se parsea en T1 y se conecta en T2 (hasta entonces es un no-op aceptado).
+
+### T2 — Guard de directorio destino
+
+- RED antes de implementar: `bun test tests/create-axiom-cli.test.ts` →
+  `SyntaxError: Export named 'resolveExistingDirectory' not found in module 'scripts/create-axiom.ts'`.
+- GREEN: `bun test tests/create-axiom-cli.test.ts` → 51 pass / 0 fail / 151 expect() calls.
+- TRIANGULATE: casos borde del prompt (path presente en el texto, formato `[y/N]`,
+  respuesta vacía = cancel).
+- Sin regresión: `bun test tests/create-axiom.test.ts` → 11 pass / 0 fail (sin cambios).
+- `bun run typecheck` → limpio.
+- Diseño: `resolveExistingDirectory({ projectDir, force, isTTY, confirm })`
+  exportado y puro con respecto al terminal — `confirm` se inyecta desde `main()`
+  mediante `node:readline/promises` con `rl.close()` en `finally`. Los mensajes
+  viven en el caller, no en la función de decisión, así que los tests unitarios
+  no se acoplan al texto del prompt.
+- Cobertura por caso del contrato:
+  - Caso 1 (no existe) → `proceed/absent`, `confirm` nunca se llama.
+  - Caso 2 (vacío) → `proceed/empty`, `confirm` nunca se llama.
+  - Caso 3 (`--force`) → `proceed/forced`, `confirm` nunca se llama.
+  - Caso 4 (TTY) → `proceed/confirmed` si `confirm` devuelve `true`,
+    `cancel` en cualquier otra respuesta.
+  - Caso 5 (no TTY) → `error/non-interactive-exists`, `confirm` nunca se llama.
+  - Path que existe y no es directorio → `error/not-a-directory` siempre
+    (con o sin `--force`).
+- Tests de proceso via `Bun.spawn` con `stdin: "ignore"`:
+  - directorio no vacío sin TTY → exit 1, stderr nombra el directorio y `--force`,
+    archivo del usuario intacto, ningún archivo de template escrito;
+  - mismo directorio con `--force` → exit 0, archivo del usuario intacto,
+    templates scaffoldeados, sin `node_modules`;
+  - directorio vacío → exit 0 sin `--force`;
+  - path que es un archivo regular → exit 1 (con y sin `--force`).
+- README refinado: bloque "Quick Start (CLI)" menciona el prompt interactivo y
+  la salida en no-TTY; la línea de comandos de pie deja claro que `--force`
+  esquiva el prompt.
+
+### T2 — Defecto del prompt en EOF (parent review)
+
+- Hallazgo: `printf '' | bun scripts/create-axiom.ts` colgaba para siempre. La
+  causa era doble: (a) `rl.question()` no se exportaba ni era inyectable, y
+  (b) en el readline de Bun, sobre un stream no-TTY con EOF, el evento
+  `close` se dispara antes de que `rl.question()` se asiente, así que un
+  `Promise.race` ingenuo contra `close` también se rompe cuando hay datos
+  buffereados (`"y\n"` + EOF → `close` gana, `question` nunca settle).
+- RED: nuevo test `ttyConfirm > EOF on input resolves false instead of
+  hanging` → `Expected: false, Received: "TIMEOUT"` (1004 ms) antes del fix;
+  el `Promise.race` con `Bun.sleep(1000)` actúa como bounded guard.
+- GREEN tras el fix: el helper escucha `'line'` directamente y escribe el
+  prompt con `output.write(prompt)` en lugar de `rl.question(prompt)`. Asi:
+  - una línea buffereada se emite como `'line'` antes que `'close'`, así que
+    `"y\n"` + EOF resuelve `true`;
+  - EOF sin datos solo emite `'close'`, que resuelve `false`;
+  - el `finally { rl.close() }` cierra el interfaz exactamente una vez
+    (idempotente sobre un interfaz ya cerrado);
+  - el flag `settled` garantiza que solo uno de `'line'`/`'close'` gana.
+- API: `ttyConfirm(prompt, input = process.stdin, output = process.stdout)`
+  exportado. `main()` sigue pasándolo por referencia, así que los defaults
+  se aplican y el gate `Boolean(process.stdin.isTTY)` no cambia.
+- Tests añadidos en `tests/create-axiom-cli.test.ts` (todos bounded por
+  `Promise.race([..., Bun.sleep(1000)])`):
+  - `EOF on input resolves false instead of hanging`
+  - `'y' answer resolves true through injected streams`
+  - `'yes' answer resolves true (case-insensitive)`
+  - `'Y' (uppercase) answer resolves true`
+  - `'n' answer resolves false`
+  - `empty answer resolves false`
+  - `garbage answer resolves false`
+  - `prompt text is written to the output stream`
+- Resultado final: `bun test tests/create-axiom-cli.test.ts` → 59 pass /
+  0 fail / 159 expect() calls. `bun test tests/create-axiom.test.ts` →
+  11 pass / 0 fail. `bun run typecheck` limpio. La suite termina en
+  ~540 ms: el bounded guard evita que un regresión cuelgue el runner.
+
+### T2 — Verificación del parent (independiente de los tests del writer)
+
+- Sondas propias sobre `ttyConfirm` exportado, con streams `PassThrough`
+  inyectados (script fuera del repo): `y` / `yes` / `Y` → `true`;
+  `n` / respuesta vacía / `maybe` → `false`; EOF puro → `false` en **0.7 ms**
+  (antes: cuelgue hasta el timeout, exit 124); el prompt aparece en el stream
+  de salida; el proceso termina solo.
+- CLI real: directorio no vacío sin TTY → exit 1, stderr accionable, **cero
+  archivos escritos**; path que es archivo regular → exit 1; `--force` → exit 0
+  con `USERFILE.txt` del usuario intacto y templates escritos; directorio vacío
+  existente → exit 0 sin prompt.
+- Suites y typecheck reconfirmados por el parent: 59 + 11 pass, 0 fail.
+- Limitación conocida: el camino con **terminal real** no se pudo ejecutar en
+  este entorno (`winpty` falla con
+  `ASSERT_CONDITION("wp != nullptr && cols > 0 && rows > 0")` al no haber
+  consola). El mecanismo de readline, la lógica de decisión y el camino no-TTY
+  están cubiertos; el `Ctrl+D` sobre una terminal real queda como verificación
+  manual pendiente.
