@@ -48,8 +48,6 @@ bun dev
 
 This scaffolds a minimal interactive starter. Open `src/app.ts` first — that's where your app lives. For an advanced example, see [`demo/portal-demo.ts`](./demo/portal-demo.ts) which demonstrates `createPortal` with the idiomatic helper API.
 
-The CLI accepts `--help` (usage), `--version` (framework version), `--force` (overwrite an existing directory), and `--no-install` (skip `bun install`). Run `create-axiom --help` for the full contract.
-
 See [docs/COOKBOOK.md](./docs/COOKBOOK.md) for step-by-step recipes.
 
 Or set up manually:
@@ -605,7 +603,7 @@ bun run build            # emit dist/
 bun run demo:build       # build demo + static snapshot
 bun run demo             # SSR server at http://localhost:3000
 bun run build:static     # generate static site via buildStatic()
-bunx --package axiom-framework create-axiom my-app           # scaffold new project (try --help, --version, --no-install, --force)
+bunx --package axiom-framework create-axiom my-app  # scaffold new project
 ```
 
 Tests use [Bun's built-in test runner](https://bun.sh/docs/cli/test) and [Happy DOM](https://github.com/capricorn86/happy-dom) for DOM simulation. Coverage is gated at 85% line coverage (currently **96.5%**).
