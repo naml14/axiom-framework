@@ -4,7 +4,7 @@
 // create-axiom — scaffold a new axiom-framework project
 // ============================================================
 
-import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
+import { mkdir, writeFile, readFile, readdir, stat, lstat } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline/promises";
@@ -136,7 +136,7 @@ export interface ResolveExistingDirectoryArgs {
 export type ResolveExistingDirectoryOutcome =
 	| { kind: "proceed"; reason: "absent" | "empty" | "forced" | "confirmed" }
 	| { kind: "cancel" }
-	| { kind: "error"; code: "not-a-directory" | "non-interactive-exists" };
+	| { kind: "error"; code: "not-a-directory" | "non-interactive-exists" | "unreadable" };
 
 export async function resolveExistingDirectory(
 	args: ResolveExistingDirectoryArgs,
@@ -145,18 +145,71 @@ export async function resolveExistingDirectory(
 	let isDirectory = false;
 	let isEmpty = false;
 
+	// Use lstat so symlinks are classified without dereferencing them. A
+	// dangling symlink (one whose target does not exist) is an existing
+	// path that is not a directory, so it falls through to the
+	// "not-a-directory" error rather than to "absent". Only after we know
+	// the path is a directory (or a symlink that points at one) do we
+	// follow it with stat and readdir.
 	try {
-		const stats = await stat(args.projectDir);
+		const linkStats = await lstat(args.projectDir);
 		exists = true;
-		isDirectory = stats.isDirectory();
+		isDirectory = linkStats.isDirectory();
 		if (isDirectory) {
-			const entries = await readdir(args.projectDir);
-			isEmpty = entries.length === 0;
+			try {
+				const entries = await readdir(args.projectDir);
+				isEmpty = entries.length === 0;
+			} catch (err) {
+				const code = (err as NodeJS.ErrnoException | undefined)?.code;
+				if (code !== "ENOENT") {
+					// EACCES, EPERM, etc.: the directory exists but cannot be read.
+					// Return a structured error instead of letting the rejection
+					// surface as an uncaught stack trace in main().
+					return { kind: "error", code: "unreadable" };
+				}
+				// ENOENT after lstat reported exists: a race where the path was
+				// removed between calls. Treat as absent.
+				exists = false;
+				isDirectory = false;
+			}
+		} else if (linkStats.isSymbolicLink()) {
+			// A symlink is classified by its target, not by being a link
+			// itself. stat() follows it; if the target is missing the call
+			// returns ENOENT and we want the user to see "not a directory"
+			// (the symlink itself is the entry that exists).
+			try {
+				const targetStats = await stat(args.projectDir);
+				isDirectory = targetStats.isDirectory();
+				if (isDirectory) {
+					try {
+						const entries = await readdir(args.projectDir);
+						isEmpty = entries.length === 0;
+					} catch (err) {
+						const code = (err as NodeJS.ErrnoException | undefined)?.code;
+						if (code !== "ENOENT") {
+							return { kind: "error", code: "unreadable" };
+						}
+						exists = false;
+						isDirectory = false;
+					}
+				}
+			} catch (err) {
+				const code = (err as NodeJS.ErrnoException | undefined)?.code;
+				if (code === "ENOENT") {
+					// Dangling symlink: the link exists, the target does not.
+					// Surface as "not a directory" so the contract is honoured.
+					isDirectory = false;
+				} else {
+					return { kind: "error", code: "unreadable" };
+				}
+			}
 		}
 	} catch (err) {
 		const code = (err as NodeJS.ErrnoException | undefined)?.code;
 		if (code !== "ENOENT") {
-			throw err;
+			// EACCES, EPERM, etc. on lstat itself: the parent likely does not
+			// grant us access. Return a structured error.
+			return { kind: "error", code: "unreadable" };
 		}
 		exists = false;
 	}
@@ -358,6 +411,14 @@ async function main(): Promise<void> {
 			);
 			console.error(
 				`  Remove or rename it, then re-run create-axiom.`,
+			);
+		} else if (outcome.code === "unreadable") {
+			console.error(
+				`  Error: cannot read "${projectDir}".`,
+			);
+			console.error(
+				`  Check its permissions (or the permissions of a parent ` +
+					`directory) and try again.`,
 			);
 		} else {
 			console.error(

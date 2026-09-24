@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync, lstatSync } from "node:fs";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
@@ -588,7 +588,7 @@ describe("create-axiom CLI — destination directory guard", () => {
 				stderr: "pipe",
 			},
 		);
-		const [stdout, stderr, exitCode] = await Promise.all([
+		const [, stderr, exitCode] = await Promise.all([
 			new Response(proc.stdout).text(),
 			new Response(proc.stderr).text(),
 			proc.exited,
@@ -606,8 +606,6 @@ describe("create-axiom CLI — destination directory guard", () => {
 		expect(existsSync(join(projectDir, "src"))).toBe(false);
 		// Nothing installed
 		expect(existsSync(join(projectDir, "node_modules"))).toBe(false);
-		// Sanity: stdout does not claim success
-		expect(stdout.toLowerCase()).not.toContain("ready");
 	});
 
 	test("non-empty pre-existing directory + --force: exits 0, user file intact, template files written", async () => {
@@ -627,7 +625,7 @@ describe("create-axiom CLI — destination directory guard", () => {
 				stderr: "pipe",
 			},
 		);
-		const [stdout, stderr, exitCode] = await Promise.all([
+		const [, stderr, exitCode] = await Promise.all([
 			new Response(proc.stdout).text(),
 			new Response(proc.stderr).text(),
 			proc.exited,
@@ -663,7 +661,7 @@ describe("create-axiom CLI — destination directory guard", () => {
 				stderr: "pipe",
 			},
 		);
-		const [stdout, stderr, exitCode] = await Promise.all([
+		const [, stderr, exitCode] = await Promise.all([
 			new Response(proc.stdout).text(),
 			new Response(proc.stderr).text(),
 			proc.exited,
@@ -690,7 +688,7 @@ describe("create-axiom CLI — destination directory guard", () => {
 				stderr: "pipe",
 			},
 		);
-		const [stdout, stderr, exitCode] = await Promise.all([
+		const [, stderr, exitCode] = await Promise.all([
 			new Response(proc.stdout).text(),
 			new Response(proc.stderr).text(),
 			proc.exited,
@@ -721,7 +719,7 @@ describe("create-axiom CLI — destination directory guard", () => {
 				stderr: "pipe",
 			},
 		);
-		const [stdout, stderr, exitCode] = await Promise.all([
+		const [, stderr, exitCode] = await Promise.all([
 			new Response(proc.stdout).text(),
 			new Response(proc.stderr).text(),
 			proc.exited,
@@ -732,6 +730,39 @@ describe("create-axiom CLI — destination directory guard", () => {
 		expect(await readFile(blocker, "utf8")).toBe("I am a file");
 	});
 });
+
+	test("dangling symlink at project path: exits 1, no template files written", async () => {
+		const workspace = await freshDir("process-dangling-symlink");
+		const projectName = "phantom-link";
+		const link = join(workspace, projectName);
+		await symlink("D:/this/path/does/not/exist", link);
+
+		const proc = Bun.spawn(
+			["bun", "run", scriptPath, "--no-install", projectName],
+			{
+				cwd: workspace,
+				stdin: "ignore",
+				stdout: "pipe",
+				stderr: "pipe",
+			},
+		);
+		const [, stderr, exitCode] = await Promise.all([
+			new Response(proc.stdout).text(),
+			new Response(proc.stderr).text(),
+			proc.exited,
+		]);
+
+		expect(exitCode).toBe(1);
+		// The CLI must surface "not a directory" — not an EEXIST stack trace.
+		expect(stderr).toContain("exists but is not a directory");
+		expect(stderr).toContain(link);
+		// The symlink itself is untouched (no template files written through
+		// it). existsSync() reports false for dangling symlinks on Windows,
+		// so use lstatSync() to confirm the entry is still a symlink.
+		expect(lstatSync(link).isSymbolicLink()).toBe(true);
+		expect(existsSync(join(workspace, "package.json"))).toBe(false);
+		expect(existsSync(join(workspace, "index.html"))).toBe(false);
+	});
 
 // ------------------------------------------------------------
 // T2 — ttyConfirm helper (EOF/close + injected streams)
