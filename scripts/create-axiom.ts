@@ -14,6 +14,109 @@ const ROOT_PACKAGE_JSON_PATH = join(__dirname, "..", "package.json");
 
 const SAFE_NAME_RE = /^[a-z0-9][a-z0-9._-]*$/i;
 
+// ============================================================
+// CLI surface (parser + usage)
+// ============================================================
+
+export class UsageError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "UsageError";
+	}
+}
+
+export interface CliOptions {
+	projectName: string;
+	force: boolean;
+	install: boolean;
+	help: boolean;
+	version: boolean;
+}
+
+export function parseArgs(argv: string[]): CliOptions {
+	const options: CliOptions = {
+		projectName: "my-axiom-app",
+		force: false,
+		install: true,
+		help: false,
+		version: false,
+	};
+
+	const positionals: string[] = [];
+	let endedOptions = false;
+
+	for (const arg of argv) {
+		if (endedOptions) {
+			positionals.push(arg);
+			continue;
+		}
+
+		if (arg === "--") {
+			endedOptions = true;
+			continue;
+		}
+
+		if (arg === "--help" || arg === "-h") {
+			options.help = true;
+			continue;
+		}
+
+		if (arg === "--version" || arg === "-v") {
+			options.version = true;
+			continue;
+		}
+
+		if (arg === "--force" || arg === "-f") {
+			options.force = true;
+			continue;
+		}
+
+		if (arg === "--no-install") {
+			options.install = false;
+			continue;
+		}
+
+		if (arg.startsWith("-")) {
+			throw new UsageError(`Unknown option: ${arg}`);
+		}
+
+		positionals.push(arg);
+	}
+
+	if (positionals.length > 1) {
+		throw new UsageError(
+			`Expected at most one project name, got ${positionals.length}: ${positionals.join(", ")}`,
+		);
+	}
+
+	if (positionals.length === 1) {
+		options.projectName = positionals[0]!;
+	}
+
+	return options;
+}
+
+export const USAGE = `Usage: create-axiom [project-name] [options]
+
+  Scaffold a new axiom-framework project into a fresh directory.
+
+Arguments:
+  project-name      Directory to create (default: my-axiom-app).
+                    Allowed characters: ASCII letters, digits, dot, dash, underscore.
+                    Must start with a letter or digit.
+
+Options:
+  -f, --force       Overwrite files in an existing project directory
+      --no-install  Skip dependency installation (run 'bun install' yourself)
+  -h, --help        Show this help and exit
+  -v, --version     Print the framework version and exit
+
+Examples:
+  create-axiom my-app
+  create-axiom my-app --no-install
+  create-axiom --force
+`;
+
 async function getCurrentFrameworkVersion(): Promise<string> {
 	const rootPackage = JSON.parse(
 		await readFile(ROOT_PACKAGE_JSON_PATH, "utf8"),
@@ -88,8 +191,28 @@ export function installProjectDependencies(projectDir: string): number {
 // ============================================================
 
 async function main(): Promise<void> {
-	const args = process.argv.slice(2);
-	const projectName = args[0] || "my-axiom-app";
+	let options: CliOptions;
+	try {
+		options = parseArgs(process.argv.slice(2));
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		console.error(message);
+		console.error(`Run 'create-axiom --help' for usage information.`);
+		process.exit(1);
+	}
+
+	if (options.help) {
+		console.log(USAGE);
+		process.exit(0);
+	}
+
+	if (options.version) {
+		const version = await getCurrentFrameworkVersion();
+		console.log(version);
+		process.exit(0);
+	}
+
+	const projectName = options.projectName;
 
 	if (!SAFE_NAME_RE.test(projectName)) {
 		throw new Error(
@@ -103,15 +226,20 @@ async function main(): Promise<void> {
 
 	await scaffoldProject(projectDir, projectName);
 
-	console.log(`\n  Installing dependencies...`);
-	const exitCode = installProjectDependencies(projectDir);
+	if (options.install) {
+		console.log(`\n  Installing dependencies...`);
+		const exitCode = installProjectDependencies(projectDir);
 
-	if (exitCode !== 0) {
-		console.error(
-			`  Install failed. Run 'bun install' manually in ${projectDir}`,
-		);
+		if (exitCode !== 0) {
+			console.error(
+				`  Install failed. Run 'bun install' manually in ${projectDir}`,
+			);
+		} else {
+			console.log(`  Dependencies installed`);
+		}
 	} else {
-		console.log(`  Dependencies installed`);
+		console.log(`\n  Skipped dependency installation.`);
+		console.log(`  Run 'bun install' inside ${projectName} when you are ready.`);
 	}
 
 	console.log(`\n  Ready! Run:\n`);
