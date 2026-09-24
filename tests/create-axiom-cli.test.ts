@@ -10,6 +10,7 @@ import {
 	ttyConfirm,
 	USAGE,
 	UsageError,
+	validateProjectName,
 } from "../scripts/create-axiom.ts";
 
 const repoRoot = join(import.meta.dir, "..");
@@ -870,5 +871,324 @@ describe("ttyConfirm", () => {
 
 		const text = Buffer.concat(chunks).toString("utf8");
 		expect(text).toContain("the-prompt");
+	});
+});
+
+// ------------------------------------------------------------
+// T3 — validateProjectName + cleanup of template placeholder
+// ------------------------------------------------------------
+
+describe("validateProjectName", () => {
+	function expectRejection(
+		name: string,
+		fragment?: string,
+	): void {
+		try {
+			validateProjectName(name);
+		} catch (err) {
+			expect(err).toBeInstanceOf(UsageError);
+			const message = (err as Error).message;
+			expect(message).toContain(name);
+			if (fragment) {
+				expect(message.toLowerCase()).toContain(fragment.toLowerCase());
+			}
+			return;
+		}
+		throw new Error(
+			`Expected validateProjectName(${JSON.stringify(name)}) to throw`,
+		);
+	}
+
+	describe("accepts well-formed names", () => {
+		const accepted = ["my-app", "My_App", "app.v2", "a1", "my-app-2"];
+		for (const name of accepted) {
+			test(`accepts ${name}`, () => {
+				expect(() => validateProjectName(name)).not.toThrow();
+			});
+		}
+	});
+
+	describe("rejects names failing the existing SAFE_NAME_RE", () => {
+		test("rejects empty string", () => {
+			expectRejection("", "my-axiom-app");
+		});
+
+		test("rejects '..' (parent directory)", () => {
+			expectRejection("..");
+		});
+
+		test("rejects '.hidden' (starts with dot)", () => {
+			expectRejection(".hidden");
+		});
+
+		test("rejects '-leading' (starts with dash)", () => {
+			expectRejection("-leading");
+		});
+
+		test("rejects 'a/b' (slash)", () => {
+			expectRejection("a/b");
+		});
+
+		test(`rejects 'a\\\\b' (backslash)`, () => {
+			expectRejection("a\\b");
+		});
+
+		test("rejects '--help' (reachable through 'create-axiom -- --help')", () => {
+			expectRejection("--help");
+		});
+	});
+
+	describe("rejects Windows reserved device names", () => {
+		const reserved = [
+			"con",
+			"CON",
+			"prn",
+			"aux",
+			"nul",
+			"com1",
+			"com9",
+			"lpt1",
+			"lpt9",
+			"con.txt",
+			"nul.log",
+			"COM1",
+			"LPT9.doc",
+		];
+		for (const name of reserved) {
+			test(`rejects reserved name ${JSON.stringify(name)}`, () => {
+				expectRejection(name, "reserved");
+			});
+		}
+
+		test("non-reserved names that look similar still pass", () => {
+			expect(() => validateProjectName("console")).not.toThrow();
+			expect(() => validateProjectName("commodity")).not.toThrow();
+			expect(() => validateProjectName("connect")).not.toThrow();
+		});
+	});
+
+	describe("rejects names ending in a dot or space", () => {
+		test("rejects 'my-app.' (trailing dot)", () => {
+			expectRejection("my-app.", "trailing");
+		});
+
+		test("rejects 'app.' (bare trailing dot)", () => {
+			expectRejection("app.", "trailing");
+		});
+
+		test("rejects names with trailing space with the Windows-specific message", () => {
+			// The trailing-dot/space check runs before SAFE_NAME_RE so a trailing
+			// space produces the actionable "A trailing dot or space is invalid…"
+			// message instead of the generic "ASCII characters" one that the
+			// regex would produce on its own.
+			try {
+				validateProjectName("my-app ");
+			} catch (err) {
+				expect(err).toBeInstanceOf(UsageError);
+				expect((err as Error).message).toContain("my-app ");
+				expect((err as Error).message.toLowerCase()).toContain(
+					"trailing",
+				);
+				return;
+			}
+			throw new Error("Expected validateProjectName('my-app ') to throw");
+		});
+	});
+
+	describe("error messages are actionable", () => {
+		test("every rejection message includes a valid example", () => {
+			for (const name of ["con", "my-app.", "..", "-leading"]) {
+				try {
+					validateProjectName(name);
+					throw new Error(`Expected to throw for ${name}`);
+				} catch (err) {
+					expect((err as Error).message).toContain("my-axiom-app");
+				}
+			}
+		});
+
+		test("error message does not include the 'Failed to create project:' prefix", () => {
+			try {
+				validateProjectName("con");
+			} catch (err) {
+				expect((err as Error).message).not.toContain("Failed to create project");
+				return;
+			}
+			throw new Error("Expected to throw for con");
+		});
+	});
+});
+
+describe("create-axiom CLI — name validation + template cleanup", () => {
+	async function runCli(
+		args: string[],
+		options: { cwd?: string } = {},
+	): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+		const proc = Bun.spawn(["bun", "run", scriptPath, ...args], {
+			cwd: options.cwd ?? repoRoot,
+			stdin: "ignore",
+			stdout: "pipe",
+			stderr: "pipe",
+		});
+		const [stdout, stderr, exitCode] = await Promise.all([
+			new Response(proc.stdout).text(),
+			new Response(proc.stderr).text(),
+			proc.exited,
+		]);
+		return { exitCode, stdout, stderr };
+	}
+
+	async function listEntries(cwd: string): Promise<string[]> {
+		return Array.fromAsync(new Bun.Glob("*").scan({ cwd }));
+	}
+
+	test("--help still wins over an invalid project name (no error, no files written)", async () => {
+		const workspace = await freshDir("help-wins");
+
+		const result = await runCli(["--help", "con"], { cwd: workspace });
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stdout).toContain("Usage:");
+		expect(result.stderr.length).toBe(0);
+		const entries = await listEntries(workspace);
+		expect(entries.length).toBe(0);
+	});
+
+	test("--version still wins over an invalid project name", async () => {
+		const workspace = await freshDir("version-wins");
+		const rootPkg = JSON.parse(
+			await readFile(join(repoRoot, "package.json"), "utf8"),
+		) as { version: string };
+
+		const result = await runCli(["--version", "con"], { cwd: workspace });
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stdout.trim()).toBe(rootPkg.version);
+		const entries = await listEntries(workspace);
+		expect(entries.length).toBe(0);
+	});
+
+	test("'-- --help' treats --help as the project name and rejects it", async () => {
+		const workspace = await freshDir("dash-dash-help");
+		const before = await listEntries(workspace);
+
+		// The first `--` is consumed by `bun run` as the end of bun's options;
+		// the script itself receives argv = ["--", "--help"], so parseArgs
+		// turns `--help` into the project name and validateProjectName rejects
+		// it as a regex failure (starts with `-`).
+		const result = await runCli(["--", "--", "--help"], {
+			cwd: workspace,
+		});
+
+		expect(result.exitCode).toBe(1);
+		// No 'Failed to create project:' prefix — just the actionable message.
+		expect(result.stderr).not.toContain("Failed to create project");
+		expect(result.stderr).toContain("--help");
+		const after = await listEntries(workspace);
+		expect(after.length).toBe(before.length);
+	});
+
+	test("Windows reserved device name 'con' exits 1, writes nothing, mentions reason on stderr", async () => {
+		const workspace = await freshDir("reserved-con");
+		const before = await listEntries(workspace);
+
+		const result = await runCli(["--no-install", "con"], { cwd: workspace });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).not.toContain("Failed to create project");
+		expect(result.stderr).toContain("con");
+		// Reason must be visible
+		expect(result.stderr.toLowerCase()).toContain("reserved");
+		// A valid example is mentioned
+		expect(result.stderr).toContain("my-axiom-app");
+
+		const after = await listEntries(workspace);
+		expect(after.length).toBe(before.length);
+		expect(existsSync(join(workspace, "con"))).toBe(false);
+	});
+
+	test("trailing-dot name 'my-app.' exits 1 and writes nothing", async () => {
+		const workspace = await freshDir("trailing-dot");
+		const before = await listEntries(workspace);
+
+		const result = await runCli(["--no-install", "my-app."], {
+			cwd: workspace,
+		});
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).not.toContain("Failed to create project");
+		expect(result.stderr).toContain("my-app.");
+		// Mentions the reason (trailing dot/space)
+		expect(result.stderr.toLowerCase()).toMatch(/trailing|dot|space/);
+
+		const after = await listEntries(workspace);
+		expect(after.length).toBe(before.length);
+		expect(existsSync(join(workspace, "my-app."))).toBe(false);
+		expect(existsSync(join(workspace, "my-app"))).toBe(false);
+	});
+
+	test("a regex-invalid name exits 1 without 'Failed to create project:' prefix", async () => {
+		const workspace = await freshDir("regex-invalid");
+		const before = await listEntries(workspace);
+
+		const result = await runCli(["--no-install", ".."], { cwd: workspace });
+
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).not.toContain("Failed to create project");
+		expect(result.stderr).toContain("..");
+
+		const after = await listEntries(workspace);
+		expect(after.length).toBe(before.length);
+	});
+
+	test("valid name still exits 0 and scaffolds the project", async () => {
+		const workspace = await freshDir("valid-name");
+		const projectName = "happy-app";
+		const projectDir = join(workspace, projectName);
+
+		const result = await runCli(["--no-install", projectName], {
+			cwd: workspace,
+		});
+
+		expect(result.exitCode).toBe(0);
+		expect(existsSync(join(projectDir, "package.json"))).toBe(true);
+		expect(existsSync(join(projectDir, "index.html"))).toBe(true);
+		expect(existsSync(join(projectDir, "src", "app.ts"))).toBe(true);
+		expect(existsSync(join(projectDir, "node_modules"))).toBe(false);
+	});
+
+	test("generated package.json pins axiom-framework to the root version after removing the placeholder", async () => {
+		const workspace = await freshDir("pin-after-cleanup");
+		const projectName = "pinned-app";
+		const projectDir = join(workspace, projectName);
+
+		const result = await runCli(["--no-install", projectName], {
+			cwd: workspace,
+		});
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr.length).toBe(0);
+
+		const rootPkg = JSON.parse(
+			await readFile(join(repoRoot, "package.json"), "utf8"),
+		) as { version: string };
+		const generatedPkg = JSON.parse(
+			await readFile(join(projectDir, "package.json"), "utf8"),
+		) as { dependencies?: Record<string, string> };
+
+		// The exact root version is pinned.
+		expect(generatedPkg.dependencies?.["axiom-framework"]).toBe(rootPkg.version);
+
+		// No leftover placeholder literal anywhere.
+		expect(Object.values(generatedPkg.dependencies ?? {})).not.toContain(
+			"__AXIOM_FRAMEWORK_VERSION__",
+		);
+
+		// The generated dependencies object contains exactly axiom-framework
+		// (the template's `dependencies` block has no other entries after the
+		// placeholder is removed).
+		expect(Object.keys(generatedPkg.dependencies ?? {}).sort()).toEqual([
+			"axiom-framework",
+		]);
 	});
 });

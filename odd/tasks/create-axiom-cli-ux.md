@@ -110,7 +110,7 @@ Reglas de comportamiento:
 
 - [x] T1. Parser de flags + `--help` / `--version` / `--no-install`
 - [x] T2. Guard de directorio destino (TTY / no-TTY / `--force` / directorio vacío)
-- [ ] T3. Hardening de nombres + limpieza del placeholder del template
+- [x] T3. Hardening de nombres + limpieza del placeholder del template
 - [ ] V1. Verificación completa (tests, typecheck, smoke end-to-end)
 
 ## Evidencia
@@ -220,3 +220,83 @@ Reglas de comportamiento:
   consola). El mecanismo de readline, la lógica de decisión y el camino no-TTY
   están cubiertos; el `Ctrl+D` sobre una terminal real queda como verificación
   manual pendiente.
+
+### T3 — Hardening de nombres + limpieza del placeholder
+
+- RED antes de implementar: `bun test tests/create-axiom-cli.test.ts` →
+  `SyntaxError: Export named 'validateProjectName' not found in module 'scripts/create-axiom.ts'`.
+- GREEN: `bun test tests/create-axiom-cli.test.ts` → 98 pass / 0 fail / 274 expect()
+  calls (T1+T2 baseline: 59 pass / 159 expect(); T3 añade 39 tests / 115 expect()).
+- Sin regresión: `bun test tests/create-axiom.test.ts` → 11 pass / 0 fail (sin cambios).
+- `bun run typecheck` → limpio.
+- Cobertura por regla del contrato:
+  - **Regex existente (SAFE_NAME_RE)** — unit: vacío, `..`, `.hidden`, `-leading`,
+    `a/b`, `a\\b`, `--help`. Cada uno lanza `UsageError` y el mensaje nombra
+    el valor. Process: `..` → exit 1, sin prefijo `Failed to create project:`,
+    cero archivos en el workspace.
+  - **Nombres reservados de Windows** — unit (13 casos): `con`, `CON`, `prn`,
+    `aux`, `nul`, `com1`, `com9`, `lpt1`, `lpt9`, `con.txt`, `nul.log`,
+    `COM1`, `LPT9.doc`. El mensaje nombra el valor y dice "reserved".
+    Process: `con --no-install` → exit 1, stderr nombra `con` y dice "reserved",
+    cero archivos en el workspace.
+  - **No-reservados que parecen reservados** — unit: `console`, `commodity`,
+    `connect` pasan sin lanzar (protege contra sobre-rechazo por prefijo).
+  - **Punto o espacio al final** — unit: `my-app.`, `app.` son rechazados por el
+    chequeo dedicado y el mensaje dice "trailing" + "Windows strips". El caso
+    `my-app ` (con espacio) lo captura el regex existente antes — el chequeo
+    dedicado es defensivo y no rompe ese comportamiento. Process:
+    `my-app. --no-install` → exit 1, stderr nombra `my-app.` y la razón,
+    cero archivos en el workspace.
+  - **`--help` / `--version` ganando** — process: `create-axiom --help con`
+    → exit 0, imprime `USAGE`, cero archivos; `create-axiom --version con`
+    → exit 0, imprime la versión, cero archivos. El parser de T1 sigue
+    haciendo a `--help`/`--version` cortos-circuit antes del nombre.
+  - **`-- --help` rechazado como nombre** — process: `create-axiom -- -- --help`
+    → exit 1, stderr nombra `--help`, sin prefijo `Failed to create project:`,
+    cero archivos en el workspace. (El primer `--` lo consume `bun run`; el
+    script recibe `["--", "--help"]`, parseArgs pone `--help` como projectName,
+    y `validateProjectName` lo rechaza por SAFE_NAME_RE.)
+  - **Pin de versión post-limpieza** — process: `create-axiom --no-install pinned-app`
+    → exit 0; `package.json` generado tiene `dependencies.axiom-framework` con la
+    versión exacta de la raíz, `Object.values(dependencies)` no contiene
+    `__AXIOM_FRAMEWORK_VERSION__`, y `Object.keys(dependencies).sort()` es
+    `["axiom-framework"]` (el objeto queda con exactamente esa clave).
+  - **Nombre válido sigue funcionando** — process: `create-axiom --no-install happy-app`
+    → exit 0, scaffoldea `package.json` + `index.html` + `src/app.ts`, no crea
+    `node_modules` (porque `--no-install`).
+- Mensajes: cada rechazo nombra el valor, dice por qué (regex / reservado /
+  trailing) y muestra `my-axiom-app` como ejemplo válido. El `main()`
+  captura `UsageError` antes de tocar el filesystem y emite el mensaje tal
+  cual a stderr con `process.exit(1)`, así que el prefijo genérico
+  `Failed to create project:` nunca aparece para nombres inválidos (sigue
+  cubriendo errores inesperados en el `.catch` de más abajo).
+- `USAGE`: se añadió una sola línea en la descripción de `project-name`
+  (`Windows reserved device names (con, prn, aux, nul, com1-9, lpt1-9) are rejected.`).
+  Los 5 tests existentes de `USAGE string` siguen pasando sin cambios.
+- Sin cambios en el comportamiento ni la firma de `parseArgs`,
+  `resolveExistingDirectory`, `ttyConfirm`, `UsageError`, `scaffoldProject`,
+  `installProjectDependencies`, `TEMPLATE_FILES`, `getCurrentFrameworkVersion`.
+  Sin dependencias nuevas. Tablas, comillas dobles, retornos explícitos y
+  comentarios en inglés, igual que el resto del archivo.
+
+### T3 — Verificación del parent (independiente de los tests del writer)
+
+- Suites reconfirmadas por el parent: `bun test tests/create-axiom-cli.test.ts` →
+  98 pass / 0 fail / 274 expect(); `bun test tests/create-axiom.test.ts` → 11 pass /
+  0 fail; `bun run typecheck` limpio.
+- Rechazos ejecutando el CLI real: `con`, `CON`, `con.txt`, `nul.log`, `COM1`,
+  `lpt9`, `CON.TXT`, `nul.`, `my-app.`, `my-app `, `..`, `a/b` → exit 1, mensaje que
+  nombra el valor y explica la razón, sin prefijo `Failed to create project:`, y
+  **cero archivos escritos**. (`-lead` lo rechaza antes el parser de T1 como flag
+  desconocido, que es el comportamiento correcto.)
+- Anti-sobrerrechazo verificado: `com0`, `lpt0`, `com10`, `console`, `commodity`,
+  `auxiliary`, `nulll` → exit 0 y scaffoldean. Comprobar `com0`, `lpt0` y `com10` es
+  importante: no son nombres reservados en Windows, y un rechazo por prefijo los
+  habría roto.
+- Pin post-limpieza con el CLI real (`my-cool_app.v2 --no-install`): el
+  `package.json` generado tiene `dependencies` = `{ "axiom-framework": "0.9.13" }`
+  exactamente (igual a la versión de la raíz), `devDependencies` intactas, sin
+  `node_modules` y sin rastro del placeholder.
+- Nota de diseño: `name.endsWith(" ")` es defensivo. `SAFE_NAME_RE` ya rechaza
+  espacios, así que esa rama solo se activaría si el regex se relajara en el futuro;
+  el test correspondiente lo dice en su nombre.
