@@ -18,6 +18,11 @@ cuál es su siguiente acción concreta.
 - **R2 (CI sin jobs en ramas de release).** Cerrado 2026-10-16: no eran fallos de tests sino runs
   de PRs de bot que nunca arrancaron (aprobación pendiente o invalidados por force-push/borrado);
   GitHub los finaliza como `failure` sin jobs ni logs. Evidencia: `axiom-next-version.md` L4.
+- **D1, D2, D3 (layout del demo).** Cerrados 2026-10-16 en `feat/next-version-release-integrity`
+  (commit `653bba6`): el motor posee el layout en Syntax, Grid y hero-titles; probe de navegador
+  before/after en `.verify-tmp/evidence/t11-{before,after}.json`.
+- **D4 y D5.** Cerrados por decisión 2026-10-16 (desktop-first documentado; skips mantenidos con
+  la decisión en el mensaje), commit `8141b66`.
 - **demo-ui-polish T1-T6**, **hardening-docs-sync T1-T4**, **npm-oidc T1-T4**: entregados.
 - **Hardening Fases 0, 1 y 2**: entregadas (F2-T7 excluida, ver P2).
 
@@ -64,9 +69,10 @@ cuál es su siguiente acción concreta.
 | D1 | Tarjetas Syntax recortadas 10 px: `.syntax-panel > div:last-child { padding:10px }` da padding CSS al host de árboles Axiom | `release-0.9.14-verification.md` §5.1, `shots/zoom-syntax-h-v2.png` | Mover el padding al layout del motor (regla de `demo-ui-polish.md`) |
 | D2 | `.grid-demo-canvas` con `height: 160` y contenido de 196 px: 4 celdas absolutas fuera del root | §5.2, `shots/zoom-grid-mvp.png` | Ajustar height/filas del canvas en `ruta-b-showcase.ts` |
 | D3 | `h2.hero-title` de 26 px en filas de 20 px (router 404 y sección Portal) | §5.3 | Ajustar altura de fila o tipografía |
-| D4 | 14 px de overflow horizontal a 390 px por el canvas fijo de 800 px | §5.4, `shots/06-static-390.png` | Decidir: soporte móvil del demo o documentarlo como desktop-only |
-| D5 | 2 tests de `bind` con `select` saltados (limitación de happy-dom) | suite | Decidir runner alternativo o mock y reactivar los tests |
+| D4 | ~~14 px de overflow horizontal a 390 px por el canvas fijo de 800 px~~ **CERRADO 2026-10-16 (decisión)**: el demo es desktop-first (≥768 px) y el ancho del canvas lo dirige el slider por diseño; adaptación a viewports estrechos es non-goal documentado en `demo/style.css` | §5.4 | — |
+| D5 | ~~2 tests de `bind` con `select` saltados~~ **CERRADO 2026-10-16 (decisión)**: se mantienen saltados hasta upgrade del runner; la decisión vive en el mensaje de skip de `tests/forms.test.ts` | suite | — |
 | D6 | Cobertura floja: `h.dev.ts` 66.7 % líneas / 46.3 % ramas, `server.ts` 87.5 %, `ssr.ts` 91.7 % | coverage gate | Añadir tests de los caminos faltantes |
+| D7 | `#syntax-layout-root`: el host `.syntax-layout-preview` tiene borde CSS de 1 px y el motor escribe el height inline → scrollHeight 162 vs clientHeight 160 (delta 2); mismo patrón host-vs-motor que D2 | verificación T11 (2026-10-16) | Cambiar borde→outline o ajustar el height del árbol, con probe de navegador |
 
 ## P4 — Entrega, repo y programa v1.0
 

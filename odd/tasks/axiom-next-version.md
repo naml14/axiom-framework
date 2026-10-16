@@ -19,18 +19,18 @@ Cada una commiteada como slice revisable en rama de feature.»
 
 | ID | Spec | Trabajo | Ruta | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S2 | WU1.1 Guard de release notes: `scripts/validate-release-notes.ts` + job de CI en ramas de release-please que falla si una entrada del CHANGELOG del rango tiene un descendiente `Revert "<mismo subject>"`; tests con historial sintético | worker | pendiente |
-| T2 | S2 | WU1.2 `create-axiom`: exit 1 y sin bloque «Ready!» cuando `bun install` falla; test de exit code (issue #96 ítem 5) | worker | pendiente |
-| T3 | S2 | WU1.3 Root-cause de las corridas de CI/Security que fallan sin jobs en ramas de release (`73ecf14`, `21abff7`); fix del workflow o nota documentada con evidencia | inline | pendiente |
-| T4 | S2, S4 | WU2.1 Extender `tests/architecture/hot-path-dom-reads.test.ts` a `src/app.ts` con allowlist explícito justificado y aserción de que los reads permitidos no se llaman por frame (C-4, M-12) | worker | pendiente |
-| T5 | S2, S4 | WU2.2 Llamar `validateStyleProps` en dev dentro de `applyStyleToElement` + test con prop maliciosa (H-9) | worker | pendiente |
-| T6 | S2 | WU2.3 JSDoc con la allowlist de DOM reads de `commitHydrate` y demarcación en el test de enforcement (M-11) | worker | pendiente |
-| T7 | S2, S4 | WU3.1 Decisión S1: `data:` base64 en estilos inline SSR (soportar saneado o documentar política en SECURITY.md) | inline | pendiente |
-| T8 | S2, S4 | WU3.2 Decisión S2: `resetIndexCounter` (re-exportar, eliminar o aceptar etiqueta) coherente con `validate:api` | inline | pendiente |
-| T9 | S2, S4 | WU3.3 Destino de los 5 exports experimental + alineación de `docs/STABILITY.md` y `validate:api` | inline | pendiente |
-| T10 | S2, S4 | WU3.4 Refrescar `docs/history/V1-0-0-PLAN-TRAZABILIDAD.md` (columna PR en TBD, enlaces del EPIC #30, evidencia de octubre) y cerrar #30 con checklist go/no-go | inline | pendiente |
-| T11 | S2 | WU4.1 Demo: D1 padding CSS en hosts de árboles Syntax, D2 height del canvas Grid, D3 hero-titles de 26 px en filas de 20 px | worker | pendiente |
-| T12 | S2 | WU4.2 Reactivar los 2 skips de `bind` con `select` (D5) o documentar por qué siguen saltados; decisión D4 desktop-only documentada | inline | pendiente |
+| T1 | S2 | WU1.1 Guard de release notes: `scripts/validate-release-notes.ts` + job de CI en ramas de release-please que falla si una entrada del CHANGELOG del rango tiene un descendiente `Revert "<mismo subject>"`; tests con historial sintético | worker | `dd8ab70`, `49ddeef` |
+| T2 | S2 | WU1.2 `create-axiom`: exit 1 y sin bloque «Ready!» cuando `bun install` falla; test de exit code (issue #96 ítem 5) | worker | `2dc584c` |
+| T3 | S2 | WU1.3 Root-cause de las corridas de CI/Security que fallan sin jobs en ramas de release (`73ecf14`, `21abff7`); fix del workflow o nota documentada con evidencia | inline | `6e386ca` |
+| T4 | S2, S4 | WU2.1 Extender `tests/architecture/hot-path-dom-reads.test.ts` a `src/app.ts` con allowlist explícito justificado y aserción de que los reads permitidos no se llaman por frame (C-4, M-12) | worker | `1c9c9c0` |
+| T5 | S2, S4 | WU2.2 Llamar `validateStyleProps` en dev dentro de `applyStyleToElement` + test con prop maliciosa (H-9) | worker | `1b34ea3` |
+| T6 | S2 | WU2.3 JSDoc con la allowlist de DOM reads de `commitHydrate` y demarcación en el test de enforcement (M-11) | worker | `f8dbfb7` |
+| T7 | S2, S4 | WU3.1 Decisión S1: `data:` base64 en estilos inline SSR (soportar saneado o documentar política en SECURITY.md) | worker + verify | `fe6cfc9` |
+| T8 | S2, S4 | WU3.2 Decisión S2: `resetIndexCounter` (re-exportar, eliminar o aceptar etiqueta) coherente con `validate:api` | inline | `e42a7be` |
+| T9 | S2, S4 | WU3.3 Destino de los 5 exports experimental + alineación de `docs/STABILITY.md` y `validate:api` | inline | `ce42415` |
+| T10 | S2, S4 | WU3.4 Refrescar `docs/history/V1-0-0-PLAN-TRAZABILIDAD.md` (columna PR en TBD, enlaces del EPIC #30, evidencia de octubre) y cerrar #30 con checklist go/no-go | inline | `2823860` |
+| T11 | S2 | WU4.1 Demo: D1 padding CSS en hosts de árboles Syntax, D2 height del canvas Grid, D3 hero-titles de 26 px en filas de 20 px | worker | `653bba6` |
+| T12 | S2 | WU4.2 Reactivar los 2 skips de `bind` con `select` (D5) o documentar por qué siguen saltados; decisión D4 desktop-only documentada | inline | `8141b66` |
 
 Cada work unit (WU1..WU4) se commitea como slice revisable ≤400 líneas en la rama de feature,
 con tests y docs junto al comportamiento. WU1 va primero: 1.0.0 no se publica con el mecanismo
@@ -44,6 +44,14 @@ de release sin guard.
 - D1 (decisión): create-axiom v2 completo (#96 S1-S7) se difiere a 1.1.0 para no repetir el
   patrón merge-grande → CI-roja-en-release → revert; solo entra el exit code de install (T2).
 - D2 (decisión): la numeración (1.0.0 vs 0.10.0) se decide al cerrar WU3, no al abrir la feature.
+- L8 (evidencia T11, 2026-10-16): D1-D3 corregidos en `653bba6` con medidas de navegador
+  before/after (los 5 roots pasan de overflow/escape a 0/0/0; sin overflow horizontal en 1440 ni
+  768; capturas `fix-d1-*.png`, `fix-d2-*.png`, `fix-d3-*.png` y JSONs `t11-before/after.json` en
+  `.verify-tmp/evidence/`). Hallazgo nuevo preexistente D7 (`#syntax-layout-root`, borde CSS de
+  1 px en el host vs height inline del motor, delta 2) registrado en el backlog.
+- L9 (decisión T12, 2026-10-16): D4 se resuelve como demo desktop-first (≥768 px) documentado en
+  `demo/style.css`; D5 se resuelve manteniendo los skips con la decisión en el mensaje
+  (`8141b66`).
 - L4 (evidencia T3, 2026-10-16): root-cause de R2 cerrado. Las corridas `failure` sin jobs
   (`35946642479/539` sobre `73ecf14`, PR #118; `38952332592/518` sobre `21abff7`, PR #119) NO son
   fallos de tests: con token de repo devuelven 0 jobs, approvals vacíos, sin attempts y sin
