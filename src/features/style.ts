@@ -104,6 +104,42 @@ const SAFE_KEY_SET = new Set<string>(SAFE_STYLE_KEYS)
 // ---------------------------------------------------------------------------
 
 /**
+ * Dev-environment detection — same mechanism as src/app.ts, src/render/pool.ts
+ * and src/render/engines/scratch.ts: the `globalThis.__AXIOM_DEV__` override
+ * wins (true/false), otherwise NODE_ENV decides. Style validation is a safety
+ * net, so anything not explicitly `production` counts as dev.
+ */
+function isDevEnvironment(): boolean {
+  if (globalThis.__AXIOM_DEV__ === true) return true
+  if (globalThis.__AXIOM_DEV__ === false) return false
+
+  const nodeEnv = (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process?.env?.NODE_ENV
+  return nodeEnv !== 'production'
+}
+
+// Warn-once registry so a repeated offending prop does not spam the console.
+const warnedStyleKeys = new Set<string>()
+
+/**
+ * Dev-only per-prop check through validateStyleProps. Returns true when the
+ * prop is safe to apply; on rejection it warns once per prop name and returns
+ * false so the caller drops the prop.
+ */
+function isSafeStylePropDev(key: string, value: string): boolean {
+  try {
+    validateStyleProps({ [key]: value } as SafeStyleProps)
+    return true
+  } catch (err) {
+    if (!warnedStyleKeys.has(key)) {
+      warnedStyleKeys.add(key)
+      const reason = err instanceof Error ? err.message : String(err)
+      console.warn(`[axiom/style] dev: dropped style prop — ${reason}`)
+    }
+    return false
+  }
+}
+
+/**
  * Validates that all keys in the given object belong to the safe whitelist
  * and that no values are empty strings.
  *
@@ -217,14 +253,19 @@ export function resolveStyleTokens(
  * Write-only — never reads from el.style.
  * Only applies keys present in the given props object.
  *
- * Call validateStyleProps() before this if you want runtime key validation
- * (e.g., in development mode). In production, assume props are pre-validated.
+ * In dev builds (see isDevEnvironment) each prop is validated through
+ * validateStyleProps before being applied; unknown or unsafe props are
+ * dropped with a warn-once per prop name (H-9). In production builds props
+ * are assumed pre-validated: the validation branch is skipped entirely and
+ * application proceeds exactly as before.
  */
 export function applyStyleToElement(el: HTMLElement, props: SafeStyleProps): void {
+  const validate = isDevEnvironment()
   // Object.keys avoids Object.entries' per-call tuple array allocation.
   for (const key of Object.keys(props)) {
     const value = (props as Record<string, string | undefined>)[key]
     if (value !== undefined) {
+      if (validate && !isSafeStylePropDev(key, value)) continue
       // CSSStyleDeclaration supports index access by property name
       ;(el.style as unknown as Record<string, unknown>)[key] = value
     }

@@ -3,7 +3,7 @@
 // Fase 3: Ruta B
 // ============================================================
 
-import { describe, it, expect, beforeAll } from 'bun:test'
+import { describe, it, expect, beforeAll, afterEach, spyOn } from 'bun:test'
 import { Window } from 'happy-dom'
 import {
   validateStyleProps,
@@ -234,7 +234,81 @@ describe('applyStyleToElement', () => {
 })
 
 // ---------------------------------------------------------------------------
-// 5. Integration with ElementNode — style persists through pipeline
+// 5. Dev-mode whitelist enforcement in applyStyleToElement (H-9 / T5)
+// ---------------------------------------------------------------------------
+describe('applyStyleToElement — dev-mode whitelist enforcement (H-9)', () => {
+  const savedDevFlag = globalThis.__AXIOM_DEV__
+
+  afterEach(() => {
+    globalThis.__AXIOM_DEV__ = savedDevFlag
+  })
+
+  it('dev: drops unknown/unsafe props and still applies whitelisted ones', () => {
+    globalThis.__AXIOM_DEV__ = true
+    const warnSpy = spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const el = document.createElement('div')
+      const props = { color: 'red', evilPropA: 'javascript:alert(1)' } as unknown as SafeStyleProps
+      applyStyleToElement(el, props)
+      expect(el.style.color).toBe('red')
+      expect((el.style as unknown as Record<string, unknown>).evilPropA).toBeUndefined()
+      expect(el.style.cssText).not.toContain('evilPropA')
+      expect(el.style.cssText).not.toContain('javascript')
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+      expect(String(warnSpy.mock.calls[0]![0])).toContain('evilPropA')
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('dev: warns only once per offending prop name', () => {
+    globalThis.__AXIOM_DEV__ = true
+    const warnSpy = spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const el = document.createElement('div')
+      applyStyleToElement(el, { evilPropB: 'x' } as unknown as SafeStyleProps)
+      applyStyleToElement(el, { evilPropB: 'y' } as unknown as SafeStyleProps)
+      expect((el.style as unknown as Record<string, unknown>).evilPropB).toBeUndefined()
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('dev: valid whitelisted props still apply normally (preserve contract)', () => {
+    globalThis.__AXIOM_DEV__ = true
+    const warnSpy = spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const el = document.createElement('div')
+      applyStyleToElement(el, { color: 'red', fontSize: '16px', borderRadius: '4px' })
+      expect(el.style.color).toBe('red')
+      expect(el.style.fontSize).toBe('16px')
+      expect(el.style.borderRadius).toBe('4px')
+      expect(warnSpy).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('production: behavior unchanged — no validation overhead, no warnings', () => {
+    globalThis.__AXIOM_DEV__ = false
+    const warnSpy = spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const el = document.createElement('div')
+      const props = { color: 'red', evilPropC: 'javascript:alert(1)' } as unknown as SafeStyleProps
+      applyStyleToElement(el, props)
+      expect(el.style.color).toBe('red')
+      // Prod path assumes pre-validated props: raw assignment lands exactly as today.
+      expect((el.style as unknown as Record<string, unknown>).evilPropC).toBe('javascript:alert(1)')
+      expect(warnSpy).not.toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 6. Integration with ElementNode — style persists through pipeline
 // ---------------------------------------------------------------------------
 describe('Style integration — ElementNode to commit', () => {
   it('style: {} on type check — ElementNode accepts SafeStyleProps', () => {
