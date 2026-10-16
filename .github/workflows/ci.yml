@@ -33,3 +33,24 @@ jobs:
 
       - name: Build
         run: bun run build
+
+  release-notes:
+    name: Release notes guard
+    runs-on: ubuntu-latest
+    if: startsWith(github.head_ref, 'release-please') || startsWith(github.ref_name, 'release-please')
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          # The guard needs tags and full history to resolve the base..head range
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Validate release notes
+        run: bun run validate:release-notes

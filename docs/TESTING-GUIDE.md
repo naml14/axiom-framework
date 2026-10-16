@@ -622,3 +622,38 @@ test('onTransformConflict fires on post-hydration update', () => {
   app.unmount()
 })
 ```
+
+---
+
+## Release notes guard (CI)
+
+`scripts/validate-release-notes.ts` catches "phantom" CHANGELOG entries: entries whose linked
+commit was reverted inside the same release range (release-please does not understand
+`Revert "<subject>"` commits, so a release PR can otherwise announce features that are not in
+the tree — see PR #118 / 0.9.14).
+
+```bash
+bun run validate:release-notes                       # base = latest tag reachable from HEAD
+bun run scripts/validate-release-notes.ts --base <ref> --head <ref>
+```
+
+The script reads `CHANGELOG.md` at `<head>`, takes the newest `## [x.y.z]` section, and for every
+entry whose linked commit sha is inside `<base>..<head>` flags it as phantom when some commit
+`R` in the range with subject `Revert "..."` undoes it, by any of three rules: (1) the quoted
+subject matches the entry subject, including the release-please rendering `* **scope:** text`
+under `### Features` / `### Bug Fixes` reconstructed to its conventional form; (2) the entry sha
+is the first parent of `R`; (3) the entry sha is an ancestor of `R`'s first parent and the file
+sets of both diffs intersect (first-parent diffs, so merge-based reverts work; the intersection
+avoids flagging unrelated ancestors). It only runs read-only git commands; it never mutates the
+repository.
+
+Exit codes:
+
+- `0` — no phantom entries (also when there is no CHANGELOG version section to check yet).
+- `1` — at least one entry lists a commit that was reverted inside the range; each phantom entry
+  is printed with its subject, the commit sha, and the reverting sha.
+
+CI runs it in the `release-notes` job of `.github/workflows/ci.yml`, **only on release-please
+branches** (`release-please*` head/ref names); regular pushes and PRs skip it. Behavior is
+covered by `tests/release-notes-guard.test.ts`, which builds synthetic git repositories in a
+temp dir and never reads the real repository history.

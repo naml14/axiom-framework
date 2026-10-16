@@ -50,6 +50,7 @@
     "test": "bun test",
     "test:coverage": "bun run scripts/validate-coverage.ts",
     "validate:api": "bun run scripts/validate-api-stability.ts",
+    "validate:release-notes": "bun run scripts/validate-release-notes.ts",
     "prepublishOnly": "bun run typecheck && bun test && bun run build",
     "build:static": "bun run scripts/build-static.ts",
     "demo:build": "bun run demo/build.ts",
