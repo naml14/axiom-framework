@@ -202,3 +202,8 @@ En ambos casos, registrar los hallazgos del §5 como follow-ups (no bloquean la 
 - D5 (decisión): el cierre de PR #118 y el borrado de su rama se hicieron con el token de las
   credenciales git almacenadas (credential.helper=manager, scopes `gist, read:org, repo,
   workflow`), consumido por script sin imprimirlo; `gh` sigue sin sesión interactiva.
+- L5 (evidencia de ejecución, 2026-10-16): opción A completada. Comentario explicativo
+  publicado en PR #118 (HTTP 201), PR cerrado sin mergear (HTTP 200, `merged=false`), rama
+  remota `release-please--branches--main--components--axiom-framework` eliminada y 0 PRs
+  abiertos tras la operación. Este documento y la evidencia quedaron en `main` con el commit
+  `ce02063`.
