@@ -1,0 +1,477 @@
+{
+  "structural": {
+    "overflow": [
+      {
+        "root": "router-demo-root",
+        "tag": "h2",
+        "id": null,
+        "class": "hero-title",
+        "text": "Página no encontrada",
+        "delta": 6,
+        "clientH": 20,
+        "scrollH": 26,
+        "overflowY": "visible",
+        "height": "20px"
+      },
+      {
+        "root": "portal-demo-root",
+        "tag": "h2",
+        "id": null,
+        "class": "hero-title",
+        "text": "createPortal",
+        "delta": 6,
+        "clientH": 20,
+        "scrollH": 26,
+        "overflowY": "visible",
+        "height": "20px"
+      },
+      {
+        "root": "ruta-b-grid-root",
+        "tag": "div",
+        "id": null,
+        "class": "grid-demo-canvas",
+        "text": "Hero\n(rowSpan=2)ABWide\n(colSpan=2)CD",
+        "delta": 36,
+        "clientH": 160,
+        "scrollH": 196,
+        "overflowY": "visible",
+        "height": "160px"
+      }
+    ],
+    "escape": [
+      {
+        "root": "ruta-b-grid-root",
+        "tag": "div",
+        "id": null,
+        "class": "grid-cell accent-sky",
+        "text": "C",
+        "beyondRight": -202,
+        "beyondBottom": 27,
+        "position": "absolute",
+        "rect": [
+          25,
+          1468,
+          92,
+          60
+        ],
+        "rootRect": [
+          20,
+          1331,
+          299,
+          170
+        ]
+      },
+      {
+        "root": "ruta-b-grid-root",
+        "tag": "span",
+        "id": null,
+        "class": "grid-cell-label",
+        "text": "C",
+        "beyondRight": -202,
+        "beyondBottom": 11,
+        "position": "absolute",
+        "rect": [
+          37,
+          1496,
+          80,
+          16
+        ],
+        "rootRect": [
+          20,
+          1331,
+          299,
+          170
+        ]
+      },
+      {
+        "root": "ruta-b-grid-root",
+        "tag": "div",
+        "id": null,
+        "class": "grid-cell accent-teal",
+        "text": "D",
+        "beyondRight": -103,
+        "beyondBottom": 27,
+        "position": "absolute",
+        "rect": [
+          123,
+          1468,
+          92,
+          60
+        ],
+        "rootRect": [
+          20,
+          1331,
+          299,
+          170
+        ]
+      },
+      {
+        "root": "ruta-b-grid-root",
+        "tag": "span",
+        "id": null,
+        "class": "grid-cell-label",
+        "text": "D",
+        "beyondRight": -103,
+        "beyondBottom": 11,
+        "position": "absolute",
+        "rect": [
+          135,
+          1496,
+          80,
+          16
+        ],
+        "rootRect": [
+          20,
+          1331,
+          299,
+          170
+        ]
+      },
+      {
+        "root": "syntax-h-v2-root",
+        "tag": "div",
+        "id": null,
+        "class": "syntax-demo-item",
+        "text": "h() shorthandSame tree. Less noise.",
+        "beyondRight": 11,
+        "beyondBottom": 10,
+        "position": "absolute",
+        "rect": [
+          186,
+          2844,
+          143,
+          120
+        ],
+        "rootRect": [
+          176,
+          2834,
+          143,
+          120
+        ]
+      },
+      {
+        "root": "syntax-h-v2-root",
+        "tag": "div",
+        "id": null,
+        "class": "",
+        "text": "h() shorthand",
+        "beyondRight": 14,
+        "beyondBottom": -55,
+        "position": "absolute",
+        "rect": [
+          205,
+          2859,
+          127,
+          40
+        ],
+        "rootRect": [
+          176,
+          2834,
+          143,
+          120
+        ]
+      },
+      {
+        "root": "syntax-h-v2-root",
+        "tag": "div",
+        "id": null,
+        "class": "",
+        "text": "Same tree. Less noise.",
+        "beyondRight": 14,
+        "beyondBottom": 9,
+        "position": "absolute",
+        "rect": [
+          205,
+          2903,
+          127,
+          60
+        ],
+        "rootRect": [
+          176,
+          2834,
+          143,
+          120
+        ]
+      },
+      {
+        "root": "syntax-h-literal-root",
+        "tag": "div",
+        "id": null,
+        "class": "syntax-demo-item",
+        "text": "Literal APISame tree. More boilerplate.",
+        "beyondRight": 11,
+        "beyondBottom": 10,
+        "position": "absolute",
+        "rect": [
+          31,
+          2844,
+          143,
+          120
+        ],
+        "rootRect": [
+          21,
+          2834,
+          143,
+          120
+        ]
+      },
+      {
+        "root": "syntax-h-literal-root",
+        "tag": "div",
+        "id": null,
+        "class": "",
+        "text": "Literal API",
+        "beyondRight": 14,
+        "beyondBottom": -55,
+        "position": "absolute",
+        "rect": [
+          50,
+          2859,
+          127,
+          40
+        ],
+        "rootRect": [
+          21,
+          2834,
+          143,
+          120
+        ]
+      },
+      {
+        "root": "syntax-h-literal-root",
+        "tag": "div",
+        "id": null,
+        "class": "",
+        "text": "Same tree. More boilerplate.",
+        "beyondRight": 14,
+        "beyondBottom": 9,
+        "position": "absolute",
+        "rect": [
+          50,
+          2903,
+          127,
+          60
+        ],
+        "rootRect": [
+          21,
+          2834,
+          143,
+          120
+        ]
+      }
+    ]
+  },
+  "forms": {
+    "invalidCase": {
+      "invalidCount": 1,
+      "statuses": [
+        "form-status--valid:\"✓ valid\"",
+        "form-status--invalid:\"✗ Invalid email format\""
+      ],
+      "code": [
+        "username = \"ada_l\"",
+        "email = \"no-valido\""
+      ]
+    },
+    "validCase": {
+      "invalidCount": 0,
+      "validCount": 2,
+      "statuses": [
+        "form-status--valid:\"✓ valid\"",
+        "form-status--valid:\"✓ valid\""
+      ],
+      "code": [
+        "username = \"ada_lovelace\"",
+        "email = \"dev@axiom.local\""
+      ]
+    }
+  },
+  "mobile390": {
+    "viewportWidth": 390,
+    "scrollWidth": 404,
+    "overflowPx": 14,
+    "offenders": [
+      {
+        "tag": "main",
+        "id": null,
+        "class": "dashboard-main",
+        "right": 404,
+        "width": 64,
+        "overflowPx": 14,
+        "position": "static"
+      },
+      {
+        "tag": "div",
+        "id": "app",
+        "class": "",
+        "right": 1172,
+        "width": 800,
+        "overflowPx": 782,
+        "position": "relative"
+      },
+      {
+        "tag": "div",
+        "id": null,
+        "class": "app-canvas",
+        "right": 1172,
+        "width": 800,
+        "overflowPx": 782,
+        "position": "absolute"
+      },
+      {
+        "tag": "div",
+        "id": null,
+        "class": "tags-cloud",
+        "right": 1156,
+        "width": 768,
+        "overflowPx": 766,
+        "position": "absolute"
+      },
+      {
+        "tag": "span",
+        "id": null,
+        "class": "tag-bubble tag-violet",
+        "right": 483,
+        "width": 95,
+        "overflowPx": 93,
+        "position": "absolute"
+      },
+      {
+        "tag": "span",
+        "id": null,
+        "class": "tag-bubble tag-teal",
+        "right": 587,
+        "width": 100,
+        "overflowPx": 197,
+        "position": "absolute"
+      },
+      {
+        "tag": "span",
+        "id": null,
+        "class": "tag-bubble tag-amber",
+        "right": 639,
+        "width": 48,
+        "overflowPx": 249,
+        "position": "absolute"
+      },
+      {
+        "tag": "span",
+        "id": null,
+        "class": "tag-bubble tag-rose",
+        "right": 717,
+        "width": 74,
+        "overflowPx": 327,
+        "position": "absolute"
+      },
+      {
+        "tag": "span",
+        "id": null,
+        "class": "tag-bubble tag-sky",
+        "right": 788,
+        "width": 67,
+        "overflowPx": 398,
+        "position": "absolute"
+      },
+      {
+        "tag": "span",
+        "id": null,
+        "class": "tag-bubble tag-violet",
+        "right": 876,
+        "width": 84,
+        "overflowPx": 486,
+        "position": "absolute"
+      },
+      {
+        "tag": "span",
+        "id": null,
+        "class": "tag-bubble tag-teal",
+        "right": 960,
+        "width": 80,
+        "overflowPx": 570,
+        "position": "absolute"
+      },
+      {
+        "tag": "span",
+        "id": null,
+        "class": "tag-bubble tag-amber",
+        "right": 1018,
+        "width": 54,
+        "overflowPx": 628,
+        "position": "absolute"
+      },
+      {
+        "tag": "div",
+        "id": null,
+        "class": "card card-hero",
+        "right": 1156,
+        "width": 768,
+        "overflowPx": 766,
+        "position": "absolute"
+      },
+      {
+        "tag": "div",
+        "id": null,
+        "class": "hero-badge",
+        "right": 1147,
+        "width": 748,
+        "overflowPx": 757,
+        "position": "absolute"
+      },
+      {
+        "tag": "h2",
+        "id": null,
+        "class": "hero-title",
+        "right": 1147,
+        "width": 748,
+        "overflowPx": 757,
+        "position": "absolute"
+      },
+      {
+        "tag": "p",
+        "id": null,
+        "class": "hero-body",
+        "right": 1147,
+        "width": 748,
+        "overflowPx": 757,
+        "position": "absolute"
+      },
+      {
+        "tag": "div",
+        "id": null,
+        "class": "masonry-grid",
+        "right": 1156,
+        "width": 768,
+        "overflowPx": 766,
+        "position": "absolute"
+      },
+      {
+        "tag": "div",
+        "id": null,
+        "class": "masonry-col",
+        "right": 641,
+        "width": 253,
+        "overflowPx": 251,
+        "position": "absolute"
+      },
+      {
+        "tag": "article",
+        "id": null,
+        "class": "card accent-violet",
+        "right": 641,
+        "width": 253,
+        "overflowPx": 251,
+        "position": "absolute"
+      },
+      {
+        "tag": "h3",
+        "id": null,
+        "class": "card-title",
+        "right": 632,
+        "width": 233,
+        "overflowPx": 242,
+        "position": "absolute"
+      }
+    ],
+    "offenderCount": 90
+  }
+}

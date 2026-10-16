@@ -1,0 +1,284 @@
+{
+  "candidate": "PR #118 — axiom-framework 0.9.14 (head fe0e1be)",
+  "when": "2026-10-16T18:38:46.127Z",
+  "base": "http://localhost:3000",
+  "totals": {
+    "checks": 39,
+    "pass": 34,
+    "fail": 5
+  },
+  "failures": [
+    {
+      "group": "estructura",
+      "id": "invariantes iniciales /static.html",
+      "ok": false,
+      "detail": "overflow=3, solapamientos=0, fugas=10, overflowHorizontalDoc=0"
+    },
+    {
+      "group": "estructura",
+      "id": "invariantes tras todos los clicks",
+      "ok": false,
+      "detail": "overflow=3, solapamientos=0, fugas=10, overflowHorizontalDoc=0"
+    },
+    {
+      "group": "estructura",
+      "id": "invariantes tras sliders al maximo",
+      "ok": false,
+      "detail": "overflow=3, solapamientos=0, fugas=10, overflowHorizontalDoc=0"
+    },
+    {
+      "group": "interaccion",
+      "id": "formulario: invalido detectado y valido aceptado",
+      "ok": false,
+      "detail": "invalidoDetectado=true, sinEstadoInvalidoTrasCorreoValido=false, campos=2"
+    },
+    {
+      "group": "responsive",
+      "id": "/static.html a 390px sin overflow horizontal",
+      "ok": false,
+      "detail": "scrollWidth-clientWidth=14, fugas=10"
+    }
+  ],
+  "consoleMessages": [
+    "error: [Axiom:prepare] Component#b9f7d6c9 @ Component#b9f7d6c9 {context: Object, err: Error: DX probe: forced render error\n    at http://localhost:3000/app.js:1:61279\n    at http://loca…}  [durante paso de error esperado]",
+    "error: [Axiom:prepare] Component#a6f7f669 @ Component#a6f7f669 {context: Object, err: Error: v0.2.8 envelope: forced error in component render\n    at http://localhost:3000/app.js:4:995\n…}  [durante paso de error esperado]"
+  ],
+  "pageErrors": [],
+  "failedRequests": [],
+  "checks": [
+    {
+      "group": "http",
+      "id": "GET /",
+      "ok": true,
+      "detail": "status=200 (esperado 200), bytes=5528, contenido=ok, headersDeSeguridad=todos"
+    },
+    {
+      "group": "http",
+      "id": "GET /static.html",
+      "ok": true,
+      "detail": "status=200 (esperado 200), bytes=18555, contenido=ok, headersDeSeguridad=todos"
+    },
+    {
+      "group": "http",
+      "id": "GET /ssr?name=Dev&width=960&root=ssr-root",
+      "ok": true,
+      "detail": "status=200 (esperado 200), bytes=7197, contenido=ok, headersDeSeguridad=todos"
+    },
+    {
+      "group": "http",
+      "id": "GET /ssr?name=Dev&width=720&root=ssr-root",
+      "ok": true,
+      "detail": "status=200 (esperado 200), bytes=7197, contenido=ok, headersDeSeguridad=todos"
+    },
+    {
+      "group": "http",
+      "id": "GET /ssr-stream",
+      "ok": true,
+      "detail": "status=200 (esperado 200), bytes=5961, contenido=ok, headersDeSeguridad=todos"
+    },
+    {
+      "group": "http",
+      "id": "GET /style.css",
+      "ok": true,
+      "detail": "status=200 (esperado 200), bytes=23933, contenido=ok, headersDeSeguridad=todos"
+    },
+    {
+      "group": "http",
+      "id": "GET /app.js",
+      "ok": true,
+      "detail": "status=200 (esperado 200), bytes=87583, contenido=ok, headersDeSeguridad=todos"
+    },
+    {
+      "group": "http",
+      "id": "GET /does-not-exist",
+      "ok": true,
+      "detail": "status=404 (esperado 404), bytes=9, contenido=ok, headersDeSeguridad=todos"
+    },
+    {
+      "group": "http",
+      "id": "GET /ssr-stream es chunked",
+      "ok": true,
+      "detail": "transfer-encoding=chunked"
+    },
+    {
+      "group": "http",
+      "id": "OPTIONS /ssr Origin=http://localhost:3000",
+      "ok": true,
+      "detail": "status=204, access-control-allow-origin=http://localhost:3000"
+    },
+    {
+      "group": "http",
+      "id": "OPTIONS /ssr Origin=http://evil.example",
+      "ok": true,
+      "detail": "status=204, access-control-allow-origin=(ausente)"
+    },
+    {
+      "group": "http",
+      "id": "traversal /../package.json",
+      "ok": true,
+      "detail": "status=404, fuga=no"
+    },
+    {
+      "group": "http",
+      "id": "traversal /..%2fpackage.json",
+      "ok": true,
+      "detail": "status=404, fuga=no"
+    },
+    {
+      "group": "http",
+      "id": "traversal /%2e%2e/package.json",
+      "ok": true,
+      "detail": "status=404, fuga=no"
+    },
+    {
+      "group": "http",
+      "id": "traversal /../.env",
+      "ok": true,
+      "detail": "status=404, fuga=no"
+    },
+    {
+      "group": "estructura",
+      "id": "roots Axiom montados en /static.html",
+      "ok": true,
+      "detail": "11/11 con hijos: context-demo-root, forms-demo-root, router-demo-root, portal-demo-root, ruta-b-grid-root, syntax-flow-root, syntax-jsx-root, syntax-layout-root, syntax-h-v2-root, syntax-h-literal-root, syntax-events-root"
+    },
+    {
+      "group": "estructura",
+      "id": "invariantes iniciales /static.html",
+      "ok": false,
+      "detail": "overflow=3, solapamientos=0, fugas=10, overflowHorizontalDoc=0"
+    },
+    {
+      "group": "estructura",
+      "id": "botones de contador en filas de <=3",
+      "ok": true,
+      "detail": "[{\"id\":\"context-demo-root\",\"buttonsPerRow\":[1,3,3],\"total\":7},{\"id\":\"forms-demo-root\",\"buttonsPerRow\":[],\"total\":0}]"
+    },
+    {
+      "group": "interaccion",
+      "id": "click en 37 botones",
+      "ok": true,
+      "detail": "clickeados=37, fallos=0"
+    },
+    {
+      "group": "estructura",
+      "id": "invariantes tras todos los clicks",
+      "ok": false,
+      "detail": "overflow=3, solapamientos=0, fugas=10, overflowHorizontalDoc=0"
+    },
+    {
+      "group": "interaccion",
+      "id": "slider #width-slider reactivo",
+      "ok": true,
+      "detail": "valores leidos en #width-display: 474px / 926px / 1120px"
+    },
+    {
+      "group": "interaccion",
+      "id": "slider #items-slider reactivo",
+      "ok": true,
+      "detail": "valores leidos en #items-display: 5 / 20 / 60"
+    },
+    {
+      "group": "estructura",
+      "id": "invariantes tras sliders al maximo",
+      "ok": false,
+      "detail": "overflow=3, solapamientos=0, fugas=10, overflowHorizontalDoc=0"
+    },
+    {
+      "group": "interaccion",
+      "id": "router demo navega",
+      "ok": true,
+      "detail": "5 salidas distintas: router-nav-home={\n  \"path\": \"/\",\n  \"params\": {},\n  \"quer | router-nav-about={\n  \"path\": \"/about\",\n  \"params\": {},\n   | router-nav-users={\n  \"path\": \"/users\",\n  \"params\": {},\n   | router-nav-user-2={\n  \"path\": \"/users/2\",\n  \"params\": {\n   | router-nav-404={\n  \"path\": \"/this-route-does-not-exist\" | ro"
+    },
+    {
+      "group": "interaccion",
+      "id": "portal abre y cierra",
+      "ok": true,
+      "detail": "host=#portal-modal-root, dentro=true, 500x227; botonCerrar=true; modalDesmontado=true"
+    },
+    {
+      "group": "interaccion",
+      "id": "formulario: invalido detectado y valido aceptado",
+      "ok": false,
+      "detail": "invalidoDetectado=true, sinEstadoInvalidoTrasCorreoValido=false, campos=2"
+    },
+    {
+      "group": "responsive",
+      "id": "/static.html a 390px sin overflow horizontal",
+      "ok": false,
+      "detail": "scrollWidth-clientWidth=14, fugas=10"
+    },
+    {
+      "group": "responsive",
+      "id": "/static.html a 768px sin overflow horizontal",
+      "ok": true,
+      "detail": "scrollWidth-clientWidth=0, fugas=10"
+    },
+    {
+      "group": "responsive",
+      "id": "/static.html a 1440px sin overflow horizontal",
+      "ok": true,
+      "detail": "scrollWidth-clientWidth=0, fugas=10"
+    },
+    {
+      "group": "launcher",
+      "id": "links del launcher presentes",
+      "ok": true,
+      "detail": "launcher-ssr-link=/ssr?name=Dev&width=960&root=ssr-root | launcher-stream-link=/ssr-stream"
+    },
+    {
+      "group": "launcher",
+      "id": "click en #launcher-ssr-link navega a /ssr",
+      "ok": true,
+      "detail": "url final=http://localhost:3000/ssr?name=Dev&width=960&root=ssr-root"
+    },
+    {
+      "group": "ssr",
+      "id": "/ssr width=960: padding 24px, separaciones >=20px, centrado, marcadores de hidratacion",
+      "ok": true,
+      "detail": "padding=24px, gapArriba=25px, gapAbajo=25px, margenes=240/240, hijos=6, data-axiom-id=17, chip=2px 8px 2px 8px, h1=\"SSR Demo — Axiom renderToString()server rendered\""
+    },
+    {
+      "group": "ssr",
+      "id": "/ssr width=720: padding 24px, separaciones >=20px, centrado, marcadores de hidratacion",
+      "ok": true,
+      "detail": "padding=24px, gapArriba=25px, gapAbajo=25px, margenes=360/360, hijos=6, data-axiom-id=17, chip=2px 8px 2px 8px, h1=\"SSR Demo — Axiom renderToString()server rendered\""
+    },
+    {
+      "group": "ssr",
+      "id": "/ssr-stream: padding 24px, separaciones >=20px, centrado, marcadores de hidratacion",
+      "ok": true,
+      "detail": "padding=24px, gapArriba=25px, gapAbajo=25px, margenes=324/324, hijos=6, data-axiom-id=15, chip=2px 8px 2px 8px, h1=\"🌀 Streaming SSR Demostreamed\""
+    },
+    {
+      "group": "ssr",
+      "id": "SSR escapa un nombre hostil (XSS)",
+      "ok": true,
+      "detail": "status=200, htmlSinEscapar=no, aparece escapado=true"
+    },
+    {
+      "group": "ssr",
+      "id": "SSR hostil no inyecta nodos",
+      "ok": true,
+      "detail": "imagenes inyectadas en #ssr-root=0"
+    },
+    {
+      "group": "higiene",
+      "id": "sin errores de pagina",
+      "ok": true,
+      "detail": "pageErrors=0"
+    },
+    {
+      "group": "higiene",
+      "id": "sin errores/avisos inesperados en consola",
+      "ok": true,
+      "detail": "mensajes=2, inesperados=0"
+    },
+    {
+      "group": "higiene",
+      "id": "sin peticiones fallidas",
+      "ok": true,
+      "detail": "fallidas=0 (favicon 404 preexistente ignorado)"
+    }
+  ]
+}
