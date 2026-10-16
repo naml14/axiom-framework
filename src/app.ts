@@ -227,27 +227,47 @@ export function createApp(
   const scheduler = options?.scheduler
 
   /**
-   * Read the current container dimensions from the DOM.
+   * Cached layout constraints. Refreshed ONLY on mount and on window resize —
+   * never per update cycle. The `prepare -> reflow -> commit` hot path consumes
+   * these plain cached values, so signal-driven updates in steady state perform
+   * zero DOM reads (invariant S4, findings C-4/M-12).
+   */
+  let cachedConstraints: LayoutConstraints | null = null
+
+  /**
+   * Read the current container/viewport dimensions from the DOM and cache them.
    *
-   * This is the ONLY intentional DOM read in the framework.
-   * It runs once per update cycle (not per frame, not in the hot path)
-   * to establish the layout constraints before prepare/reflow begin.
+   * These are the ONLY intentional DOM reads in the framework. They run on
+   * mount and on window `resize`, not per frame and not per update cycle:
+   * 1. They happen BEFORE reflow() — they provide input, not feedback
+   * 2. The result is cached and passed as plain values into the pure
+   *    arithmetic pipeline of every subsequent cycle
+   * 3. SSR-safe: no `window` access when `typeof window === 'undefined'`
    *
-   * This read does NOT violate the zero-DOM-reads invariant because:
-   * 1. It happens BEFORE reflow() — it provides input, not feedback
-   * 2. It is a single read, not interleaved with writes
-   * 3. The result is passed as a plain value into the pure arithmetic pipeline
+   * Each read line carries the `// dom-read-allowlist:` marker enforced by
+   * tests/architecture/hot-path-dom-reads.test.ts, and the mount/resize-only
+   * claim is behaviorally enforced by
+   * tests/architecture/app-steady-state-dom-reads.test.ts.
+   */
+  function refreshConstraints(): LayoutConstraints {
+    const hasWindow = typeof window !== 'undefined'
+    const constraints: LayoutConstraints = {
+      maxWidth: root.clientWidth || 800, // dom-read-allowlist: cached; read only on mount and window resize, never per update cycle
+      maxHeight: root.clientHeight || 600, // dom-read-allowlist: cached; read only on mount and window resize, never per update cycle
+      viewportWidth: hasWindow ? window.innerWidth : undefined, // dom-read-allowlist: cached; SSR-safe window read only on mount and resize
+      viewportHeight: hasWindow ? window.innerHeight : undefined, // dom-read-allowlist: cached; SSR-safe window read only on mount and resize
+    }
+    cachedConstraints = constraints
+    return constraints
+  }
+
+  /**
+   * Return the cached layout constraints for this update cycle. Performs no
+   * DOM read in steady state; the fallback refresh only fires if constraints
+   * were never computed (e.g. getConstraints called before mount).
    */
   function getConstraints(): LayoutConstraints {
-    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : undefined
-    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : undefined
-
-    return {
-      maxWidth: root.clientWidth || 800,
-      maxHeight: root.clientHeight || 600,
-      viewportWidth,
-      viewportHeight,
-    }
+    return cachedConstraints ?? refreshConstraints()
   }
 
   function isSameTopology(a: PreparedComponent, b: PreparedComponent): boolean {
@@ -433,6 +453,19 @@ export function createApp(
       const cycle = ++state.profileCycle
       const cycleStart = performance.now()
 
+      // Read layout constraints once at mount and keep them fresh on resize
+      // only — update cycles consume the cache (zero DOM reads in steady state).
+      // The read feeds reflow, so failures are reported under the reflow phase.
+      try {
+        refreshConstraints()
+      } catch (err) {
+        reportError(err, resolveContextFromPrepared('reflow', cycle))
+        throw err
+      }
+      if (typeof window !== 'undefined') {
+        window.addEventListener('resize', refreshConstraints)
+      }
+
       // First render — synchronous, no rAF
       const t0 = performance.now()
       let prepared: PreparedComponent
@@ -510,6 +543,10 @@ export function createApp(
       const wasMounted = state.mounted
       state.stopEffect?.()
       cancelScheduled()
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', refreshConstraints)
+      }
+      cachedConstraints = null
       options?.router?.dispose?.()
       fireUnmountEvents(state.domState.domNodes)
       // Clear portal targets BEFORE wiping root — they live outside root DOM scope
