@@ -82,6 +82,49 @@ export function commitFull(
   fireMountEvents(state.domNodes)
 }
 
+/**
+ * Hydration commit: adopts existing server-rendered markup instead of building
+ * new DOM, verifying it against the prepared tree and repairing mismatches.
+ *
+ * ARCHITECTURAL EXCEPTION (M-11 / axiom-next-version T6) — DOM read allowlist.
+ * Hydration is the single place where the framework legitimately reads the
+ * DOM: every read below is a ONE-TIME read over server-rendered markup,
+ * performed during `commitHydrate` only. None of them runs in the per-frame
+ * hot path (`prepare -> reflow -> commit` via `applyOps`), so the invariant
+ * "hot path without DOM reads" (S4) holds.
+ *
+ * DOM reads performed directly in this function body (including the nested
+ * `hydrateNode` closure):
+ *
+ * - `root.getElementsByTagName('*')` — collect the server-rendered elements
+ *   once, to index them by their `data-axiom-id` hydration marker.
+ * - `element.getAttribute('data-axiom-id')` — read each hydration marker.
+ * - `parentEl.childNodes` (`.length` and indexed access) — locate the next
+ *   Text node per parent for text hydration.
+ * - `textNode.nodeValue` — compare server-rendered text against the prepared
+ *   tree (mismatch detection).
+ * - `domEl.tagName` — compare the server-rendered tag against the expected tag.
+ * - `domEl.textContent` — compare single-text-child content (mismatch
+ *   detection).
+ * - `domEl.children.length` — compare child element count (mismatch detection).
+ * - `target.isConnected` / `target.childNodes` — validate a portal target and
+ *   snapshot its existing children.
+ *
+ * Indirect reads via hydration-only helpers called from this function:
+ *
+ * - `mergeInlineStyle` → `getAttribute('style')` — merge user inline style
+ *   without wiping the framework layout resets.
+ * - `sanitizeHydratedElementAttrs` → `element.attributes` — XSS
+ *   re-sanitization of server-rendered attributes.
+ * - `applyFrameworkLayout` → `style.transform` / `style.getPropertyPriority`
+ *   — inline-style (CSSOM) reads for the transform-conflict hook; they force
+ *   no layout, and geometry always comes from `layout`, never from the DOM.
+ *
+ * Enforcement: `tests/architecture/hot-path-dom-reads.test.ts` demarcates this
+ * function by boundary (from the `function commitHydrate(` declaration to its
+ * matching closing brace) and skips ONLY that region; any of these read APIs
+ * elsewhere in the hot path still fails the architectural test.
+ */
 export function commitHydrate(
   layout: LayoutResult,
   prepared: PreparedComponent,
