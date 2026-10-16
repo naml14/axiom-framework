@@ -333,6 +333,171 @@ describe('SSR: bodyStyle sanitization', () => {
   })
 })
 
+// --- T7 (WU3.1, decisión S1): base64 media data URLs in SSR inline styles ---
+// Policy parity with sanitizeUrlValue() (src/core/attrs.ts): base64 data URLs
+// survive with the exact subtype set attrs.ts permits per top-level type —
+// image only as {png,jpeg,jpg,gif,webp,bmp,ico,avif,svg+xml}, audio/video any
+// subtype. Every other url(...) construct keeps being stripped.
+// The payload class excludes \s so unterminated inputs stay linear (ReDoS pin).
+describe('SSR: safe base64 data URLs in inline styles (T7 / S1)', () => {
+  function makeApp(attrs?: Record<string, string>) {
+    return defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      attrs,
+      children: [{ type: 'text' as const, content: 'test' }],
+    }))
+  }
+
+  test('inlineStyles preserves base64 media data URLs verbatim (png, svg+xml base64, audio)', async () => {
+    const css =
+      '.a{background-image:url(data:image/png;base64,iVBORw0KGgo=)}' +
+      '.b{background:url("data:image/svg+xml;base64,PHN2ZyB4bYxucz0i")}' +
+      ".c{background:url('data:audio/mpeg;base64,AAA=')}"
+
+    const html = await renderToString(makeApp(), {
+      metadata: { inlineStyles: css },
+    })
+
+    expect(html).toContain('url(data:image/png;base64,iVBORw0KGgo=)')
+    expect(html).toContain('url("data:image/svg+xml;base64,PHN2ZyB4bYxucz0i")')
+    expect(html).toContain("url('data:audio/mpeg;base64,AAA=')")
+    // Nothing dangerous in the input, so the <style> block must be byte-identical.
+    expect(html).toContain(`<style>${css}</style>`)
+  })
+
+  test('attrs.style (sanitizeCssProperty) preserves base64 image data URL', async () => {
+    const html = await renderToString(
+      makeApp({ style: 'background-image:url(data:image/png;base64,iVBORw0KGgo=)' })
+    )
+
+    expect(html).toContain('background-image:url(data:image/png;base64,iVBORw0KGgo=)')
+  })
+
+  test('bodyStyle preserves base64 video data URL', async () => {
+    const html = await renderToString(makeApp(), {
+      metadata: { bodyStyle: 'background:url(data:video/mp4;base64,AAAAIGZ0eXBpc29t)' },
+    })
+
+    expect(html).toContain('background:url(data:video/mp4;base64,AAAAIGZ0eXBpc29t)')
+  })
+
+  test('non-media, non-base64 and remote url() are still stripped', async () => {
+    // Remote https URL — url( token stripped (residual bare text is inert CSS)
+    const remote = await renderToString(makeApp(), {
+      metadata: { bodyStyle: 'background:url(https://evil.example/x.png)' },
+    })
+    expect(remote).not.toContain('url(')
+
+    // javascript: inside url()
+    const js = await renderToString(makeApp(), {
+      metadata: { bodyStyle: 'background:url(javascript:alert(1))' },
+    })
+    expect(js).not.toContain('url(')
+    expect(js).not.toContain('javascript:')
+
+    // data: with non-media type (text/html) — attrs.ts blocks these too
+    const textHtml = await renderToString(makeApp(), {
+      metadata: { bodyStyle: 'background:url(data:text/html;base64,PHA+)' },
+    })
+    expect(textHtml).not.toContain('url(')
+    expect(textHtml).not.toContain('url(data:text/html')
+
+    // Inline (non-base64) SVG data URL — XSS vector, blocked like attrs.ts
+    const inlineSvg = await renderToString(makeApp(), {
+      metadata: { bodyStyle: 'background:url(data:image/svg+xml,<svg onload=alert(1)>)' },
+    })
+    expect(inlineSvg).not.toContain('url(')
+  })
+
+  test('mixed value: safe data URL kept, remote url() stripped', async () => {
+    const html = await renderToString(makeApp(), {
+      metadata: {
+        inlineStyles: '.a{background:url(data:image/png;base64,AA) url(https://x);}',
+      },
+    })
+
+    expect(html).toContain('url(data:image/png;base64,AA)')
+    expect(html).not.toContain('url(https://x)')
+    // Exactly one live url( token survives — the preserved safe one.
+    expect((html.match(/\burl\s*\(/gi) ?? []).length).toBe(1)
+  })
+
+  test('collapse attack via ururl(...) neither extracts nor reconstructs a live url( token', async () => {
+    // `ururl(` has no word boundary before `url`, so the allowlist does NOT
+    // extract it; CSS tokenizes it as an inert FUNCTION token named `ururl`,
+    // never as `url(`. Assert at token level (same \b semantics as the
+    // sanitizer) that no live url( or javascript: survives.
+    const html = await renderToString(makeApp(), {
+      metadata: { bodyStyle: 'background:ururl(data:image/png;base64,AAA)l(' },
+    })
+
+    expect(html).not.toMatch(/(?:^|[^A-Za-z0-9_-])url\s*\(/i)
+    expect(html).not.toContain('javascript:')
+  })
+
+  test('loop-stable stripping neutralizes reconstruction into a live url(', async () => {
+    // Removing `javascript:` reconstructs `url(` — the loop-until-stable must
+    // strip the reconstruction even though extraction already ran.
+    const html = await renderToString(makeApp(), {
+      metadata: { bodyStyle: 'background:urjavascript:l(https://evil.example)' },
+    })
+
+    expect(html).not.toContain('url(')
+    expect(html).not.toContain('javascript:')
+  })
+
+  test('guessed placeholder text in user input never forges a restoration', async () => {
+    // The real placeholder is \x00 + per-call random hex nonce + index + \x00,
+    // so guessed shapes must pass through literally and never be replaced by
+    // the preserved URL of another match.
+    const guessed =
+      '\u0000axiom0\u0000;\u0000axiom-css-safe-url-0\u0000;\u0000axiom-css-safe-url-0000000000000000-0\u0000'
+    const html = await renderToString(makeApp(), {
+      metadata: {
+        bodyStyle: `background:url(data:image/png;base64,AAA=);color:${guessed}`,
+      },
+    })
+
+    // The one legitimate data URL survives exactly once…
+    expect((html.match(/url\(data:image\/png;base64,AAA=\)/g) ?? []).length).toBe(1)
+    // …the guessed placeholders stay literal (no forged restoration).
+    expect(html).toContain('\u0000axiom0\u0000')
+    expect(html).toContain('\u0000axiom-css-safe-url-0000000000000000-0\u0000')
+    // Only the preserved safe url( token exists in the output.
+    expect((html.match(/\burl\s*\(/gi) ?? []).length).toBe(1)
+  })
+
+  test('unterminated base64 url( with 200KB of spaces stays linear (<500ms) and inert', async () => {
+    // ReDoS pin: the payload class must not include \s, or it overlaps the
+    // trailing `\1\s*\)` and backtracks quadratically on an unterminated
+    // `url(data:image/png;base64,` + N spaces input (9.6s at 200KB before fix).
+    const payload = 'background:url(data:image/png;base64,' + ' '.repeat(200_000)
+    const start = performance.now()
+    const html = await renderToString(makeApp(), {
+      metadata: { bodyStyle: payload },
+    })
+    const elapsed = performance.now() - start
+
+    expect(elapsed).toBeLessThan(500)
+    // No live url( token survives — the unterminated data URL is stripped.
+    expect((html.match(/\burl\s*\(/gi) ?? []).length).toBe(0)
+  })
+
+  test('image subtypes outside the attrs.ts allowlist are stripped (parity pin)', async () => {
+    // attrs.ts (SAFE_DATA_URL_RE / SAFE_SVG_DATA_URL_RE) admits only
+    // png|jpeg|jpg|gif|webp|bmp|ico|avif and svg+xml (base64). SSR must not
+    // be looser: tiff, x-icon, APNG and svgxml (no +xml) must not survive.
+    const rejected = ['tiff', 'x-icon', 'APNG', 'svgxml']
+    for (const subtype of rejected) {
+      const html = await renderToString(makeApp(), {
+        metadata: { bodyStyle: `background:url(data:image/${subtype};base64,AAA=)` },
+      })
+      expect((html.match(/\burl\s*\(/gi) ?? []).length).toBe(0)
+    }
+  })
+})
+
 describe('SSR: stylesheet origin policy', () => {
   function makeApp() {
     return defineComponent(() => ({

@@ -70,7 +70,7 @@ Each environment has distinct attack surfaces documented below:
    - **Dangerous schemes** (`javascript:`, `vbscript:`, `file:`, and every other `data:` such as `data:text/html`, `data:application/javascript`, `data:text/css`, `data:text/plain`) are neutralized to `#blocked`.
    - **Anything else** (e.g. an unknown custom scheme) is left untouched: this ladder blocks known-dangerous schemes and allowlists media `data:` URLs, it is not a full scheme allowlist.
 
-   **SSR inline-style asymmetry**: `escapeStyleText()` (`src/ssr.ts`) removes every `url(...)`, `@import`, `expression(...)`, `behavior:` and `javascript:` occurrence from raw style text. A legitimate base64 image inside an SSR inline style is therefore dropped — reference such images through `attrs.src` or asset URLs instead of inline CSS.
+   **SSR inline-style parity**: `escapeStyleText()` (`src/ssr.ts`) removes every `url(...)`, `@import`, `expression(...)`, `behavior:` and `javascript:` occurrence from raw style text, with one allowlisted exception that mirrors the media `data:` policy above: a `url(...)` whose argument is a base64-encoded `data:image/{png,jpeg,jpg,gif,webp,bmp,ico,avif}`, `data:image/svg+xml`, `data:audio/*` or `data:video/*` URL — the exact subtype set attrs.ts permits per top-level type — is preserved verbatim. One residual difference: SSR styles require `;base64,` for *every* media type (SVG only as `data:image/svg+xml;base64,...`, never inline markup), while attrs.ts also accepts non-base64 media `data:` URLs; SSR is the stricter side. The base64 payload pattern admits only `[A-Za-z0-9+/=]` (no whitespace), which also keeps the allowlist match linear on unterminated `url(data:...;base64,` inputs. Allowlisted URLs are extracted behind an unforgeable per-call placeholder (control character + fresh random nonce) before the dangerous-pattern loop and restored after it, so collapse/reconstruction inputs (`ururl(...)l(`) and guessed placeholder text cannot forge a restoration. Every other `url(...)` — remote, `javascript:`, or non-media `data:` such as `data:text/html;base64,...` — keeps being stripped.
 4. **Value escaping**: In SSR, `escapeHtml()` escapes all attribute values.
 
 **Consumer responsibility**: While the framework blocks known dangerous patterns, always sanitize user input before using it in attributes:
@@ -106,9 +106,9 @@ createApp({ tag: 'button', on: { click: () => handleClick() } });
 
 ### Inline Styles Injection
 
-`SSRRenderOptions.metadata.inlineStyles` is rendered as-is inside a `<style>` block. Axiom calls `escapeStyleText()` to prevent premature `</style>` tag injection, but does **not** sanitize CSS property values.
+`SSRRenderOptions.metadata.inlineStyles` is rendered inside a `<style>` block after `escapeStyleText()` strips dangerous constructs: `</style`, `@import`, `expression(`, `behavior:`, `javascript:`, and every `url(...)` — except the allowlisted base64 media data URLs described under [XSS via Attributes](#xss-via-attributes) ("SSR inline-style parity"), which are inert opaque bytes and cannot issue network requests or run script.
 
-**Risk**: An attacker controlling `inlineStyles` content can inject CSS `url()` expressions to exfiltrate data.
+**Risk**: The residual attack surface for attacker-controlled `inlineStyles` is CSS selector-based exfiltration (e.g., attribute selectors that leak form values) and payload size — the framework does **not** sanitize CSS selectors or property values beyond the constructs above.
 
 **Consumer responsibility**: Sanitize all CSS before passing it to `renderToString`:
 
@@ -168,9 +168,9 @@ See also [Plugin Lifecycle Risks](#plugin-lifecycle-risks) for additional SSR co
 
 ### Inline CSS via bodyStyle
 
-`SSRRenderOptions.metadata.bodyStyle` is rendered as the `style` attribute on `<body>`. Axiom calls `escapeStyleText()` to prevent CSS-based attacks (same function used for `inlineStyles`).
+`SSRRenderOptions.metadata.bodyStyle` is rendered as the `style` attribute on `<body>`. Axiom calls `escapeStyleText()` to prevent CSS-based attacks (same function used for `inlineStyles`), then HTML-escapes the result.
 
-**Risk**: An attacker controlling `bodyStyle` can inject CSS `url()` expressions to exfiltrate data or `@import` external stylesheets.
+**Risk**: `url()` exfiltration and `@import` injection are stripped by the framework; only allowlisted base64 media data URLs survive (see "SSR inline-style parity" under [XSS via Attributes](#xss-via-attributes)). Selector-based exfiltration inside a caller-supplied `bodyStyle` remains the consumer's responsibility.
 
 **Consumer responsibility**: Sanitize all CSS before passing it to `renderToString`:
 

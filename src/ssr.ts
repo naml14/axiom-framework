@@ -227,7 +227,10 @@ function renderHead(metadata?: SSRMetadata): string {
  * Blocked constructs:
  *  - `</style`        — closes the raw-text element prematurely
  *  - `@import`        — loads attacker-controlled external sheets
- *  - `url(`           — fires HTTP requests (cookie exfil, tracking pixels)
+ *  - `url(`           — fires HTTP requests (cookie exfil, tracking pixels);
+ *                       allowlisted base64 media data URLs are extracted
+ *                       before the loop (see SAFE_CSS_DATA_URL_RE) so they
+ *                       never reach this pattern
  *  - `expression(`    — IE CSS expression execution
  *  - `behavior:`      — IE HTC behaviour binding
  *  - `javascript:`    — JS URI in CSS properties
@@ -242,7 +245,73 @@ const DANGEROUS_CSS_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
 ] as const
 
 /**
+ * Strict allowlist of `url(...)` values that survive {@link escapeStyleText}:
+ * base64-encoded media data URLs. Mirrors the `data:` policy of
+ * `sanitizeUrlValue()` in `src/core/attrs.ts` exactly per top-level type:
+ * image only as `SAFE_DATA_URL_RE`'s subtype allowlist plus `svg+xml`
+ * (`SAFE_SVG_DATA_URL_RE`), audio/video with any subtype — inline SVG markup
+ * stays blocked because `;base64,` is required here for every media type
+ * (attrs.ts also accepts non-base64 media data URLs; SSR styles are stricter).
+ *
+ * Clauses, in order:
+ *  - `\burl`                          — word boundary: a real `url` function
+ *                                       token, never the tail of a longer
+ *                                       identifier (e.g. `ururl(` is inert)
+ *  - `\s*\(\s*`                       — opening paren (CSS function syntax),
+ *                                       optional whitespace on either side
+ *  - `(['"]?)`                        — optional single/double quote, captured
+ *                                       so `\1` forces a matching close quote
+ *  - `data:(?:image\/…|(?:audio|video)\/…)`
+ *                                     — media types only; `data:text/html`,
+ *                                       `data:application/javascript`, etc.
+ *                                       never match (same deny as attrs.ts)
+ *  - image subtypes                   — exact attrs.ts allowlist: `png`,
+ *                                       `jpe?g`, `gif`, `webp`, `bmp`, `ico`,
+ *                                       `avif` (SAFE_DATA_URL_RE) and
+ *                                       `svg+xml` (SAFE_SVG_DATA_URL_RE);
+ *                                       `tiff`, `x-icon`, `APNG`, `svgxml`, …
+ *                                       never match. audio/video keep any
+ *                                       subtype (`[A-Za-z0-9.+-]+`), exactly
+ *                                       what attrs.ts permits for them
+ *  - `;base64,`                       — literal; only opaque base64 payloads,
+ *                                       so inline SVG markup (no `;base64,`)
+ *                                       is blocked
+ *  - `[A-Za-z0-9+\/=]*`               — base64 alphabet only; unquoted and
+ *                                       quoted CSS url() base64 payloads carry
+ *                                       no whitespace, so `\s` is deliberately
+ *                                       omitted: including it would overlap
+ *                                       the trailing `\1\s*\)` and make an
+ *                                       unterminated `url(data:…;base64,` +
+ *                                       N spaces input backtrack
+ *                                       quadratically. The omission is what
+ *                                       keeps this match linear. `)`, quotes
+ *                                       and any URL/scheme characters still
+ *                                       terminate the match
+ *  - `\1\s*\)`                        — matching close quote, optional
+ *                                       whitespace, closing paren
+ */
+const SAFE_CSS_DATA_URL_RE =
+  /\burl\s*\(\s*(['"]?)data:(?:image\/(?:png|jpe?g|gif|webp|bmp|ico|avif|svg\+xml)|(?:audio|video)\/[A-Za-z0-9.+-]+);base64,[A-Za-z0-9+\/=]*\1\s*\)/gi
+
+/** Per-call unforgeable nonce (16 hex chars) used in preservation placeholders. */
+function randomHexNonce(): string {
+  const bytes = new Uint8Array(8)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
  * Strips dangerous CSS constructs from raw style text.
+ *
+ * Allowlisted base64 media data URLs (see {@link SAFE_CSS_DATA_URL_RE}) are
+ * extracted first and swapped back in verbatim after sanitization, so a
+ * legitimate `background-image: url("data:image/png;base64,…")` survives.
+ * Each match is replaced with an unforgeable per-call placeholder — a NUL
+ * control character plus a fresh random hex nonce plus the match index — so
+ * user input can neither guess a placeholder nor smuggle one through the
+ * dangerous-pattern loop. The placeholder matches none of the dangerous
+ * patterns (no `url(`, no `javascript:`, …), and restoration happens strictly
+ * after the loop, never inside it.
  *
  * The patterns are applied repeatedly until the string stabilizes. A single
  * pass is not enough because removing an inner match can reconstruct a
@@ -251,7 +320,16 @@ const DANGEROUS_CSS_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
  * collapses to `url(`. Looping until no further change closes that bypass.
  */
 function escapeStyleText(value: string): string {
-  let css = value
+  // 1. Extract allowlisted safe data URLs behind unforgeable placeholders.
+  const nonce = randomHexNonce()
+  const preserved: string[] = []
+  let css = value.replace(SAFE_CSS_DATA_URL_RE, match => {
+    const index = preserved.length
+    preserved.push(match)
+    return `\u0000axiom-css-safe-url-${nonce}-${index}\u0000`
+  })
+
+  // 2. Strip dangerous constructs, looping until stable.
   let prev: string
   do {
     prev = css
@@ -260,12 +338,20 @@ function escapeStyleText(value: string): string {
       prev,
     )
   } while (css !== prev)
+
+  // 3. Restore the preserved URLs verbatim (split/join avoids `$` semantics).
+  for (let i = 0; i < preserved.length; i++) {
+    css = css.split(`\u0000axiom-css-safe-url-${nonce}-${i}\u0000`).join(preserved[i]!)
+  }
   return css
 }
 
 /**
  * Sanitizes a single CSS property value string.
  * Strips any construct that could load external resources or run scripts.
+ * Allowlisted base64 media data URLs (`url(data:image|audio|video/…;base64,…)`,
+ * SVG only as base64) are preserved — same policy as `escapeStyleText` and
+ * parity with the `data:` allowlist in `sanitizeUrlValue()` (attrs.ts).
  * Use this when building individual CSS declarations programmatically.
  */
 function sanitizeCssProperty(value: string): string {
