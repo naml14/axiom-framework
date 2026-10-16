@@ -162,6 +162,23 @@ For v1.0.0 kickoff, untagged public exports are treated as stable since v1.0.0.
 | AxiomServer | ./server |
 | AxiomServerOptions | ./server |
 
+### Promotion policy (1.0 decision, 2026-10-16)
+
+The five experimental surfaces (streaming SSR and the built-in server) ship
+**as experimental in 1.0.0**: they are young APIs whose contracts may still
+need to move, and freezing them as stable would extend SemVer guarantees the
+project cannot yet honor. Experimental exports may change in minor versions
+and are excluded from the stability guarantees above.
+
+Promotion to stable requires, per export:
+
+1. One full minor-release cycle without a breaking change to that export.
+2. A documented contract (this file) plus tests covering its public behavior.
+3. An evidence entry in the release notes of the version that promotes it.
+
+`bun run validate:api` enforces that every public export keeps an explicit
+tag, so an untagged or silently promoted export fails CI.
+
 ## Enforcement
 
 - Run: bun run validate:api

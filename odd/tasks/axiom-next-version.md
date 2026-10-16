@@ -54,3 +54,14 @@ de release sin guard.
   (force-push de release-please o borrado), y GitHub los finaliza como `failure` sin jobs ni
   logs. Mitigación de proceso: aprobar los runs después de que la rama estabilice y leer el
   resultado real antes de mergear; el guard de T1 cubre la otra mitad del riesgo.
+- L5 (decisión T7, 2026-10-16): S1 se resuelve soportando `url(data:…)` base64 de medios en
+  estilos inline SSR con paridad exacta de attrs.ts (subtipos de imagen png/jpeg/jpg/gif/webp/
+  bmp/ico/avif/svg+xml; audio/video cualquier subtipo; `;base64,` obligatorio). Verificación
+  independiente de seguridad: pass-with-findings; los 2 findings (ReDoS cuadrático por `\s` en
+  la clase payload y paridad de subtipos) quedaron corregidos y pineados con tests.
+- L6 (decisión T8, 2026-10-16): S2 se resuelve eliminando `resetIndexCounter` (no-op que nunca
+  estuvo en el contrato público); sus 7 usos de tests se retiraron.
+- L7 (decisión T9, 2026-10-16): los 5 exports experimental (streaming SSR y createServer) se
+  mantienen experimental en 1.0.0; `docs/STABILITY.md` documenta la política de promoción
+  (un ciclo minor sin breaking changes + contrato documentado + tests + evidencia en release
+  notes; validate:api enforcea el tagging).
