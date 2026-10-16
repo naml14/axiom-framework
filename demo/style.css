@@ -659,7 +659,11 @@ Portal Modal — Rendered by portal into #portal-modal-root
   width: 100%;
   min-height: 170px;
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  /* outline en vez de border: el motor escribe `height: <alto del árbol>`
+     inline en el host (commit.ts); con box-sizing:border-box un border de
+     1px dejaría clientHeight 2px por debajo del canvas y volvería a haber
+     scroll interno. outline da la misma línea visual sin coste de layout. */
+  outline: 1px solid var(--border);
   border-radius: var(--radius-md);
   margin-bottom: 8px;
   overflow: hidden;
@@ -827,8 +831,12 @@ Portal Modal — Rendered by portal into #portal-modal-root
   color: var(--accent-violet);
 }
 
+/* Host de un árbol Axiom: sin padding CSS (el motor posiciona al hijo
+   absoluto en el padding box y lo dimensiona al border-box del host →
+   la tarjeta quedaba recortada 10px, D1). El inset de 10px lo declara
+   el árbol montado con la prop `padding` del motor (syntax-showcase.ts),
+   según las reglas de demo-ui-polish.md. */
 .syntax-panel > div:last-child {
-  padding: 10px;
   min-height: 56px;
 }
 
@@ -886,11 +894,14 @@ Portal Modal — Rendered by portal into #portal-modal-root
 
 /* ---- Syntax demo card items (used inside Axiom trees) ---- */
 
+/* Sin padding CSS: este item vive dentro de árboles del motor, donde el
+   padding desplaza a los hijos absolutos sin reducir su ancho calculado
+   (regla 2 de demo-ui-polish.md). El inset lo declara cada nodo con la
+   prop `padding` del engine layout. */
 .syntax-demo-item {
   background: var(--surface-3);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 6px 10px;
   font-size: 11.5px;
   color: var(--text-muted);
 }

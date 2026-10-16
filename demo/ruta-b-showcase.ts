@@ -64,7 +64,11 @@ function initGridDemo(): void {
         gap: 6,
         rowGap: 6,
         columnGap: 6,
-        height: 160,
+        // Altura declarada >= contenido medido: 3 filas × 60 (altura de celda)
+        // + 2 rowGaps × 6 + 2 × padding 4 = 200. Con la altura anterior (160)
+        // las celdas C/D pintaban 27px fuera del root (scrollHeight 196 vs
+        // clientHeight 160 — evidence release-0.9.14 diagnostic.json, D2).
+        height: 200,
         padding: 4,
       },
       children: cells.map((cell) => ({

@@ -8,6 +8,13 @@ import { signal, defineComponent, createPortal, createApp, h, stack } from '../s
 
 const isModalOpen = signal(false)
 
+// Altura de fila para el h2.hero-title dentro del árbol del motor:
+// `.hero-title` renderiza 20px × 1.3 = 26px de texto; la fila por defecto
+// (lineHeight 20) lo recortaba (scrollHeight 26 vs clientHeight 20 —
+// evidence release-0.9.14 diagnostic.json, D3). La prop `height` se honra
+// porque el padre es un stack flex (regla 3 de demo-ui-polish.md).
+const HERO_TITLE_HEIGHT = 26
+
 // Dedicated container for portal output.
 // Never use document.body directly as a portal target.
 function getOrCreateModalRoot(): HTMLElement {
@@ -63,7 +70,7 @@ const ModalPortal = defineComponent(() => {
 const PortalDemo = defineComponent(() =>
   stack({ gap: 10, padding: 16, class: ['card', 'portal-demo-section'] },
     h('div', { class: ['hero-badge'] }, '🌀 PORTAL DEMO'),
-    h('h2', { class: ['hero-title'] }, 'createPortal'),
+    h('h2', { class: ['hero-title'], height: HERO_TITLE_HEIGHT }, 'createPortal'),
     h('p', { class: ['hero-body'] },
       'Renders children into an arbitrary DOM node outside the component tree. Perfect for modals, tooltips, and overlays that need to escape overflow/stacking contexts.',
     ),

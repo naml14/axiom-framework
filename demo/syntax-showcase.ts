@@ -38,34 +38,47 @@ function initHComparison(): void {
   if (!literalRoot || !v2Root || !output) return
 
   // ---- Before: plain object literal API ----
+  // El wrapper con `padding: 10` declara en el layout del motor el inset que
+  // antes daba el CSS del host (`.syntax-panel > div:last-child`), siguiendo la
+  // regla de demo-ui-polish.md: el host de un árbol Axiom no lleva padding CSS.
   const LiteralCard = defineComponent(() => ({
     type: 'element' as const,
     tag: 'div',
-    classes: ['syntax-demo-item'],
-    layout: { flexDirection: 'column' as const, gap: 4, padding: 8 },
+    classes: [],
+    layout: { flexDirection: 'column' as const, padding: 10 },
     children: [
       {
         type: 'element' as const,
         tag: 'div',
-        classes: [],
-        layout: {},
-        children: [{ type: 'text' as const, content: 'Literal API' }],
-      },
-      {
-        type: 'element' as const,
-        tag: 'div',
-        classes: [],
-        layout: {},
-        children: [{ type: 'text' as const, content: 'Same tree. More boilerplate.' }],
+        classes: ['syntax-demo-item'],
+        layout: { flexDirection: 'column' as const, gap: 4, padding: 8 },
+        children: [
+          {
+            type: 'element' as const,
+            tag: 'div',
+            classes: [],
+            layout: {},
+            children: [{ type: 'text' as const, content: 'Literal API' }],
+          },
+          {
+            type: 'element' as const,
+            tag: 'div',
+            classes: [],
+            layout: {},
+            children: [{ type: 'text' as const, content: 'Same tree. More boilerplate.' }],
+          },
+        ],
       },
     ],
   }))
 
   // ---- After: h() shorthand (Syntax v2) ----
   const V2Card = defineComponent(() =>
-    h('div', { class: 'syntax-demo-item', flex: 'column', gap: 4, padding: 8 },
-      h('div', {}, t('h() shorthand')),
-      h('div', {}, t('Same tree. Less noise.')),
+    h('div', { flex: 'column', padding: 10 },
+      h('div', { class: 'syntax-demo-item', flex: 'column', gap: 4, padding: 8 },
+        h('div', {}, t('h() shorthand')),
+        h('div', {}, t('Same tree. Less noise.')),
+      )
     )
   )
 
