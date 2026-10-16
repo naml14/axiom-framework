@@ -15,6 +15,9 @@ cuál es su siguiente acción concreta.
   2026-09-23T20:49Z, ~2 min después del release de GitHub.
 - **Limpieza de ramas.** 4 remotas ya mergeadas y 3 locales fusionadas borradas; rama
   `chore/revert-create-aviom-merges` eliminada y repositorio en `main` al día.
+- **R2 (CI sin jobs en ramas de release).** Cerrado 2026-10-16: no eran fallos de tests sino runs
+  de PRs de bot que nunca arrancaron (aprobación pendiente o invalidados por force-push/borrado);
+  GitHub los finaliza como `failure` sin jobs ni logs. Evidencia: `axiom-next-version.md` L4.
 - **demo-ui-polish T1-T6**, **hardening-docs-sync T1-T4**, **npm-oidc T1-T4**: entregados.
 - **Hardening Fases 0, 1 y 2**: entregadas (F2-T7 excluida, ver P2).
 
@@ -22,9 +25,8 @@ cuál es su siguiente acción concreta.
 
 | ID | Pendiente | Origen | Siguiente acción |
 | --- | --- | --- | --- |
-| R1 | El próximo release PR de release-please volverá a traer las 2 Features fantasma del revert | `release-0.9.14-verification.md` §6, L5 | Al abrirse el PR: editar `CHANGELOG.md` en su rama (quitar las entradas o nota del revert) y aprobar sus runs antes de mergear |
-| R2 | Corridas de CI/Security en ramas de release-please que fallan **sin jobs** (`73ecf14`, `21abff7`) | verificación 2026-10-16 (runs 35946642479, 38952332592) | La próxima vez: leer el log de arranque del workflow en la UI de Actions (falla antes de crear jobs) |
-| R3 | `create-axiom` termina con exit 0 e imprime «Ready!» aunque `bun install` falle | issue #96; reproducido en head de release | Fix del exit code + test que lo pine, dentro del alcance de #96 |
+| R1 | El próximo release PR de release-please volverá a traer las 2 Features fantasma del revert | `release-0.9.14-verification.md` §6, L5 | Al abrirse el PR: editar `CHANGELOG.md` en su rama (quitar las entradas o nota del revert) y aprobar sus runs antes de mergear; el guard de `axiom-next-version` T1 lo detectará automáticamente |
+| R3 | `create-axiom` termina con exit 0 e imprime «Ready!» aunque `bun install` falle | issue #96; reproducido en head de release | Fix del exit code + test que lo pine: `axiom-next-version` T2 |
 
 ## P1 — Seguridad y correctness (Fase 3 del hardening, sin iniciar)
 
