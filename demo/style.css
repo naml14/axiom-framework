@@ -2,6 +2,10 @@
     Axiom Demo — Dark Editorial Theme  (v2 — Dashboard Layout)
     Framework handles layout (position/size).
     CSS handles everything visual (colors, fonts, shadows).
+
+    Scope (decision D4, 2026-10-16): desktop-first dashboard, supported from
+    768px up. The canvas width is slider-driven (320-1400px) by design, so
+    narrow-viewport adaptation is a documented non-goal, not a defect.
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
