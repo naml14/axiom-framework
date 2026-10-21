@@ -8,9 +8,12 @@ cuál es su siguiente acción concreta.
 
 ## Cerrados en esta renovación (no reabrir sin evidencia nueva)
 
-- **Release 0.9.14 fantasma (PR #118).** Cerrado sin mergear (opción A del mantenedor), rama
-  remota de release-please eliminada, evidencia y scripts commiteados (`ce02063`, `c08dc02`).
-  Motivo: árbol idéntico a v0.9.13 y CHANGELOG con dos Features revertidas por #117.
+- **Release 0.9.14 fantasma (PR #118 y PR #119).** PR #118 y PR #119 cerrados sin mergear,
+  ramas remotas de release-please eliminadas y 6 ramas huérfanas remotas con el typo `create-aviom`
+  purgadas de GitHub. `release-please-config.json` blindado con `last-release-sha` en `372a0e0`
+  para que el bot no vuelva a escanear los commits revertidos de septiembre.
+- **R1 (Features fantasma de release-please).** Cerrado definitivamente con `last-release-sha`
+  en `release-please-config.json` y el guard `scripts/validate-release-notes.ts` implementado en WU1.
 - **U1 (npm OIDC trusted publisher).** Confirmado funcionando: 0.9.13 publicado vía OIDC el
   2026-09-23T20:49Z, ~2 min después del release de GitHub.
 - **Limpieza de ramas.** 4 remotas ya mergeadas y 3 locales fusionadas borradas; rama
@@ -30,8 +33,7 @@ cuál es su siguiente acción concreta.
 
 | ID | Pendiente | Origen | Siguiente acción |
 | --- | --- | --- | --- |
-| R1 | El próximo release PR de release-please volverá a traer las 2 Features fantasma del revert | `release-0.9.14-verification.md` §6, L5 | Al abrirse el PR: editar `CHANGELOG.md` en su rama (quitar las entradas o nota del revert) y aprobar sus runs antes de mergear; el guard de `axiom-next-version` T1 lo detectará automáticamente |
-| R3 | `create-axiom` termina con exit 0 e imprime «Ready!» aunque `bun install` falle | issue #96; reproducido en head de release | Fix del exit code + test que lo pine: `axiom-next-version` T2 |
+| R3 | `create-axiom` termina con exit 0 e imprime «Ready!» aunque `bun install` falle | issue #96; reproducido en head de release | Fix del exit code + test que lo pine: `axiom-next-version` T2 (ya implementado en WU1 / PR #120) |
 
 ## P1 — Seguridad y correctness (Fase 3 del hardening, sin iniciar)
 
@@ -69,10 +71,9 @@ cuál es su siguiente acción concreta.
 | D1 | Tarjetas Syntax recortadas 10 px: `.syntax-panel > div:last-child { padding:10px }` da padding CSS al host de árboles Axiom | `release-0.9.14-verification.md` §5.1, `shots/zoom-syntax-h-v2.png` | Mover el padding al layout del motor (regla de `demo-ui-polish.md`) |
 | D2 | `.grid-demo-canvas` con `height: 160` y contenido de 196 px: 4 celdas absolutas fuera del root | §5.2, `shots/zoom-grid-mvp.png` | Ajustar height/filas del canvas en `ruta-b-showcase.ts` |
 | D3 | `h2.hero-title` de 26 px en filas de 20 px (router 404 y sección Portal) | §5.3 | Ajustar altura de fila o tipografía |
-| D4 | ~~14 px de overflow horizontal a 390 px por el canvas fijo de 800 px~~ **CERRADO 2026-10-16 (decisión)**: el demo es desktop-first (≥768 px) y el ancho del canvas lo dirige el slider por diseño; adaptación a viewports estrechos es non-goal documentado en `demo/style.css` | §5.4 | — |
-| D5 | ~~2 tests de `bind` con `select` saltados~~ **CERRADO 2026-10-16 (decisión)**: se mantienen saltados hasta upgrade del runner; la decisión vive en el mensaje de skip de `tests/forms.test.ts` | suite | — |
+| D4 | 14 px de overflow horizontal a 390 px por el canvas fijo de 800 px | §5.4, `shots/06-static-390.png` | Decidir: soporte móvil del demo o documentarlo como desktop-only |
+| D5 | 2 tests de `bind` con `select` saltados (limitación de happy-dom) | suite | Decidir runner alternativo o mock y reactivar los tests |
 | D6 | Cobertura floja: `h.dev.ts` 66.7 % líneas / 46.3 % ramas, `server.ts` 87.5 %, `ssr.ts` 91.7 % | coverage gate | Añadir tests de los caminos faltantes |
-| D7 | `#syntax-layout-root`: el host `.syntax-layout-preview` tiene borde CSS de 1 px y el motor escribe el height inline → scrollHeight 162 vs clientHeight 160 (delta 2); mismo patrón host-vs-motor que D2 | verificación T11 (2026-10-16) | Cambiar borde→outline o ajustar el height del árbol, con probe de navegador |
 
 ## P4 — Entrega, repo y programa v1.0
 
