@@ -30,7 +30,7 @@ import {
 // ARCHITECTURAL EXCEPTION: render/ → features/style allowed
 // Reason: commit phase applies managed CSS. Decoupling requires
 // functional refactoring (strategy pattern or callback injection).
-import { applyStyleToElement } from '../features/style.js'
+import { applyStyleToElement, sanitizeInlineStyle } from '../features/style.js'
 
 // Security: attribute sanitization for XSS prevention
 import { sanitizeAttrs } from '../core/attrs.js'
@@ -58,6 +58,7 @@ interface AxiomDOMElement extends HTMLElement {
   _listeners?: Record<string, EventListener>
   [MANAGED_STYLE_KEYS_PROP]?: string[]
   [AXIOM_TRANSFORM_OWNED]?: string
+  __axiomTransformImportant?: boolean
 }
 
 export function commitFull(
@@ -82,6 +83,51 @@ export function commitFull(
   fireMountEvents(state.domNodes)
 }
 
+/**
+ * Hydration commit: adopts existing server-rendered markup instead of building
+ * new DOM, verifying it against the prepared tree and repairing mismatches.
+ *
+ * ARCHITECTURAL EXCEPTION (M-11 / axiom-next-version T6) — DOM read allowlist.
+ * Hydration is the single place where the framework legitimately reads the
+ * DOM: every read below is a ONE-TIME read over server-rendered markup,
+ * performed during `commitHydrate` only. None of them runs in the per-frame
+ * hot path (`prepare -> reflow -> commit` via `applyOps`), so the invariant
+ * "hot path without DOM reads" (S4) holds.
+ *
+ * DOM reads performed directly in this function body (including the nested
+ * `hydrateNode` closure):
+ *
+ * - `root.getElementsByTagName('*')` — collect the server-rendered elements
+ *   once, to index them by their `data-axiom-id` hydration marker.
+ * - `element.getAttribute('data-axiom-id')` — read each hydration marker.
+ * - `parentEl.childNodes` (`.length` and indexed access) — locate the next
+ *   Text node per parent for text hydration.
+ * - `textNode.nodeValue` — compare server-rendered text against the prepared
+ *   tree (mismatch detection).
+ * - `domEl.tagName` — compare the server-rendered tag against the expected tag.
+ * - `domEl.textContent` — compare single-text-child content (mismatch
+ *   detection).
+ * - `domEl.children.length` — compare child element count (mismatch detection).
+ * - `target.isConnected` / `target.childNodes` — validate a portal target and
+ *   snapshot its existing children.
+ *
+ * Indirect reads via hydration-only helpers called from this function:
+ *
+ * - `mergeInlineStyle` → `getAttribute('style')` — merge user inline style
+ *   without wiping the framework layout resets.
+ * - `sanitizeHydratedElementAttrs` → `element.attributes` — XSS
+ *   re-sanitization of server-rendered attributes.
+ * - `applyFrameworkLayout` → `style.transform` / `style.getPropertyPriority`
+ *   — CSSOM reads on adoption (including hydration), or when the consumer opts
+ *   into external-transform diagnostics via `onTransformConflict`. These reads
+ *   force no layout. Owned nodes without that hook use cached priority and
+ *   transform state on updates; external mutations require the diagnostic hook.
+ *
+ * Enforcement: `tests/architecture/hot-path-dom-reads.test.ts` demarcates this
+ * function by boundary (from the `function commitHydrate(` declaration to its
+ * matching closing brace) and skips ONLY that region; any of these read APIs
+ * elsewhere in the hot path still fails the architectural test.
+ */
 export function commitHydrate(
   layout: LayoutResult,
   prepared: PreparedComponent,
@@ -214,7 +260,7 @@ export function commitHydrate(
     applyFrameworkLayout(domEl, {
       x: layout.x[idx], y: layout.y[idx],
       width: layout.width[idx], height: layout.height[idx],
-    }, true, commitOpts)
+    }, true, commitOpts, true)
 
     // Sanitize and apply user attributes, but merge style instead of replacing.
     // Replacing domEl.style would wipe out the layout resets applied above.
@@ -526,26 +572,31 @@ export function __getComposedTransformCacheStatsForTests(): { size: number; miss
  */
 function mergeInlineStyle(domEl: HTMLElement, userStyle: string): void {
   if (userStyle.length === 0) return
+  userStyle = sanitizeInlineStyle(userStyle)
   const existing = domEl.getAttribute('style') ?? ''
   const merged = existing.endsWith(';') || existing.length === 0
     ? `${existing}${userStyle}`
     : `${existing};${userStyle}`
   domEl.setAttribute('style', merged)
+  rememberInlineTransform(domEl, userStyle)
 }
 
 function applyFrameworkLayout(
   el: HTMLElement,
   layoutInfo: { x?: number; y?: number; width?: number; height?: number },
   managedByFramework: boolean,
-  opts?: CommitOptions
+  opts?: CommitOptions,
+  adopting = false
 ): void {
   if (!managedByFramework) return
   el.style.position = 'absolute'
   const { x, y, width, height } = layoutInfo
   if (x !== undefined && y !== undefined) {
     const axiomEl = el as AxiomDOMElement
-    const currentTransform = el.style.transform
     const ownedTransform = axiomEl[AXIOM_TRANSFORM_OWNED]
+    const inspect = adopting || ownedTransform === undefined || opts?.onTransformConflict !== undefined
+    const currentTransform = inspect ? el.style.transform : ownedTransform // dom-read-allowlist: adoption or opt-in external-transform diagnostics; owned default updates use cache
+    if (inspect) axiomEl.__axiomTransformImportant = el.style.getPropertyPriority('transform') === 'important' // dom-read-allowlist: adoption or opt-in diagnostics only; cache priority for default updates
 
     // Detect conflict: there's a non-empty inline transform that Axiom did not write.
     if (
@@ -557,7 +608,7 @@ function applyFrameworkLayout(
     }
 
     // Respect `!important` overrides — user intent wins; Axiom does not escalate priority.
-    if (el.style.getPropertyPriority('transform') === 'important') {
+    if (axiomEl.__axiomTransformImportant === true) {
       // Hook was called above if applicable; we do not overwrite.
     } else {
       const composed = composedTransform(x, y)
@@ -652,7 +703,11 @@ function buildDOMTree(
   const attrs = sanitizeAttrs(getAttrs(prepared))
   if (attrs !== undefined) {
     for (const [key, value] of Object.entries(attrs)) {
-      el.setAttribute(key, value)
+      if (key.toLowerCase() === 'style') {
+        const safe = sanitizeInlineStyle(value)
+        el.setAttribute(key, safe)
+        rememberInlineTransform(el, safe)
+      } else el.setAttribute(key, value)
     }
   }
 
@@ -705,7 +760,11 @@ function createDOMElement(op: import('./diff.js').DOMInsertOp, isPortalChild = f
   const attrs = sanitizeAttrs(op.attrs)
   if (attrs !== undefined) {
     for (const [key, value] of Object.entries(attrs)) {
-      el.setAttribute(key, value)
+      if (key.toLowerCase() === 'style') {
+        const safe = sanitizeInlineStyle(value)
+        el.setAttribute(key, safe)
+        rememberInlineTransform(el, safe)
+      } else el.setAttribute(key, value)
     }
   }
 
@@ -724,6 +783,13 @@ function createDOMElement(op: import('./diff.js').DOMInsertOp, isPortalChild = f
   return el
 }
 
+/** Track priority from validated framework inputs, without reading CSSOM. */
+function rememberInlineTransform(el: HTMLElement, style: string): void {
+  const transforms = style.match(/(?:^|;)\s*transform\s*:[^;]*/gi)
+  if (transforms === null) return
+  ;(el as AxiomDOMElement).__axiomTransformImportant = transforms.some(value => /!\s*important\s*$/i.test(value))
+}
+
 function readElementAttrs(el: Element): Record<string, string> {
   const result: Record<string, string> = {}
   for (const attr of Array.from(el.attributes)) {
@@ -737,7 +803,12 @@ function sanitizeHydratedElementAttrs(
   preparedAttrs: Record<string, string> | undefined
 ): void {
   const currentAttrs = readElementAttrs(el)
-  const sanitizedCurrent = sanitizeAttrs(currentAttrs) ?? {}
+  const sanitizedCurrent = { ...sanitizeAttrs(currentAttrs) }
+  // Revalidate SSR styles too: dropping a prepared declaration must not leave
+  // its original server-rendered value active. Keep framework layout resets.
+  for (const key of Object.keys(sanitizedCurrent)) {
+    if (key.toLowerCase() === 'style') sanitizedCurrent[key] = sanitizeInlineStyle(sanitizedCurrent[key]!, true)
+  }
 
   for (const [key, value] of Object.entries(currentAttrs)) {
     if (!(key in sanitizedCurrent)) {

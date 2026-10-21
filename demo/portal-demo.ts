@@ -1,4 +1,5 @@
 import { signal, defineComponent, createPortal, createApp, h, stack } from '../src/index.ts'
+import { HERO_TITLE_HEIGHT } from './components.ts'
 
 // Portal Demo — demonstrates createPortal with the idiomatic helper API.
 //
@@ -63,7 +64,7 @@ const ModalPortal = defineComponent(() => {
 const PortalDemo = defineComponent(() =>
   stack({ gap: 10, padding: 16, class: ['card', 'portal-demo-section'] },
     h('div', { class: ['hero-badge'] }, '🌀 PORTAL DEMO'),
-    h('h2', { class: ['hero-title'] }, 'createPortal'),
+    h('h2', { class: ['hero-title'], height: HERO_TITLE_HEIGHT }, 'createPortal'),
     h('p', { class: ['hero-body'] },
       'Renders children into an arbitrary DOM node outside the component tree. Perfect for modals, tooltips, and overlays that need to escape overflow/stacking contexts.',
     ),

@@ -1,7 +1,9 @@
 # Plan maestro y trazabilidad — Axiom v1.0.0
 
 > Estado inicial: **2026-04-15**
-> Estado actual (rama `feat/v1-0-0-kickoff`): **P0 5/5 implementados, P1 5/5 implementados (pendiente merge/CI final en PR)**
+> Estado actual (2026-10-16): **P0 5/5 y P1 5/5 merged y cerrados; EPIC #30 cerrado con la
+> sección 9 de este documento; pendiente solo la decisión de numeración del release
+> (ver `odd/tasks/axiom-next-version.md`)**
 > Objetivo: lanzar `v1.0.0` con calidad **excelente** en estabilidad API, SSR/hydration, seguridad, testing y operación.
 
 ## 1) Objetivo y alcance
@@ -103,16 +105,16 @@ El release `1.0.0` solo puede aprobarse si:
 
 | Item | Issue | PR | Evidencia (tests/coverage/doc) | Estado |
 | --- | --- | --- | --- | --- |
-| P0 Plugin lifecycle runtime | #32 | TBD | `tests/app.test.ts` + `tests/plugin.test.ts` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
-| P0 Router SSR-safe | #33 | TBD | `tests/router.test.ts` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
-| P0 Aislamiento SSR prepare | #31 | TBD | `tests/prepare.test.ts` + `tests/portal.test.ts` + `tests/router.test.ts` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
-| P0 SECURITY threat model | #35 | TBD | `SECURITY.md` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
-| P0 API stability contract | #34 | TBD | `scripts/validate-api-stability.ts` + `docs/STABILITY.md` + `bun run validate:api` | Done (branch) |
-| P1 Hardening attrs/event attrs | #39 | TBD | `tests/edge-cases.test.ts` + suite coverage + `SECURITY.md` | Done (branch) |
-| P1 Scheduler API no-op | #37 | TBD | `tests/scheduler.test.ts` + `tests/app.test.ts` | Done (branch) |
-| P1 Coverage gate en CI | #36 | TBD | `.github/workflows/ci.yml` + `scripts/validate-coverage.ts` + `bun run test:coverage` | Done (branch) |
-| P1 Hardening XSS residual + alineación docs/código | #40 | TBD | `tests/commit.test.ts` + `tests/ssr.test.ts` + `SECURITY.md` + `docs/V1-0-0-EVIDENCE-LOG.md` | Done (branch) |
-| P1 Diff performance | #38 | TBD | `tests/diff.test.ts` + `tests/integration.test.ts` + `tests/benchmark.test.ts` | Done (branch) |
+| P0 Plugin lifecycle runtime | #32 | #41, #42 | `tests/app.test.ts` + `tests/plugin.test.ts` + `docs/history/V1-0-0-EVIDENCE-LOG.md` | Done (merged) |
+| P0 Router SSR-safe | #33 | #41, #42 | `tests/router.test.ts` + `docs/history/V1-0-0-EVIDENCE-LOG.md` | Done (merged) |
+| P0 Aislamiento SSR prepare | #31 | #41, #42 | `tests/prepare.test.ts` + `tests/portal.test.ts` + `tests/router.test.ts` + `docs/history/V1-0-0-EVIDENCE-LOG.md` | Done (merged) |
+| P0 SECURITY threat model | #35 | #41, #46 | `SECURITY.md` + `docs/history/V1-0-0-EVIDENCE-LOG.md` | Done (merged) |
+| P0 API stability contract | #34 | #41, #42 | `scripts/validate-api-stability.ts` + `docs/STABILITY.md` + `bun run validate:api` | Done (merged) |
+| P1 Hardening attrs/event attrs | #39 | #41, #42, #46 | `tests/edge-cases.test.ts` + suite coverage + `SECURITY.md` | Done (merged) |
+| P1 Scheduler API no-op | #37 | #41, #42, #46 | `tests/scheduler.test.ts` + `tests/app.test.ts` | Done (merged) |
+| P1 Coverage gate en CI | #36 | #41, #42, #46 | `.github/workflows/ci.yml` + `scripts/validate-coverage.ts` + `bun run test:coverage` | Done (merged) |
+| P1 Hardening XSS residual + alineación docs/código | #40 | #41, #42, #46 | `tests/commit.test.ts` + `tests/ssr.test.ts` + `SECURITY.md` + `docs/history/V1-0-0-EVIDENCE-LOG.md` | Done (merged) |
+| P1 Diff performance | #38 | #41, #46 | `tests/diff.test.ts` + `tests/integration.test.ts` + `tests/benchmark.test.ts` | Done (merged) |
 
 ---
 
@@ -138,7 +140,7 @@ El release `1.0.0` solo puede aprobarse si:
 
 - **Diaria (15 min):** mover estado en issues + actualización rápida de matriz.
 - **Semanal:** revisión de riesgo, burn-down de P0/P1, decisiones de alcance.
-- **Por PR:** enlazar issue obligatoriamente y actualizar evidencia en `docs/V1-0-0-EVIDENCE-LOG.md`.
+- **Por PR:** enlazar issue obligatoriamente y actualizar evidencia en `docs/history/V1-0-0-EVIDENCE-LOG.md`.
 
 ---
 
@@ -149,3 +151,21 @@ El release `1.0.0` solo puede aprobarse si:
 - `Blocked` → dependencia externa o decisión pendiente
 - `Done` → merged y verificado
 - `Deferred` → acordado fuera de 1.0.0 con justificación
+
+---
+
+## 9) Cierre del EPIC #30 (2026-10-16)
+
+- Las 10 issues hijas (#31-#40) están closed/completed; los merges que las cerraron quedan
+  registrados en la matriz de la sección 6 (PR #41, #42 y #46, según cada ítem).
+- Checklist go/no-go: P0 5/5 cerrado; P1 5/5 cerrado; CI verde con coverage gate activo
+  (`scripts/validate-coverage.ts` en CI); evidencia por ítem en
+  `docs/history/V1-0-0-EVIDENCE-LOG.md` (entrada 2026-10-16) más la verificación de release de
+  `odd/tasks/release-0.9.14-verification.md` y su evidencia en `odd/evidence/release-0.9.14/`.
+- Gaps remanentes de contrato resueltos en la rama `feat/next-version-release-integrity`
+  (S1: data URLs base64 en estilos SSR con paridad de attrs.ts; S2: retiro de resetIndexCounter;
+  enforcement de DOM reads del hot path y del whitelist de estilos; allowlist documentada de
+  commitHydrate): detalle y specs en `odd/tasks/axiom-next-version.md`.
+- Única decisión pendiente: numeración del release (1.0.0 vs 0.10.0), que se toma al cerrar WU3
+  según D2 del mismo documento.
+- Con esta sección y la entrada de evidencia 2026-10-16, el EPIC #30 queda cerrado.

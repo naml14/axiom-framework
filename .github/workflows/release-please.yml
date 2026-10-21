@@ -10,6 +10,9 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # Explicit workflow dispatch is exempt from GITHUB_TOKEN event suppression.
+  actions: write
+  statuses: write
 
 jobs:
   release-please:
@@ -34,6 +37,25 @@ jobs:
           #   3. When that PR is merged, creates the GitHub Release + tag automatically
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      - name: Dispatch release notes guard for open release PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          # Query after release-please updates the PR; do not assume action output shape.
+          gh api --paginate --method GET "repos/$GITHUB_REPOSITORY/pulls" \
+            -f state=open -f base="$DEFAULT_BRANCH" \
+            --jq '.[] | select(.head.ref | startswith("release-please--")) | [.head.repo.full_name, .head.sha] | @tsv' |
+          while IFS=$'\t' read -r repository sha; do
+            # Never dispatch code from a fork, even if it uses the release branch prefix.
+            [[ "$repository" == "$GITHUB_REPOSITORY" ]] || continue
+            gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" \
+              -f state=pending -f context="Release notes integrity" \
+              -f description="Waiting for release notes guard"
+            gh workflow run ci.yml --ref "$DEFAULT_BRANCH" -f release-head="$sha"
+          done
 
   # Publish to npm only when release-please actually creates a release.
   # Uses npm Trusted Publishing with OIDC (no long-lived token):

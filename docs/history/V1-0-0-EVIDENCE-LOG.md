@@ -36,6 +36,25 @@ Plantilla:
 
 ## Entradas
 
+### 2026-10-16 — Cierre del EPIC #30 y verificación de la rama de la siguiente versión
+- Issue: #30 (EPIC); hijas #31-#40
+- PR: #41, #42, #46 (merges que cerraron las hijas); rama `feat/next-version-release-integrity`
+  (cierre de gaps de contrato S1/S2 y enforcement de invariantes)
+- Verificación:
+  - [x] `bun test` (782 pass, 2 skips documentados, 0 fail)
+  - [x] `bun run test:coverage` (gate 95.06 % vs umbral 85 %)
+  - [x] `bun run typecheck`
+  - [x] `bun run validate:api` (137 exports, 0 untagged, 0 deprecated)
+  - [x] Navegador real sobre el demo (34/39 checks; los 5 FAIL son defectos cosméticos
+        preexistentes documentados en `odd/tasks/release-0.9.14-verification.md`)
+- Evidencia:
+  - tests: suite completa + arquitectura (DOM reads steady-state y allowlist de commitHydrate),
+    ssr (data URLs base64), style (whitelist en dev)
+  - docs: `odd/tasks/release-0.9.14-verification.md`, `odd/evidence/release-0.9.14/`,
+    `odd/tasks/axiom-next-version.md`, matriz sección 6 de este plan con columna PR completada
+- Resultado: PASS — checklist go/no-go de #30 cumplido; el EPIC se cierra con esta entrada y con
+  la sección 9 del plan de trazabilidad.
+
 ### 2026-09-23 — Rollup de hardening: cobertura del demo, seguridad y perf del hot path
 
 - Issue: #30 (épica 1.0.0)
