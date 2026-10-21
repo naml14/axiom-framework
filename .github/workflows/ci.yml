@@ -2,9 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "release-please--**"]
   pull_request:
     branches: [main]
+  # GITHUB_TOKEN pushes/PR updates do not trigger workflows. Explicit dispatch does.
+  workflow_dispatch:
+    inputs:
+      release-head:
+        description: Exact release PR head SHA to validate
+        required: true
+        type: string
 
 # Minimal permissions — CI only reads, never writes
 permissions:
@@ -13,6 +20,7 @@ permissions:
 jobs:
   test:
     name: Test
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -37,20 +45,45 @@ jobs:
   release-notes:
     name: Release notes guard
     runs-on: ubuntu-latest
-    if: startsWith(github.head_ref, 'release-please') || startsWith(github.ref_name, 'release-please')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'release-please--') || startsWith(github.ref_name, 'release-please--')
+    permissions:
+      contents: read
+      statuses: write
+    env:
+      RELEASE_HEAD: ${{ inputs.release-head || github.event.pull_request.head.sha || github.sha }}
     steps:
+      - name: Validate target SHA
+        id: target
+        shell: bash
+        run: '[[ "$RELEASE_HEAD" =~ ^[0-9a-f]{40}$ ]]'
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          # The guard needs tags and full history to resolve the base..head range
+          # The guard needs tags and full history to resolve the base..head range.
           fetch-depth: 0
+          ref: ${{ inputs.release-head || github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
         with:
           bun-version: latest
 
-      - name: Install dependencies
-        run: bun install
-
+      # The guard has no runtime dependencies and must only inspect Git data.
       - name: Validate release notes
-        run: bun run validate:release-notes
+        run: bun run scripts/validate-release-notes.ts --head "$RELEASE_HEAD"
+
+      # Dispatched runs belong to main, so explicitly attach the result to the PR SHA.
+      - name: Report release PR status
+        if: always() && github.event_name == 'workflow_dispatch' && steps.target.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ job.status }}
+        shell: bash
+        run: |
+          state=failure
+          if [[ "$RESULT" == success ]]; then state=success; fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$RELEASE_HEAD" \
+            -f state="$state" -f context="Release notes integrity" \
+            -f description="Release notes guard: $state" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

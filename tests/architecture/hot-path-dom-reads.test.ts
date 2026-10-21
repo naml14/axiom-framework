@@ -63,6 +63,8 @@ const FORBIDDEN_DOM_READ_PATTERNS: ReadonlyArray<string> = [
   'window.getComputedStyle',
   'window.innerWidth',
   'window.innerHeight',
+  '.style.transform',
+  '.getPropertyPriority(',
 ]
 
 // Inline marker that allowlists a single line containing a DOM-read API.
@@ -96,17 +98,61 @@ function blankPreservingLines(match: string): string {
 }
 
 function stripCommentsAndStrings(source: string): string {
-  // Strip /* ... */ block comments (preserving line structure)
-  let out = source.replace(/\/\*[\s\S]*?\*\//g, blankPreservingLines)
-  // Strip // ... line comments that occupy the whole line (trailing inline
-  // comments — including the allowlist marker — are preserved). Use [ \t]
-  // instead of \s so leading blank lines' newlines are not consumed.
-  out = out.replace(/^[ \t]*\/\/.*$/gm, '')
-  // Strip single/double quoted string contents (preserve length and line numbers)
-  out = out.replace(/'([^'\\]|\\.)*'/g, blankPreservingLines)
-  out = out.replace(/"([^"\\]|\\.)*"/g, blankPreservingLines)
-  out = out.replace(/`([^`\\]|\\.)*`/g, blankPreservingLines)
-  return out
+  const out = source.split('')
+  let i = 0
+  function mask(start: number, end: number): void {
+    for (let j = start; j < end; j++) if (out[j] !== '\n') out[j] = ' '
+  }
+  function quoted(quote: string): void {
+    const start = i++
+    while (i < source.length) {
+      if (source[i] === '\\\\') { i += 2; continue }
+      if (source[i++] === quote) break
+    }
+    mask(start, i)
+  }
+  function template(): void {
+    mask(i, ++i)
+    let start = i
+    while (i < source.length) {
+      if (source[i] === '\\\\') { i += 2; continue }
+      if (source[i] === '`') { mask(start, ++i); return }
+      if (source[i] === '$' && source[i + 1] === '{') {
+        mask(start, i + 2)
+        i += 2
+        code(true)
+        start = i
+      } else i++
+    }
+    mask(start, i)
+  }
+  function code(interpolation = false): void {
+    let depth = 0
+    while (i < source.length) {
+      const ch = source[i]
+      if (ch === '"' || ch === "'") quoted(ch)
+      else if (ch === '`') template()
+      else if (source.startsWith('/*', i)) {
+        const start = i
+        const end = source.indexOf('*/', i + 2)
+        i = end < 0 ? source.length : end + 2
+        mask(start, i)
+      } else if (source.startsWith('//', i)) {
+        const start = i
+        const end = source.indexOf('\n', i)
+        i = end < 0 ? source.length : end
+        // Only actual comments can supply an allowlist marker.
+        if (!source.slice(start, i).startsWith(ALLOWLIST_MARKER)) mask(start, i)
+      } else if (ch === '{') { depth++; i++ }
+      else if (ch === '}') {
+        i++
+        if (interpolation && depth === 0) { mask(i - 1, i); return }
+        depth--
+      } else i++
+    }
+  }
+  code()
+  return out.join('')
 }
 
 /**
@@ -147,8 +193,10 @@ function scanStrippedLines(stripped: string, path: string, isSkipped: (index: nu
     if (isSkipped(i)) continue
     const line = lines[i]!
     if (line.includes(ALLOWLIST_MARKER)) continue
+    // A plain transform assignment is a write, not a CSSOM read.
+    const reads = line.replace(/\.style\.transform\s*=(?!=)/g, '')
     for (const pattern of FORBIDDEN_DOM_READ_PATTERNS) {
-      if (line.includes(pattern)) {
+      if (reads.includes(pattern)) {
         violations.push(
           `${path}:${i + 1}: forbidden DOM read \`${pattern}\` without inline marker ` +
             `\`${ALLOWLIST_MARKER} <justification>\``
@@ -238,6 +286,19 @@ describe('architectural invariant: hot path does not read from the DOM', () => {
 })
 
 describe('scanSourceForDomReads (unit)', () => {
+  test('detects a DOM read in a simple template interpolation', () => {
+    const violations = scanSourceForDomReads('const x = `width: ${root.clientWidth}`', 'template.ts')
+    expect(violations).toHaveLength(1)
+    expect(violations[0]).toContain('template.ts:1')
+  })
+
+  test('scans executable template interpolations, including nested templates', () => {
+    const code = 'const x = `root.clientHeight ${`text ${root.clientWidth}`} ${"root.offsetWidth"}`'
+    const violations = scanSourceForDomReads(code, 'template.ts')
+    expect(violations).toHaveLength(1)
+    expect(violations[0]).toContain('clientWidth')
+  })
+
   test('reports an unmarked DOM read naming file, line and API', () => {
     const code = [
       'const a = 1',

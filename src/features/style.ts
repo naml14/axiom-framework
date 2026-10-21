@@ -9,6 +9,8 @@
 //  - Theme tokens drive consistency; raw values are accepted as passthrough.
 // ============================================================
 
+import { isSafeDataUrl } from '../core/attrs.js'
+
 // ---------------------------------------------------------------------------
 // 1. Safe Style Key Whitelist
 // ---------------------------------------------------------------------------
@@ -248,16 +250,67 @@ export function resolveStyleTokens(
 // ---------------------------------------------------------------------------
 
 /**
- * Apply SafeStyleProps to an HTMLElement.
- *
- * Write-only — never reads from el.style.
- * Only applies keys present in the given props object.
- *
- * In dev builds (see isDevEnvironment) each prop is validated through
- * validateStyleProps before being applied; unknown or unsafe props are
- * dropped with a warn-once per prop name (H-9). In production builds props
- * are assumed pre-validated: the validation branch is skipped entirely and
- * application proceeds exactly as before.
+ * Security floor independent of dev validation. Reject rather than rewrite:
+ * rewriting CSS tokens can reconstruct another dangerous token. Escapes and
+ * comments are intentionally unsupported, as are image-set's bare-string URLs.
+ * Ordinary values take linear scans, with no DOM access or parser allocation.
+ */
+function sanitizeStyleValue(value: string): string {
+  if (/[\\\\]|\/\*|@import\b|\b(?:expression\s*\(|behavior\s*:|javascript\s*:|(?:-webkit-)?image-set\s*\()/i.test(value)) return ''
+  let unsafe = false
+  const remainder = value.replace(/\burl\s*\(\s*(['"]?)([^()]*?)\1\s*\)/gi, (_match: string, _quote: string, url: string) => {
+    if (!isSafeDataUrl(url) || !/^data:[^,;]+;base64,[a-z0-9+/]*={0,2}$/i.test(url.trim())) unsafe = true
+    return ''
+  })
+  return unsafe || /\burl\s*\(/i.test(remainder) ? '' : value
+}
+
+/**
+ * Internal raw-attribute boundary shared by full commit, inserts and hydration.
+ * Parse declarations without CSSOM reads. Unbalanced/escaped CSS is rejected;
+ * dev uses the same camel-case whitelist and warn-once registry as style props.
+ * Not re-exported from the package API.
+ */
+export function sanitizeInlineStyle(style: string, preserveFrameworkLayout = false): string {
+  if (/[\\\\]|\/\*/.test(style)) return ''
+  const declarations: string[] = []
+  let start = 0
+  let depth = 0
+  let quote = ''
+  for (let i = 0; i <= style.length; i++) {
+    const ch = style[i]
+    if (quote !== '') {
+      if (ch === quote) quote = ''
+    } else if (ch === '"' || ch === "'") quote = ch
+    else if (ch === '(') depth++
+    else if (ch === ')') { if (--depth < 0) return '' }
+    else if ((ch === ';' && depth === 0) || i === style.length) {
+      declarations.push(style.slice(start, i))
+      start = i + 1
+    }
+  }
+  if (quote !== '' || depth !== 0) return ''
+  const validate = isDevEnvironment()
+  const safe: string[] = []
+  for (const declaration of declarations) {
+    const colon = declaration.indexOf(':')
+    if (colon < 0) continue
+    const name = declaration.slice(0, colon).trim().toLowerCase()
+    const key = name.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase())
+    const value = declaration.slice(colon + 1).trim()
+    const frameworkLayout = preserveFrameworkLayout && (key === 'position' || key === 'width' || key === 'height')
+    if (validate && !frameworkLayout && !isSafeStylePropDev(key, value)) continue
+    const sanitized = sanitizeStyleValue(value)
+    if (sanitized !== '') safe.push(`${name}:${sanitized}`)
+  }
+  return safe.join(';')
+}
+
+/**
+ * Apply only supplied SafeStyleProps, without DOM reads.
+ * Dev rejects unknown keys with a shared warn-once policy. Explicit empty
+ * whitelisted values warn but clear old styles. All builds sanitize values;
+ * production skips key validation, never the URL security floor.
  */
 export function applyStyleToElement(el: HTMLElement, props: SafeStyleProps): void {
   const validate = isDevEnvironment()
@@ -265,9 +318,9 @@ export function applyStyleToElement(el: HTMLElement, props: SafeStyleProps): voi
   for (const key of Object.keys(props)) {
     const value = (props as Record<string, string | undefined>)[key]
     if (value !== undefined) {
-      if (validate && !isSafeStylePropDev(key, value)) continue
-      // CSSStyleDeclaration supports index access by property name
-      ;(el.style as unknown as Record<string, unknown>)[key] = value
+      if (validate && !isSafeStylePropDev(key, value) && !(SAFE_KEY_SET.has(key) && value === '')) continue
+      // CSSStyleDeclaration supports index access by property name.
+      ;(el.style as unknown as Record<string, unknown>)[key] = sanitizeStyleValue(value)
     }
   }
 }

@@ -7,14 +7,11 @@
  * `Revert "<subject>"` commits, so without this guard a release PR can
  * announce features that are no longer in the tree (see PR #118 / 0.9.14).
  *
- * An entry whose linked commit E is inside the range is phantom when some
- * commit R in the range has a subject starting with `Revert "` and any of:
- *   1. R's subject matches one of the entry's candidate original subjects;
- *   2. E is exactly R's first parent (R^), the commit the revert undoes;
- *   3. E is an ancestor of R^ inside the range AND the file sets of
- *      `git diff --name-only E^ E` and `git diff --name-only R^ R`
- *      intersect (first-parent diffs for merge commits). The file-set
- *      intersection prevents flagging unrelated ancestors of R^.
+ * Reverts are associated with original commits by inverse patch identity,
+ * never by subject or the revert's parent alone. An entry (including an
+ * interior commit of a reverted merge) is phantom only when its changed
+ * paths return to their pre-entry state at the revert AND at range head.
+ * Restored changes and ancestors whose changes survive are not phantom.
  *
  * Usage:
  *   bun run scripts/validate-release-notes.ts [--base <ref>] [--head <ref>]
@@ -25,7 +22,7 @@
  *
  * Exit codes:
  *   0 - no phantom entries (or nothing to check)
- *   1 - at least one CHANGELOG entry lists a commit reverted inside the range
+ *   1 - phantom entries, invalid arguments/range, or a required Git inspection failed
  *
  * Read-only: this script only runs non-mutating git commands.
  */
@@ -65,19 +62,29 @@ function readOption(flag: string): string | undefined {
 	return value;
 }
 
+for (let index = 0; index < argv.length; index++) {
+	const argument = argv[index];
+	if (argument === "--base" || argument === "--head") {
+		readOption(argument);
+		index++;
+	} else if (argument !== "--help" && argument !== "-h") {
+		fail(`unknown argument: ${argument}`);
+	}
+}
+
 if (argv.includes("--help") || argv.includes("-h")) {
 	console.log(
 		[
 			"Usage: bun run scripts/validate-release-notes.ts [--base <ref>] [--head <ref>]",
 			"",
 			"Fails (exit 1) when CHANGELOG.md at <head> lists an entry whose linked commit",
-			'was reverted by a `Revert "<subject>"` commit inside <base>..<head>. An entry is',
-			"phantom when its commit matches the revert subject, is the commit the revert",
-			"undoes (its first parent), or is an in-range ancestor of that commit whose changed",
-			"files intersect the revert's changed files.",
+			'was undone by a `Revert "<subject>"` commit inside <base>..<head>.',
+			"Inverse patches identify the target; changed paths must be restored to their",
+			"pre-entry state both at the revert and at head. Reverted merges include interior commits.",
+			"Unknown arguments, ambiguous SHAs, invalid ranges and Git inspection errors fail closed.",
 			"",
 			"Defaults: --head HEAD, --base most recent tag reachable from head (root commit if none).",
-			"Exit codes: 0 = clean, 1 = phantom entries found.",
+			"Exit codes: 0 = clean, 1 = phantom entries or invalid input/history.",
 		].join("\n"),
 	);
 	process.exit(0);
@@ -145,6 +152,7 @@ if (baseOption !== undefined) {
 	}
 }
 
+if (!isAncestor(base, head)) fail("base must be an ancestor of head");
 const rangeLabel = `${base.slice(0, 7)}..${head.slice(0, 7)}`;
 
 // ============================================================
@@ -163,33 +171,18 @@ const rangeCommits: RangeCommit[] = logOutput
 		};
 	});
 
-// Map: reverted subject -> reverting commit(s)
-const revertsBySubject = new Map<string, RangeCommit>();
-for (const commit of rangeCommits) {
-	const match = /^Revert "(.*)"$/s.exec(commit.subject);
-	if (match !== null) {
-		const reverted = match[1];
-		if (reverted !== undefined && !revertsBySubject.has(reverted)) {
-			revertsBySubject.set(reverted, commit);
-		}
-	}
-}
-
-// Structural revert detection for rules 2-3: any commit whose subject starts
-// with `Revert "`, regardless of whether the quoted text matches any entry.
 const revertCommits = rangeCommits.filter((commit) => commit.subject.startsWith('Revert "'));
-const rangeShas = new Set(rangeCommits.map((commit) => commit.sha));
 
 // ============================================================
 // CHANGELOG at head: newest version section
 // ============================================================
 
-const showResult = git(["show", `${head}:CHANGELOG.md`]);
-if (showResult.exitCode !== 0) {
+const changelogPath = gitOrExit(["ls-tree", head, "--", "CHANGELOG.md"]);
+if (changelogPath.trim() === "") {
 	console.log(`release-notes-guard: OK — no CHANGELOG.md at ${head.slice(0, 7)}; nothing to check (${rangeLabel}).`);
 	process.exit(0);
 }
-const changelog = showResult.stdout;
+const changelog = gitOrExit(["show", `${head}:CHANGELOG.md`]);
 
 const lines = changelog.split("\n");
 const versionHeader = /^## \[(\d+\.\d+\.\d+)\]/;
@@ -274,33 +267,70 @@ for (const rawLine of lines.slice(sectionStart + 1, sectionEnd)) {
 // ============================================================
 
 function findRangeCommit(sha: string): RangeCommit | undefined {
-	return rangeCommits.find((commit) => commit.sha.startsWith(sha));
-}
-
-/** First parent of a commit, only when that parent is inside the range. */
-function firstParentInRange(sha: string): string | undefined {
-	const result = git(["rev-parse", "--verify", "--quiet", `${sha}^1`]);
-	if (result.exitCode !== 0) return undefined;
-	const parent = result.stdout.trim();
-	return rangeShas.has(parent) ? parent : undefined;
+	const matches = rangeCommits.filter((commit) => commit.sha.startsWith(sha));
+	if (matches.length > 1) fail(`ambiguous commit prefix: ${sha} matches ${matches.length} commits in range`);
+	return matches[0];
 }
 
 function isAncestor(ancestor: string, descendant: string): boolean {
-	return git(["merge-base", "--is-ancestor", ancestor, descendant]).exitCode === 0;
-}
-
-/** Files changed by a commit against its first parent (empty for root commits). */
-function changedFiles(sha: string): Set<string> {
-	const result = git(["diff", "--name-only", `${sha}^1`, sha]);
-	if (result.exitCode !== 0) return new Set();
-	return new Set(result.stdout.split("\n").filter((line) => line.length > 0));
-}
-
-function intersects(a: Set<string>, b: Set<string>): boolean {
-	for (const item of a) {
-		if (b.has(item)) return true;
+	const args = ["merge-base", "--is-ancestor", ancestor, descendant];
+	const result = git(args);
+	if (result.exitCode > 1 || result.exitCode < 0) {
+		fail(`\`git ${args.join(" ")}\` failed: ${result.stderr.trim()}`);
 	}
-	return false;
+	return result.exitCode === 0;
+}
+
+/** Include both sides of renames; NUL delimiters preserve unusual path names. */
+function changedFiles(sha: string): Set<string> {
+	const fields = gitOrExit(["diff", "--name-status", "-z", "-M", `${sha}^1`, sha]).split("\0");
+	const paths = new Set<string>();
+	for (let index = 0; index < fields.length - 1;) {
+		const status = fields[index++] ?? "";
+		paths.add(fields[index++] ?? "");
+		if (status.startsWith("R") || status.startsWith("C")) paths.add(fields[index++] ?? "");
+	}
+	return paths;
+}
+
+const patchIds = new Map<string, string>();
+function patchId(sha: string, reverse = false): string {
+	const key = `${sha}:${reverse}`;
+	const cached = patchIds.get(key);
+	if (cached !== undefined) return cached;
+	const refs = reverse ? [sha, `${sha}^1`] : [`${sha}^1`, sha];
+	const patch = gitOrExit(["diff", "--no-ext-diff", "--no-textconv", "--binary", ...refs]);
+	const result = Bun.spawnSync(["git", "patch-id", "--stable"], { stdin: Buffer.from(patch) });
+	if (result.exitCode !== 0) fail(`\`git patch-id --stable\` failed: ${result.stderr.toString().trim()}`);
+	const id = result.stdout.toString().trim().split(/\s/)[0] ?? "";
+	patchIds.set(key, id);
+	return id;
+}
+
+/** Tree entries include mode, object identity and path; absent paths are significant. */
+function pathState(ref: string, path: string): string {
+	return gitOrExit(["ls-tree", "-z", ref, "--", `:(literal)${path}`]);
+}
+
+function removedAt(entry: string, revert: string, tip: string): boolean {
+	const paths = changedFiles(entry);
+	if (paths.size === 0) return false;
+	for (const path of paths) {
+		const before = pathState(`${entry}^1`, path);
+		if (pathState(revert, path) !== before || pathState(tip, path) !== before) return false;
+	}
+	return true;
+}
+
+// Search by patch, not title/body: GitHub reverts may omit the target SHA and
+// quote a PR title different from both the merge subject and interior subjects.
+const targets = new Map<string, RangeCommit[]>();
+for (const revert of revertCommits) {
+	const inverse = patchId(revert.sha, true);
+	targets.set(revert.sha, rangeCommits.filter((candidate) =>
+		candidate.sha !== revert.sha && inverse !== "" &&
+		isAncestor(candidate.sha, revert.sha) && patchId(candidate.sha) === inverse,
+	));
 }
 
 const phantoms: PhantomEntry[] = [];
@@ -313,38 +343,17 @@ for (const entry of entries) {
 	let matchedRevert: RangeCommit | undefined;
 	let matchedSubject: string | undefined;
 
-	// Rule 1: subject match against the revert's quoted original subject.
-	for (const candidate of entry.candidates) {
-		const revert = revertsBySubject.get(candidate);
-		if (revert !== undefined) {
-			matchedRevert = revert;
-			matchedSubject = candidate === entry.subject ? entry.subject : `${entry.subject} (as ${candidate})`;
-			break;
-		}
-	}
-
-	// Rules 2-3: structural match against what each revert actually undoes.
-	if (matchedRevert === undefined) {
-		for (const revert of revertCommits) {
-			const revertedParent = firstParentInRange(revert.sha);
-			if (revertedParent === undefined) continue;
-			// Rule 2: the entry's commit is exactly the commit the revert undoes (R^).
-			if (commit.sha === revertedParent) {
+	for (const revert of revertCommits) {
+		for (const target of targets.get(revert.sha) ?? []) {
+			if (isAncestor(commit.sha, target.sha) && removedAt(commit.sha, revert.sha, head)) {
 				matchedRevert = revert;
-				matchedSubject = entry.subject;
-				break;
-			}
-			// Rule 3: the entry's commit is an ancestor of R^ inside the range and its
-			// file changes intersect the revert's (guards against unrelated ancestors).
-			if (
-				isAncestor(commit.sha, revertedParent) &&
-				intersects(changedFiles(commit.sha), changedFiles(revert.sha))
-			) {
-				matchedRevert = revert;
-				matchedSubject = entry.subject;
+				const candidate = entry.candidates.find((subject) => subject === commit.subject);
+				matchedSubject = candidate !== undefined && candidate !== entry.subject
+					? `${entry.subject} (as ${candidate})` : entry.subject;
 				break;
 			}
 		}
+		if (matchedRevert !== undefined) break;
 	}
 
 	if (matchedRevert !== undefined && matchedSubject !== undefined) {
