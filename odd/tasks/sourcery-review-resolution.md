@@ -138,4 +138,20 @@ después.
   corrigió. La revisión nativa queda **no disponible**, no ejecutada: la resolución de los
   hallazgos de Sourcery no dependía de ella y se verificó con la suite completa, `typecheck`,
   `validate:api` y un run real de Actions.
+- D10 (decisión, D2 del plan 1.0.0): la numeración del release se decide **1.0.0** (no 0.10.0).
+  El plan `docs/history/V1-0-0-PLAN-TRAZABILIDAD.md` (§3 M4 y §5 go/no-go) fija `1.0.0` como
+  versión objetivo, el EPIC #30 se cerró con la checklist go/no-go y `docs/STABILITY.md` declara
+  el contrato de estabilidad como v1.0.0. Además, sin fijarla, release-please calcularía `0.9.14`
+  — el mismo número fantasma que originó todo el trabajo de R1.
+- D11 (decisión, orden de merges): la pila se fusiona **de arriba abajo** (#123 → #122 → #121 →
+  #120) y el merge a `main` es el último. Verificado con una simulación local de ambos órdenes:
+  con top-down los 22 commits de las WU y los cuatro fixes de Sourcery quedan como ancestros de
+  `main`; con bottom-up se pierden el fix de demo (`da50147`) y la punta de `04-demo`, porque
+  cada merge avanza solo su rama base y el orden inverso deja el tracker desfasado.
+- D12 (verificación del mecanismo de versión): el footer `Release-As:` en el cuerpo de un
+  **merge commit** no se aplica — release-please filtra los merge commits antes de parsearlos, y
+  la simulación propose `0.9.14`. Con un commit convencional dedicado (`chore: release 1.0.0` +
+  footer) sí se aplica: `title: chore(main): release axiom-framework 1.0.0`. Se elige el commit
+  one-shot y no `release-as` en la config, porque el segundo fijaría todas las releases futuras
+  a 1.0.0 y dejaría residuo permanente en el repo.
 - L3 (usuario, verbatim): «retome, pero no utilice GPT para los subagentes.»
