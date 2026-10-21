@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -58,6 +59,7 @@ async function initRepo(): Promise<string> {
 	const dir = await freshRepo();
 	gitOrThrow(dir, ["init", "-b", "main"]);
 	await writeFile(join(dir, "README.md"), "# synthetic repo\n");
+	await writeFile(join(dir, "flag.ts"), "export const flag = false\n");
 	return dir;
 }
 
@@ -114,6 +116,18 @@ async function buildHistory(changelogEntry: (featSha: string) => string | null):
 }
 
 describe("release-notes-guard", () => {
+	test("S120-A bot updates explicitly dispatch CI and publish a status on the checked SHA", async () => {
+		const ci = await readFile(join(repoRoot, ".github/workflows/ci.yml"), "utf8");
+		const release = await readFile(join(repoRoot, ".github/workflows/release-please.yml"), "utf8");
+		expect(ci).toContain("workflow_dispatch:");
+		expect(ci).toContain('branches: [main, "release-please--**"]');
+		expect(ci).toContain("ref: ${{ inputs.release-head || github.event.pull_request.head.sha || github.sha }}");
+		expect(ci).toContain('"repos/$GITHUB_REPOSITORY/statuses/$RELEASE_HEAD"');
+		expect(release).toContain("actions: write");
+		expect(release).toContain('gh workflow run ci.yml --ref "$DEFAULT_BRANCH" -f release-head="$sha"');
+		expect(release).toContain("state=pending");
+	});
+
 	test("(a) phantom entry (reverted commit still listed) exits 1 and names the entry", async () => {
 		const history = await buildHistory(
 			(featSha) => `* ${featSubject} ([${featSha.slice(0, 7)}](https://example.com/commit/${featSha}))`,
@@ -121,7 +135,6 @@ describe("release-notes-guard", () => {
 
 		const result = runGuard(history.dir, history.baseSha, history.revertSha);
 		const output = `${result.stdout}\n${result.stderr}`;
-
 		expect(result.exitCode).toBe(1);
 		expect(output).toContain(featSubject);
 		expect(output).toContain(history.featSha.slice(0, 7));
@@ -175,6 +188,8 @@ describe("release-notes-guard", () => {
 
 		// Revert the merge directly (parent of the revert is the merge commit).
 		gitWithIdentity(dir, ["revert", "-m", "1", "--no-edit", mergeSha]);
+		// GitHub's PR #109 revert had only a different PR title, not a target body.
+		gitWithIdentity(dir, ["commit", "--amend", "-m", 'Revert "feat(typo): PR title differs from commits"']);
 		const revertSha = gitOrThrow(dir, ["rev-parse", "HEAD"]);
 
 		// CHANGELOG lists the PR title twice: once linked to the merge sha, once to the feature sha.
@@ -231,6 +246,110 @@ describe("release-notes-guard", () => {
 		const result = runGuard(dir, baseSha, headSha);
 
 		expect(result.exitCode).toBe(0);
+	});
+
+	test("S120-E rejects unknown arguments before resolving refs", async () => {
+		const dir = await initRepo();
+		const result = Bun.spawnSync([process.execPath, scriptPath, "--baes", "missing"], { cwd: dir });
+		expect(result.exitCode).toBe(1);
+		expect(result.stdout.toString()).toBe("");
+		expect(result.stderr.toString()).toBe("release-notes-guard: unknown argument: --baes\n");
+	});
+
+	test("S120-F rejects reversed ranges", async () => {
+		const history = await buildHistory(() => null);
+		const result = runGuard(history.dir, history.revertSha, history.baseSha);
+		expect(result.exitCode).toBe(1);
+		expect(result.stdout).toBe("");
+		expect(result.stderr).toContain("base must be an ancestor of head");
+	});
+
+	test("S120-G a revert of a revert restores the feature", async () => {
+		const history = await buildHistory((sha) => `* restored (${sha})`);
+		gitWithIdentity(history.dir, ["revert", "--no-edit", history.revertSha]);
+		const result = runGuard(history.dir, history.baseSha, "HEAD");
+		expect(result.exitCode).toBe(0);
+		expect(result.stderr).toBe("");
+	});
+
+	for (const sameSubject of [false, true]) {
+		test(`S120-H/I/J preserved ancestor and revert parent, same subject=${sameSubject}`, async () => {
+			const dir = await initRepo();
+			const base = commit(dir, "initial");
+			await writeFile(join(dir, "flag.ts"), "export const flag = true\n");
+			const kept = commit(dir, "feat: same subject");
+			await writeFile(join(dir, "flag.ts"), "export const flag = true\nexport const extra = 1\n");
+			const removed = commit(dir, sameSubject ? "feat: same subject" : "feat: extra");
+			await writeFile(join(dir, "parent.ts"), "export const parent = true\n");
+			const parent = commit(dir, "feat: parent survives");
+			gitWithIdentity(dir, ["revert", "--no-edit", removed]);
+			await writeFile(join(dir, "CHANGELOG.md"), `## [1.2.3]\n* feat: same subject (${kept})\n* parent (${parent})\n`);
+			const head = commit(dir, "notes");
+			const result = runGuard(dir, base, head);
+			expect(result.exitCode).toBe(0);
+			expect(result.stderr).toBe("");
+		});
+	}
+
+	test("S120-D a reverted rename is detected regardless of its subject", async () => {
+		const dir = await initRepo();
+		const base = commit(dir, "initial");
+		gitOrThrow(dir, ["mv", "flag.ts", "renamed.ts"]);
+		const renamed = commit(dir, "feat: rename flag");
+		await writeFile(join(dir, "unrelated.ts"), "export const unrelated = true\n");
+		commit(dir, "unrelated parent");
+		gitWithIdentity(dir, ["revert", "--no-edit", renamed]);
+		gitWithIdentity(dir, ["commit", "--amend", "-m", 'Revert "different PR title"']);
+		await writeFile(join(dir, "CHANGELOG.md"), `## [1.2.3]\n* different rendered title (${renamed})\n`);
+		const head = commit(dir, "notes");
+		const result = runGuard(dir, base, head);
+		expect(result.exitCode).toBe(1);
+		expect(result.stdout).toBe("");
+		expect(result.stderr).toContain(renamed.slice(0, 7));
+	});
+
+	test("S120-C ambiguous seven-character SHAs fail explicitly", async () => {
+		const dir = await initRepo();
+		const base = commit(dir, "initial");
+		const tree = gitOrThrow(dir, ["rev-parse", "HEAD^{tree}"]);
+		const seen = new Map<string, string>();
+		let pair: [string, string] | undefined;
+		for (let nonce = 0; nonce < 200000; nonce++) {
+			const raw = `tree ${tree}\nparent ${base}\nauthor Test <test@example.com> 1700000000 +0000\ncommitter Test <test@example.com> 1700000000 +0000\n\ncollision ${nonce}\n`;
+			const sha = createHash("sha1").update(`commit ${Buffer.byteLength(raw)}\0${raw}`).digest("hex");
+			const prefix = sha.slice(0, 7);
+			const previous = seen.get(prefix);
+			if (previous !== undefined) { pair = [previous, raw]; break; }
+			seen.set(prefix, raw);
+		}
+		if (pair === undefined) throw new Error("deterministic collision search exhausted");
+		const shas = pair.map((raw) => {
+			const result = Bun.spawnSync(["git", "hash-object", "-t", "commit", "-w", "--stdin"], { cwd: dir, stdin: Buffer.from(raw) });
+			expect(result.exitCode).toBe(0);
+			return result.stdout.toString().trim();
+		});
+		const merged = gitWithIdentity(dir, ["commit-tree", tree, "-p", shas[0]!, "-p", shas[1]!, "-m", "merge collision"]);
+		gitOrThrow(dir, ["update-ref", "HEAD", merged]);
+		await writeFile(join(dir, "CHANGELOG.md"), `## [1.2.3]\n* ambiguous (${shas[0]!.slice(0, 7)})\n`);
+		const head = commit(dir, "notes");
+		const result = runGuard(dir, base, head);
+		expect(result.exitCode).toBe(1);
+		expect(result.stdout).toBe("");
+		expect(result.stderr).toContain("ambiguous commit prefix");
+	});
+
+	test("S120-B a missing tree fails closed instead of skipping a diff", async () => {
+		const history = await buildHistory((sha) => `* unrelated rendered title (${sha})`);
+		// A valid commit object referencing an absent tree simulates corrupt history
+		// without deleting objects or relying on the real repository.
+		const raw = `tree ${"1".repeat(40)}\nparent ${history.revertSha}\nauthor Test <test@example.com> 1700000000 +0000\ncommitter Test <test@example.com> 1700000000 +0000\n\nRevert "corrupt"\n`;
+		const object = Bun.spawnSync(["git", "hash-object", "-t", "commit", "-w", "--stdin"], { cwd: history.dir, stdin: Buffer.from(raw) });
+		expect(object.exitCode).toBe(0);
+		const broken = object.stdout.toString().trim();
+		const result = runGuard(history.dir, history.baseSha, broken);
+		expect(result.exitCode).toBe(1);
+		expect(result.stdout).toBe("");
+		expect(result.stderr).toContain("failed:");
 	});
 
 	test("entry whose sha is outside the range is not flagged", async () => {
