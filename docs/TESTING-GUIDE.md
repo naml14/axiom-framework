@@ -638,22 +638,41 @@ bun run scripts/validate-release-notes.ts --base <ref> --head <ref>
 ```
 
 The script reads `CHANGELOG.md` at `<head>`, takes the newest `## [x.y.z]` section, and for every
-entry whose linked commit sha is inside `<base>..<head>` flags it as phantom when some commit
-`R` in the range with subject `Revert "..."` undoes it, by any of three rules: (1) the quoted
-subject matches the entry subject, including the release-please rendering `* **scope:** text`
-under `### Features` / `### Bug Fixes` reconstructed to its conventional form; (2) the entry sha
-is the first parent of `R`; (3) the entry sha is an ancestor of `R`'s first parent and the file
-sets of both diffs intersect (first-parent diffs, so merge-based reverts work; the intersection
-avoids flagging unrelated ancestors). It only runs read-only git commands; it never mutates the
-repository.
+entry whose linked commit SHA is inside `<base>..<head>` checks for a `Revert "..."` commit
+whose inverse patch ID matches an original commit's first-parent patch. Subjects and the
+revert's parent are not evidence of identity. This also handles GitHub reverts with only a
+PR title (no target SHA) and entries linked to interior commits of a reverted merge, as in
+PR #109 / 0.9.14. Both rename paths are included using NUL-delimited `--name-status -M`.
+
+The entry must be an ancestor of the identified target, and all its changed paths must match
+their pre-entry tree entries both at the revert and at head. This deliberately conservative
+whole-path check avoids flagging surviving ancestor changes and restored features (a revert
+of a revert). Partial removals or later unrelated edits on those same paths may need manual
+review; this is not a semantic feature-presence proof. It only runs read-only Git commands.
+Unknown CLI arguments are rejected before ref resolution; base must be an ancestor of head.
+Ambiguous in-range SHA prefixes and required Git inspection failures are errors, not clean results.
 
 Exit codes:
 
 - `0` — no phantom entries (also when there is no CHANGELOG version section to check yet).
-- `1` — at least one entry lists a commit that was reverted inside the range; each phantom entry
-  is printed with its subject, the commit sha, and the reverting sha.
+- `1` — phantom entries, invalid arguments/range, ambiguous SHAs, or a Git inspection failure.
+  Each phantom entry is printed with its subject, commit SHA, and reverting SHA.
 
-CI runs it in the `release-notes` job of `.github/workflows/ci.yml`, **only on release-please
-branches** (`release-please*` head/ref names); regular pushes and PRs skip it. Behavior is
-covered by `tests/release-notes-guard.test.ts`, which builds synthetic git repositories in a
-temp dir and never reads the real repository history.
+CI runs it in the `release-notes` job of `.github/workflows/ci.yml` for release-please PRs,
+release branch pushes, and explicit `workflow_dispatch` runs. **Neither pushes nor PR updates
+made with `GITHUB_TOKEN` trigger another workflow**; the push trigger alone is not a fix.
+After release-please updates a same-repository release PR, `release-please.yml` creates a pending
+`Release notes integrity` commit status and explicitly dispatches CI on the default branch with
+the PR's exact head SHA. CI checks out that SHA and publishes success/failure back to that SHA,
+including when checkout or validation fails. No PAT is needed: dispatch requires `actions: write`
+and status reporting requires `statuses: write` on the workflow's `GITHUB_TOKEN`.
+
+Configure **Release notes integrity** as a required status in the release branch protection/ruleset
+to enforce the merge gate (repository settings are not changed by these workflow files). A failed
+dispatch leaves the status pending, not successful. Workflow changes must land on the default
+branch before dispatch works. Runtime GitHub dispatch/status behavior still needs an Actions run;
+local tests only pin the workflow wiring, not GitHub's event service.
+
+Behavior is covered by `tests/release-notes-guard.test.ts`, which builds synthetic Git repositories
+in system temp directories and never reads real repository history. Run the focused tests with
+`bun test tests/release-notes-guard.test.ts`, then `bun test` and `bun run typecheck`.
