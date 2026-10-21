@@ -468,18 +468,44 @@ describe('SSR: safe base64 data URLs in inline styles (T7 / S1)', () => {
     expect((html.match(/\burl\s*\(/gi) ?? []).length).toBe(1)
   })
 
-  test('unterminated base64 url( with 200KB of spaces stays linear (<500ms) and inert', async () => {
+  test('many preserved URLs use a single global restoration pass', async () => {
+    const css = Array.from({ length: 1_000 }, (_, i) =>
+      `.a${i}{background:url(data:image/png;base64,AAA=)}`
+    ).join('')
+    const html = renderToString(makeApp(), { metadata: { inlineStyles: css } })
+    expect(html).toContain(`<style>${css}</style>`)
+
+    // Structural complexity pin: restoration must not traverse CSS per URL.
+    const source = await readFile(join(repoRoot, 'src/ssr.ts'), 'utf8')
+    const restoration = source.slice(source.indexOf('// 3. Restore'), source.indexOf('/**\n * Sanitizes a single'))
+    expect(restoration).not.toMatch(/\b(?:for|while)\s*\(/)
+    expect(restoration.match(/\.replace\(/g)).toHaveLength(1)
+    expect(restoration).toContain("new RegExp(`\\u0000axiom-css-safe-url-${nonce}-(\\\\d+)\\u0000`, 'g')")
+  })
+
+  test('base64 payload alphabet excludes whitespace overlapping the closing delimiter', async () => {
+    const source = await readFile(join(repoRoot, 'src/ssr.ts'), 'utf8')
+    const pattern = source.match(/const SAFE_CSS_DATA_URL_RE\s*=\s*\/([^\n]+)\/gi/)?.[1]
+    expect(pattern).toBeDefined()
+    // Deterministic ReDoS pin: adjacent overlapping whitespace quantifiers
+    // caused the historical 9.6s backtracking, regardless of runner speed.
+    const hasDisjointPayload = (regexSource: string) =>
+      regexSource.includes(String.raw`;base64,[A-Za-z0-9+\/=]*\1\s*\)`)
+    expect(hasDisjointPayload(pattern!)).toBe(true)
+    // The historical vulnerable alphabet must fail this structural guard.
+    expect(hasDisjointPayload(pattern!.replace('[A-Za-z0-9+\\/=]', '[A-Za-z0-9+\\/=\\s]'))).toBe(false)
+  })
+
+  test('unterminated base64 url( with 200KB of spaces is inert without a wall-clock threshold', async () => {
     // ReDoS pin: the payload class must not include \s, or it overlaps the
     // trailing `\1\s*\)` and backtracks quadratically on an unterminated
     // `url(data:image/png;base64,` + N spaces input (9.6s at 200KB before fix).
     const payload = 'background:url(data:image/png;base64,' + ' '.repeat(200_000)
-    const start = performance.now()
     const html = await renderToString(makeApp(), {
       metadata: { bodyStyle: payload },
     })
-    const elapsed = performance.now() - start
 
-    expect(elapsed).toBeLessThan(500)
+    expect(html).toContain('background:data:image/png;base64,' + ' '.repeat(200_000))
     // No live url( token survives — the unterminated data URL is stripped.
     expect((html.match(/\burl\s*\(/gi) ?? []).length).toBe(0)
   })
@@ -600,6 +626,18 @@ describe('SSR: stylesheet origin policy', () => {
       metadata: {},
     })
     expect(html).not.toContain('<link rel="stylesheet"')
+  })
+})
+
+describe('API stability documentation generation', () => {
+  test('generator preserves the complete promotion policy from the published contract', async () => {
+    const doc = await readFile(join(repoRoot, 'docs/STABILITY.md'), 'utf8')
+    const generator = await readFile(join(repoRoot, 'scripts/validate-api-stability.ts'), 'utf8')
+    const policy = doc.slice(doc.indexOf('### Promotion policy'), doc.indexOf('## Enforcement')).trim()
+    expect(policy).toContain('Promotion to stable requires, per export:')
+    // Template literals escape Markdown backticks; compare rendered text.
+    const template = generator.slice(generator.indexOf('const content ='), generator.indexOf('const outputPath ='))
+    expect(template.replaceAll('\\`', '`')).toContain(policy)
   })
 })
 

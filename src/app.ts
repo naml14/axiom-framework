@@ -227,18 +227,29 @@ export function createApp(
   const scheduler = options?.scheduler
 
   /**
-   * Cached layout constraints. Refreshed ONLY on mount and on window resize —
+   * Cached layout constraints. Refreshed ONLY on mount and on window/root resize —
    * never per update cycle. The `prepare -> reflow -> commit` hot path consumes
    * these plain cached values, so signal-driven updates in steady state perform
    * zero DOM reads (invariant S4, findings C-4/M-12).
    */
   let cachedConstraints: LayoutConstraints | null = null
+  let rootResizeObserver: ResizeObserver | null = null
+
+  function handleResize(): void {
+    if (!state.mounted) return
+    const previous = cachedConstraints
+    const next = refreshConstraints()
+    // Root height writes also notify the observer. Avoid no-op render loops.
+    if (previous === null || Object.keys(next).some(key =>
+      next[key as keyof LayoutConstraints] !== previous[key as keyof LayoutConstraints]
+    )) scheduleRender(performUpdate, scheduler)
+  }
 
   /**
    * Read the current container/viewport dimensions from the DOM and cache them.
    *
    * These are the ONLY intentional DOM reads in the framework. They run on
-   * mount and on window `resize`, not per frame and not per update cycle:
+   * mount and on window/root resize, not per frame and not per update cycle:
    * 1. They happen BEFORE reflow() — they provide input, not feedback
    * 2. The result is cached and passed as plain values into the pure
    *    arithmetic pipeline of every subsequent cycle
@@ -252,8 +263,8 @@ export function createApp(
   function refreshConstraints(): LayoutConstraints {
     const hasWindow = typeof window !== 'undefined'
     const constraints: LayoutConstraints = {
-      maxWidth: root.clientWidth || 800, // dom-read-allowlist: cached; read only on mount and window resize, never per update cycle
-      maxHeight: root.clientHeight || 600, // dom-read-allowlist: cached; read only on mount and window resize, never per update cycle
+      maxWidth: root.clientWidth || 800, // dom-read-allowlist: cached; mount and window/root resize only, never per update cycle
+      maxHeight: root.clientHeight || 600, // dom-read-allowlist: cached; mount and window/root resize only, never per update cycle
       viewportWidth: hasWindow ? window.innerWidth : undefined, // dom-read-allowlist: cached; SSR-safe window read only on mount and resize
       viewportHeight: hasWindow ? window.innerHeight : undefined, // dom-read-allowlist: cached; SSR-safe window read only on mount and resize
     }
@@ -463,7 +474,7 @@ export function createApp(
         throw err
       }
       if (typeof window !== 'undefined') {
-        window.addEventListener('resize', refreshConstraints)
+        window.addEventListener('resize', handleResize)
       }
 
       // First render — synchronous, no rAF
@@ -524,6 +535,10 @@ export function createApp(
       state.prevLayout = layout
       updateHotReloadSnapshot('none')
       state.mounted = true
+      if (typeof window !== 'undefined' && typeof window.ResizeObserver === 'function') {
+        rootResizeObserver = new window.ResizeObserver(handleResize)
+        rootResizeObserver.observe(root)
+      }
       installDevHook(state)
       applyPluginHook('onMount', pluginCtx)
 
@@ -544,8 +559,10 @@ export function createApp(
       state.stopEffect?.()
       cancelScheduled()
       if (typeof window !== 'undefined') {
-        window.removeEventListener('resize', refreshConstraints)
+        window.removeEventListener('resize', handleResize)
       }
+      rootResizeObserver?.disconnect()
+      rootResizeObserver = null
       cachedConstraints = null
       options?.router?.dispose?.()
       fireUnmountEvents(state.domState.domNodes)

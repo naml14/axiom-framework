@@ -3,7 +3,7 @@ import { Window } from 'happy-dom'
 import { createPortal } from '../src/features/portal.js'
 import { prepare, getNodeIndex, getNodeType, getPreparedChildren, getPortalCssManaged } from '../src/render/prepare.js'
 import { reflow } from '../src/render/reflow.js'
-import { commitFull } from '../src/render/commit.js'
+import { commitFull, applyOps } from '../src/render/commit.js'
 import type { DOMState } from '../src/render/commit.js'
 import { defineComponent } from '../src/render/component.js'
 import { signal } from '../src/reactivity/signals.js'
@@ -25,6 +25,58 @@ beforeAll(() => {
     cb(0)
     return 0
   }) as typeof requestAnimationFrame
+})
+
+describe('S121-E write-only transform updates', () => {
+  test('owned elements do not read CSSOM during layout updates or moves', () => {
+    const root = document.createElement('div')
+    const component = defineComponent(() => ({ type: 'element' as const, tag: 'div', children: [] }))
+    const prepared = prepare(component, undefined)
+    const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+    const state: DOMState = { domNodes: [], portalRoots: new Map() }
+    commitFull(layout, prepared, root, state)
+    const el = state.domNodes[0] as HTMLElement
+    const style = el.style
+    Object.defineProperty(el, 'style', { configurable: true, value: new Proxy(style, {
+      get(target, key) {
+        if (key === 'transform' || key === 'getPropertyPriority') throw new Error('CSSOM read')
+        const value: unknown = Reflect.get(target, key)
+        return typeof value === 'function' ? value.bind(target) : value
+      },
+      set(target, key, value: unknown) { return Reflect.set(target, key, value) },
+    }) })
+    expect(() => applyOps([{ type: 'update', index: 0, x: 20, y: 30, width: 100, height: 50 }], root, state.domNodes)).not.toThrow()
+    expect(style.transform).toContain('translate(20px,30px)')
+    expect(() => applyOps([{ type: 'move', oldIndex: 0, index: 1, x: 30, y: 40 }], root, state.domNodes)).not.toThrow()
+  })
+
+  test('raw important transform remains protected on default owned updates', () => {
+    const root = document.createElement('div')
+    const component = defineComponent(() => ({
+      type: 'element' as const, tag: 'div', attrs: { style: 'transform:rotate(45deg) !important' }, children: [],
+    }))
+    const prepared = prepare(component, undefined)
+    const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+    const state: DOMState = { domNodes: [], portalRoots: new Map() }
+    commitFull(layout, prepared, root, state)
+    applyOps([{ type: 'update', index: 0, x: 20, y: 30 }], root, state.domNodes)
+    const el = state.domNodes[0] as HTMLElement
+    expect(el.style.transform).toBe('rotate(45deg)')
+    expect(el.style.getPropertyPriority('transform')).toBe('important')
+  })
+
+  test('opt-in conflict hook still observes external important transforms', () => {
+    const root = document.createElement('div')
+    const el = document.createElement('div')
+    el.style.setProperty('transform', 'rotate(45deg)', 'important')
+    const conflicts: string[] = []
+    applyOps([{ type: 'update', index: 0, x: 10, y: 20 }], root, [el], {
+      onTransformConflict: (_el, value) => conflicts.push(value),
+    })
+    expect(conflicts).toEqual(['rotate(45deg)'])
+    expect(el.style.transform).toBe('rotate(45deg)')
+    expect(el.style.getPropertyPriority('transform')).toBe('important')
+  })
 })
 
 // ============================================================

@@ -138,6 +138,38 @@ afterEach(() => {
 })
 
 describe('app steady state performs zero DOM reads (C-4/M-12, S4)', () => {
+  for (const source of ['window', 'root'] as const) {
+    test(`${source} resize schedules layout without a signal update and disconnects on unmount`, () => {
+      let notify: ResizeObserverCallback | undefined
+      let disconnected = false
+      const Original = win.ResizeObserver
+      Object.defineProperty(win, 'ResizeObserver', { configurable: true, value: class {
+        constructor(callback: ResizeObserverCallback) { notify = callback }
+        observe() {}
+        unobserve() {}
+        disconnect() { disconnected = true }
+      } })
+      const root = document.createElement('div')
+      let width = 400
+      Object.defineProperty(root, 'clientWidth', { get: () => width })
+      const comp = defineComponent(() => ({ type: 'element' as const, tag: 'div', children: [] }))
+      const app = createApp(comp, root, { scheduler: syncScheduler })
+      try {
+        app.mount()
+        expect((root.firstElementChild as HTMLElement).style.width).toBe('400px')
+        width = 250
+        if (source === 'window') win.dispatchEvent(new win.Event('resize'))
+        else {
+          expect(notify).toBeDefined()
+          notify!([], {} as ResizeObserver)
+        }
+        expect((root.firstElementChild as HTMLElement).style.width).toBe('250px')
+        app.unmount()
+        expect(disconnected).toBe(true)
+      } finally { Object.defineProperty(win, 'ResizeObserver', { configurable: true, value: Original }) }
+    })
+  }
+
   test('mount reads layout constraints exactly from the DOM', () => {
     const { app, root } = createCountingApp()
     resetCounters()

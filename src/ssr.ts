@@ -339,11 +339,10 @@ function escapeStyleText(value: string): string {
     )
   } while (css !== prev)
 
-  // 3. Restore the preserved URLs verbatim (split/join avoids `$` semantics).
-  for (let i = 0; i < preserved.length; i++) {
-    css = css.split(`\u0000axiom-css-safe-url-${nonce}-${i}\u0000`).join(preserved[i]!)
-  }
-  return css
+  // 3. Restore all preserved URLs in one pass, bound to this call's nonce.
+  // A callback inserts URLs verbatim without replacement-string `$` semantics.
+  const placeholder = new RegExp(`\u0000axiom-css-safe-url-${nonce}-(\\d+)\u0000`, 'g')
+  return css.replace(placeholder, (match, index: string) => preserved[Number(index)] ?? match)
 }
 
 /**
