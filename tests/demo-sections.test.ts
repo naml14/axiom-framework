@@ -13,6 +13,7 @@ const styleCssPath = join(repoRoot, "demo", "style.css");
 const rutaBShowcasePath = join(repoRoot, "demo", "ruta-b-showcase.ts");
 const routerDemoPath = join(repoRoot, "demo", "router-demo.ts");
 const portalDemoPath = join(repoRoot, "demo", "portal-demo.ts");
+const componentsPath = join(repoRoot, "demo", "components.ts");
 
 /**
  * Extract { selector, body } pairs from a CSS source. Flat scan: rules nested
@@ -103,7 +104,16 @@ describe("D2 — Grid demo canvas: declared height covers the measured content",
 });
 
 describe("D3 — hero-title rows fit the rendered text (26px)", () => {
-	test("demo/router-demo.ts pins HERO_TITLE_HEIGHT >= 26 on every hero-title row", async () => {
+	test("demo/components.ts pins HeroCard's hero-title row to the shared 26px height", async () => {
+		const source = await readFile(componentsPath, "utf8");
+
+		expect(source).toMatch(/export const HERO_TITLE_HEIGHT = 26\b/);
+		const heroCard = source.slice(source.indexOf("export const HeroCard ="));
+		expect(heroCard).toMatch(/tag:\s*'h2',\s*classes:\s*\['hero-title'\]/);
+		expect(heroCard).not.toMatch(/classes:\s*\['hero-title'\](?!,\s*layout:\s*\{\s*height:\s*HERO_TITLE_HEIGHT\s*\})/);
+	});
+
+	test("demo/router-demo.ts pins the shared HERO_TITLE_HEIGHT on every hero-title row", async () => {
 		const source = await readFile(routerDemoPath, "utf8");
 
 		// `.hero-title` renders 20px font × 1.3 line-height = 26px of text;
@@ -111,21 +121,19 @@ describe("D3 — hero-title rows fit the rendered text (26px)", () => {
 		// (diagnostic.json: clientH 20 / scrollH 26, delta 6 — "Página no
 		// encontrada" in the 404 view). The explicit `height` prop is honored
 		// because the parent is a flex stack (demo-ui-polish.md rule 3).
-		const m = source.match(/const HERO_TITLE_HEIGHT = (\d+)/);
-		expect(m).not.toBeNull();
-		expect(Number(m![1])).toBeGreaterThanOrEqual(26);
+		expect(source).toMatch(/import\s*\{\s*HERO_TITLE_HEIGHT\s*\}\s*from\s*'\.\/components\.ts'/);
+		expect(source).not.toMatch(/const HERO_TITLE_HEIGHT\s*=/);
 		// Every hero-title node in the file must carry the height.
 		expect(source).not.toMatch(/class:\s*\['hero-title'\](?!,\s*height:\s*HERO_TITLE_HEIGHT)/);
 	});
 
-	test("demo/portal-demo.ts pins HERO_TITLE_HEIGHT >= 26 on every hero-title row", async () => {
+	test("demo/portal-demo.ts pins the shared HERO_TITLE_HEIGHT on every hero-title row", async () => {
 		const source = await readFile(portalDemoPath, "utf8");
 
 		// Same defect as the router 404 view: "createPortal" h2 rendered 26px
 		// of text inside a 20px engine row (diagnostic.json, D3).
-		const m = source.match(/const HERO_TITLE_HEIGHT = (\d+)/);
-		expect(m).not.toBeNull();
-		expect(Number(m![1])).toBeGreaterThanOrEqual(26);
+		expect(source).toMatch(/import\s*\{\s*HERO_TITLE_HEIGHT\s*\}\s*from\s*'\.\/components\.ts'/);
+		expect(source).not.toMatch(/const HERO_TITLE_HEIGHT\s*=/);
 		expect(source).not.toMatch(/class:\s*\['hero-title'\](?!,\s*height:\s*HERO_TITLE_HEIGHT)/);
 	});
 });

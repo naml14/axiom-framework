@@ -1,4 +1,5 @@
 import { signal, defineComponent, createPortal, createApp, h, stack } from '../src/index.ts'
+import { HERO_TITLE_HEIGHT } from './components.ts'
 
 // Portal Demo — demonstrates createPortal with the idiomatic helper API.
 //
@@ -7,13 +8,6 @@ import { signal, defineComponent, createPortal, createApp, h, stack } from '../s
 // controlled container so Axiom only removes what it inserted on cleanup.
 
 const isModalOpen = signal(false)
-
-// Altura de fila para el h2.hero-title dentro del árbol del motor:
-// `.hero-title` renderiza 20px × 1.3 = 26px de texto; la fila por defecto
-// (lineHeight 20) lo recortaba (scrollHeight 26 vs clientHeight 20 —
-// evidence release-0.9.14 diagnostic.json, D3). La prop `height` se honra
-// porque el padre es un stack flex (regla 3 de demo-ui-polish.md).
-const HERO_TITLE_HEIGHT = 26
 
 // Dedicated container for portal output.
 // Never use document.body directly as a portal target.

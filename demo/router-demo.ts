@@ -22,13 +22,7 @@ import {
 } from '../src/index.ts'
 import type { Route, Router, RouteState } from '../src/index.ts'
 
-// Altura de fila para los h2.hero-title dentro del árbol del motor:
-// `.hero-title` renderiza 20px × 1.3 = 26px de texto; la fila por defecto
-// del motor (lineHeight 20) los recortaba (scrollHeight 26 vs clientHeight
-// 20 — evidence release-0.9.14 diagnostic.json, D3). La prop explícita
-// `height` se honra porque el padre es un stack flex (regla 3 de
-// demo-ui-polish.md).
-const HERO_TITLE_HEIGHT = 26
+import { HERO_TITLE_HEIGHT } from './components.ts'
 
 // ============================================================
 // Rutas
