@@ -68,13 +68,32 @@ evidencia (SHA del commit + test que lo pinea).
 
 | ID | Spec | Trabajo | Ruta | Rama |
 | --- | --- | --- | --- | --- |
-| T1 | S1, S2 | Resolver S120-A..S120-J (10 hallazgos del guard) | worker | `feat/next-version-01-release-integrity` |
-| T2 | S1, S2 | Resolver S121-A..S121-F (6 hallazgos de core) | worker | `feat/next-version-02-promises` |
-| T3 | S1, S2 | Resolver S122-A..S122-C (3 hallazgos de contrato) | worker | `feat/next-version-03-contract` |
-| T4 | S1, S2 | Resolver S123-A (1 hallazgo de demo) | worker | `feat/next-version-04-demo` |
-| T5 | S2, S5 | Verificar: `bun test`, `bun run typecheck`, `bun run validate:api`, `bun run validate:release-notes` por rama | inline | todas |
-| T6 | S4 | Propagar los fixes por la pila (merge WU1→WU2→WU3→WU4) y pushear | inline | todas |
-| T7 | S2, S3 | Responder y resolver los 20 hilos con evidencia; registrar en `odd/evidence/sourcery-review/` | inline | — |
+| T1 | S1, S2 | Resolver S120-A..S120-J (10 hallazgos del guard) | worker + inline | `aadf6d0`, `3d828a0` |
+| T2 | S1, S2 | Resolver S121-A..S121-F (6 hallazgos de core) | worker + inline | `d2ba618` |
+| T3 | S1, S2 | Resolver S122-A..S122-C (3 hallazgos de contrato) | worker + inline | `0467101` |
+| T4 | S1, S2 | Resolver S123-A (1 hallazgo de demo) | worker | `da50147` |
+| T5 | S2, S5 | Verificar: `bun test`, `bun run typecheck`, `bun run validate:api`, `bun run validate:release-notes` por rama | inline | 812 pass / 2 skip / 0 fail |
+| T6 | S4 | Propagar los fixes por la pila (merge WU1→WU2→WU3→WU4) y pushear | inline | 7bae508, 9b14c05, 0820e87 |
+| T7 | S2, S3 | Responder y resolver los 20 hilos con evidencia; registrar en `odd/evidence/sourcery-review/` | inline | 20/20 `isResolved: true` |
+
+## Results
+
+Los 20 hallazgos de `sourcery-ai` quedaron resueltos, con fix en código, test que lo pina y
+respuesta publicada en el hilo correspondiente. Los 20 hilos quedaron `isResolved: true` y las
+20 respuestas están en GitHub (10 en #120, 6 en #121, 3 en #122, 1 en #123).
+
+Evidencia durable en `odd/evidence/sourcery-review/`:
+- `threads.tsv` — inventario de los 20 hilos (threadId, commentId, archivo:línea).
+- `replies.json` — respuesta publicada por cada hallazgo, con commit y test citados.
+- `resolve-threads.ts` — publica las respuestas y resuelve los hilos.
+- `validate-replies.ts` — comprueba contra la API que cada hilo tiene exactamente una respuesta
+  y que cada `threadId`/`commentId` coincide con GitHub.
+
+Verificación del gate de release (S120-A), no solo local: se publicó una rama de prueba con
+una entrada fantasma en el CHANGELOG y el run de Actions `39656976978` terminó en
+`conclusion: failure` con el commit en `state: failure` bajo el contexto
+`Release notes integrity`; la misma rama limpia pasó en verde. La rama de prueba se borró
+después.
 
 ## Log
 
@@ -95,3 +114,22 @@ evidencia (SHA del commit + test que lo pinea).
   0 jobs ejecutados, lo que confirma que el guard no llega a correr en los PRs del bot.
 - D3 (decisión): los fixes se aplican en la rama que introduce el código señalado (S4), y luego se
   propagan hacia abajo en la pila para que cada PR siga siendo mergeable en orden.
+- D4 (decisión): el rebase se sustituyó por merge-down (tracker→01→02→03→04) porque la
+  política de seguridad del entorno bloquea el force-push. El resultado es el mismo para el
+  revisor: cada PR es descendiente de su base y sus diffs siguen conteniendo solo su trabajo.
+- D5 (decisión): el guard se rediseñó sobre identidad de parche inverso (`git patch-id --stable`
+  del diff invertido) en vez de heurísticas de asunto y de primer padre. Es la única forma
+  fiable de reconocer un revert cuyo mensaje cita un título de PR y de cubrir los commits
+  interiores de un merge revertido.
+- D6 (hallazgo propio, no de Sourcery): al validar el gate de release con una rama de prueba
+  se detectó que el guard exigía que cada path cambiado fuera byte-idéntico a su estado previo
+  también en el head, de modo que un commit posterior legítimo sobre el mismo archivo ocultaba
+  la detección. La comprobación de supervivencia pasó a ser por path y a comparar la
+  post-imagen de la entrada, y se pineó con el test
+  `a later unrelated edit to a reverted file does not hide the revert` (RED verificado).
+- D7 (decisión): la política de promoción de `docs/STABILITY.md` afirmaba que un export sin
+  tag falla CI, pero el validador trata los exports públicos sin tag como estables desde
+  v1.0.0. Se corrigió la redacción para enumerar lo que el validador sí rechaza.
+- D8 (decisión): los hallazgos se resolvieron sin subagentes de IA por indicación del
+  mantenedor: la implementación y la verificación se hicieron directamente sobre los worktrees.
+- L3 (usuario, verbatim): «retome, pero no utilice GPT para los subagentes.»
