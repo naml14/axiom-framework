@@ -14,6 +14,11 @@ cuál es su siguiente acción concreta.
   para que el bot no vuelva a escanear los commits revertidos de septiembre.
 - **R1 (Features fantasma de release-please).** Cerrado definitivamente con `last-release-sha`
   en `release-please-config.json` y el guard `scripts/validate-release-notes.ts` implementado en WU1.
+- **Revisión de sourcery-ai en la cadena WU1-WU4.** Los 20 hallazgos del bot en los PRs #120-#123
+  resueltos con fix, test y respuesta publicada; los 20 hilos quedaron resueltos. El guard de
+  release se rediseñó sobre identidad de parche inverso y ahora sí corre en los PRs del bot
+  (dispatch explícito + commit status `Release notes integrity`). Evidencia:
+  `odd/evidence/sourcery-review/`. Detalle: `odd/tasks/sourcery-review-resolution.md`.
 - **U1 (npm OIDC trusted publisher).** Confirmado funcionando: 0.9.13 publicado vía OIDC el
   2026-09-23T20:49Z, ~2 min después del release de GitHub.
 - **Limpieza de ramas.** 4 remotas ya mergeadas y 3 locales fusionadas borradas; rama
@@ -26,18 +31,19 @@ cuál es su siguiente acción concreta.
 | ID | Pendiente | Origen | Siguiente acción |
 | --- | --- | --- | --- |
 | R3 | `create-axiom` termina con exit 0 e imprime «Ready!» aunque `bun install` falle | issue #96; reproducido en head de release | Fix del exit code + test que lo pine: `axiom-next-version` T2 (ya implementado en WU1 / PR #120) |
+| R4 | Configurar `Release notes integrity` como required status en las reglas de protección de la rama de release | `sourcery-review-resolution.md` S120-A | Los workflows ya publican ese estado en el SHA del PR de release y bloquean el merge cuando el guard falla, pero el requisito se configura en la UI de GitHub, no en el repo. Verificado en verde y en rojo con un run real (`39656976978`) |
 
 ## P1 — Seguridad y correctness (Fase 3 del hardening, sin iniciar)
 
 | ID | Pendiente | Origen | Siguiente acción |
 | --- | --- | --- | --- |
-| F3-T1 | C-4 + M-12: `src/app.ts:getConstraints()` hace 4 DOM reads por update cycle y el enforcement test no escanea `src/app.ts` | plan FASE 3 | Decidir allowlist explícito justificado vs remediar; extender `hot-path-dom-reads.test.ts` |
-| F3-T2 | H-9: `validateStyleProps` nunca se llama; el whitelist se rompe en runtime | plan FASE 3 | Llamarlo en dev en `applyStyleToElement` + test con prop maliciosa |
-| F3-T7 | M-11: `commitHydrate` lee DOM extensivamente sin allowlist documentada | plan FASE 3 | JSDoc con la allowlist y demarcación en el test |
+| F3-T1 | C-4 + M-12: `src/app.ts:getConstraints()` hace 4 DOM reads por update cycle y el enforcement test no escanea `src/app.ts` | plan FASE 3 | **Resuelto en WU2** (`d2ba618`): allowlist explícita justificada, `src/app.ts` escaneado, test de enforcement en steady state y refresh en resize. Pendiente: cerrar en el plan de FASE 3 |
+| F3-T2 | H-9: `validateStyleProps` nunca se llama; el whitelist se rompe en runtime | plan FASE 3 | **Resuelto en WU2** (`d2ba618`): se llama en dev en `applyStyleToElement` con test de prop maliciosa, y el sanitizado de valores se aplica en todos los builds. Pendiente: cerrar en el plan de FASE 3 |
+| F3-T7 | M-11: `commitHydrate` lee DOM extensivamente sin allowlist documentada | plan FASE 3 | **Resuelto en WU2** (`f8dbfb7`, `d2ba618`): JSDoc con la allowlist, demarcación en el test y allowlist actualizada con las lecturas CSSOM reales |
 | F3-T9a | L-3: `validateStaticDir` acepta symlinks | plan FASE 3 | Rechazar symlinks + test |
 | F3-T9b | L-4: `escapeHtml` no escapa backticks | plan FASE 3 | Añadir backtick al escape + test |
-| S1 | C-1 parcial: `escapeStyleText` descarta `url(...)` con `data:image` base64 legítima en estilos inline SSR | docs-sync T7; `SECURITY.md` | Decidir: soportar `url(data:…)` saneado en SSR o documentar la asimetría como política |
-| S2 | H-11 / F1-T7: `resetIndexCounter` marcado `@deprecated` pero no re-exportado; el validador seguirá en `Deprecated: 0` | docs-sync T6 | Decidir: re-exportar, eliminar (es no-op) o aceptar la etiqueta como documentación |
+| S1 | C-1 parcial: `escapeStyleText` descarta `url(...)` con `data:image` base64 legítima en estilos inline SSR | docs-sync T7; `SECURITY.md` | **Resuelto en WU3** (`fe6cfc9`): se soporta `url(data:…)` saneado en SSR con paridad de subtipos con `attrs.ts` |
+| S2 | H-11 / F1-T7: `resetIndexCounter` marcado `@deprecated` pero no re-exportado; el validador seguirá en `Deprecated: 0` | docs-sync T6 | **Resuelto en WU3** (`e42a7be`): se eliminó la exportación inerte `resetIndexCounter` |
 
 ## P2 — Correctness y contratos
 
@@ -54,7 +60,7 @@ cuál es su siguiente acción concreta.
 | K1 | H-12: `portal.ts` no maneja portals con target desconectado en CSR | catálogo, sin fase asignada | Verificar estado actual; si sigue abierto, asignar tarea con test |
 | K2 | H-13: `applyOps`/`commitFull` no verifican `parentNode` antes de `appendChild` | catálogo, sin fase asignada | Idem |
 | K3 | M-3, M-6, M-7, M-8, M-9 sin tarea en el plan | catálogo | Revisar uno a uno: resueltos en Fases 1-2, aceptados como wont-fix, o crear tarea |
-| F3-T9c | L-1 (`escapeStyleText` O(n²)), L-2 (`commitHydrate` itera el DOM completo), L-5 (`installDevHook` sin warn en re-mount) | plan FASE 3 | Bounded loop, iterar solo subtree, warn; con tests |
+| F3-T9c | L-1 (`escapeStyleText` O(n²)), L-2 (`commitHydrate` itera el DOM completo), L-5 (`installDevHook` sin warn en re-mount) | plan FASE 3 | L-1 **resuelto en WU3** (`0467101`): la restauración de placeholders es una sola pasada. Pendientes L-2 y L-5: bounded loop, iterar solo subtree, warn; con tests |
 
 ## P3 — Demo y DX (hallazgos de la verificación 2026-10-16, preexistentes en 0.9.13)
 
