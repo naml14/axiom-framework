@@ -8,16 +8,16 @@ cuál es su siguiente acción concreta.
 
 ## Cerrados en esta renovación (no reabrir sin evidencia nueva)
 
-- **Release 0.9.14 fantasma (PR #118).** Cerrado sin mergear (opción A del mantenedor), rama
-  remota de release-please eliminada, evidencia y scripts commiteados (`ce02063`, `c08dc02`).
-  Motivo: árbol idéntico a v0.9.13 y CHANGELOG con dos Features revertidas por #117.
+- **Release 0.9.14 fantasma (PR #118 y PR #119).** PR #118 y PR #119 cerrados sin mergear,
+  ramas remotas de release-please eliminadas y 6 ramas huérfanas remotas con el typo `create-aviom`
+  purgadas de GitHub. `release-please-config.json` blindado con `last-release-sha` en `372a0e0`
+  para que el bot no vuelva a escanear los commits revertidos de septiembre.
+- **R1 (Features fantasma de release-please).** Cerrado definitivamente con `last-release-sha`
+  en `release-please-config.json` y el guard `scripts/validate-release-notes.ts` implementado en WU1.
 - **U1 (npm OIDC trusted publisher).** Confirmado funcionando: 0.9.13 publicado vía OIDC el
   2026-09-23T20:49Z, ~2 min después del release de GitHub.
 - **Limpieza de ramas.** 4 remotas ya mergeadas y 3 locales fusionadas borradas; rama
   `chore/revert-create-aviom-merges` eliminada y repositorio en `main` al día.
-- **R2 (CI sin jobs en ramas de release).** Cerrado 2026-10-16: no eran fallos de tests sino runs
-  de PRs de bot que nunca arrancaron (aprobación pendiente o invalidados por force-push/borrado);
-  GitHub los finaliza como `failure` sin jobs ni logs. Evidencia: `axiom-next-version.md` L4.
 - **demo-ui-polish T1-T6**, **hardening-docs-sync T1-T4**, **npm-oidc T1-T4**: entregados.
 - **Hardening Fases 0, 1 y 2**: entregadas (F2-T7 excluida, ver P2).
 
@@ -25,8 +25,7 @@ cuál es su siguiente acción concreta.
 
 | ID | Pendiente | Origen | Siguiente acción |
 | --- | --- | --- | --- |
-| R1 | El próximo release PR de release-please volverá a traer las 2 Features fantasma del revert | `release-0.9.14-verification.md` §6, L5 | Al abrirse el PR: editar `CHANGELOG.md` en su rama (quitar las entradas o nota del revert) y aprobar sus runs antes de mergear; el guard de `axiom-next-version` T1 lo detectará automáticamente |
-| R3 | `create-axiom` termina con exit 0 e imprime «Ready!» aunque `bun install` falle | issue #96; reproducido en head de release | Fix del exit code + test que lo pine: `axiom-next-version` T2 |
+| R3 | `create-axiom` termina con exit 0 e imprime «Ready!» aunque `bun install` falle | issue #96; reproducido en head de release | Fix del exit code + test que lo pine: `axiom-next-version` T2 (ya implementado en WU1 / PR #120) |
 
 ## P1 — Seguridad y correctness (Fase 3 del hardening, sin iniciar)
 
