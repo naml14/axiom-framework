@@ -18,6 +18,14 @@ cuál es su siguiente acción concreta.
   2026-09-23T20:49Z, ~2 min después del release de GitHub.
 - **Limpieza de ramas.** 4 remotas ya mergeadas y 3 locales fusionadas borradas; rama
   `chore/revert-create-aviom-merges` eliminada y repositorio en `main` al día.
+- **R2 (CI sin jobs en ramas de release).** Cerrado 2026-10-16: no eran fallos de tests sino runs
+  de PRs de bot que nunca arrancaron (aprobación pendiente o invalidados por force-push/borrado);
+  GitHub los finaliza como `failure` sin jobs ni logs. Evidencia: `axiom-next-version.md` L4.
+- **D1, D2, D3 (layout del demo).** Cerrados 2026-10-16 en `feat/next-version-release-integrity`
+  (commit `653bba6`): el motor posee el layout en Syntax, Grid y hero-titles; probe de navegador
+  before/after en `.verify-tmp/evidence/t11-{before,after}.json`.
+- **D4 y D5.** Cerrados por decisión 2026-10-16 (desktop-first documentado; skips mantenidos con
+  la decisión en el mensaje), commit `8141b66`.
 - **demo-ui-polish T1-T6**, **hardening-docs-sync T1-T4**, **npm-oidc T1-T4**: entregados.
 - **Hardening Fases 0, 1 y 2**: entregadas (F2-T7 excluida, ver P2).
 

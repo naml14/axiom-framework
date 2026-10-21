@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, beforeAll } from 'bun:test'
 import { Window } from 'happy-dom'
 import { createPortal } from '../src/features/portal.js'
-import { prepare, resetIndexCounter, getNodeIndex, getNodeType, getPreparedChildren, getPortalCssManaged } from '../src/render/prepare.js'
+import { prepare, getNodeIndex, getNodeType, getPreparedChildren, getPortalCssManaged } from '../src/render/prepare.js'
 import { reflow } from '../src/render/reflow.js'
 import { commitFull, applyOps } from '../src/render/commit.js'
 import type { DOMState } from '../src/render/commit.js'
@@ -154,7 +154,6 @@ describe('prepare — portal node', () => {
   let target: HTMLElement
 
   beforeEach(() => {
-    resetIndexCounter()
     target = { tagName: 'DIV' } as unknown as HTMLElement
   })
 
@@ -221,7 +220,6 @@ describe('reflow — portal layout', () => {
   let target: HTMLElement
 
   beforeEach(() => {
-    resetIndexCounter()
     target = { tagName: 'DIV' } as unknown as HTMLElement
   })
 
@@ -316,7 +314,6 @@ describe('Bug B — portal in flex row does not displace siblings', () => {
   let target: HTMLElement
 
   beforeEach(() => {
-    resetIndexCounter()
     target = { tagName: 'DIV' } as unknown as HTMLElement
   })
 
@@ -389,7 +386,6 @@ describe('Bug B — portal in flex row does not displace siblings', () => {
 
 describe('commitFull — portal children appended to targetElement', () => {
   beforeEach(() => {
-    resetIndexCounter()
   })
 
   test('portal children are appended to targetElement, not the parent container', () => {
@@ -707,7 +703,6 @@ describe('Bug A1 — portal cleanup does not nuke external DOM', () => {
 
 describe('Bug A2 — portal direct children are CSS-managed (no Axiom layout positions)', () => {
   test('portal direct children have 0×0 layout — CSS owns their positioning', () => {
-    resetIndexCounter()
     const target = document.createElement('div')
 
     const component = defineComponent(() => ({
@@ -749,7 +744,6 @@ describe('Bug A2 — portal direct children are CSS-managed (no Axiom layout pos
   })
 
   test('portal direct children are appended to the target DOM without inline position styles', () => {
-    resetIndexCounter()
     const target = document.createElement('div')
     const root = document.createElement('div')
 
@@ -789,7 +783,6 @@ describe('Bug A2 — portal direct children are CSS-managed (no Axiom layout pos
 
 describe('Bug A3 — fullDiff insert ops for portal descendants carry portalTarget', () => {
   test('fullDiff first-render path: insert ops for portal element children have portalTarget set', () => {
-    resetIndexCounter()
     const targetEl = document.createElement('section')
 
     const component = defineComponent(() => ({
@@ -815,7 +808,6 @@ describe('Bug A3 — fullDiff insert ops for portal descendants carry portalTarg
   })
 
   test('fullDiff update path carries portal metadata for cssManaged:false portal children', () => {
-    resetIndexCounter()
     const targetEl = document.createElement('section')
     let width = 100
 
@@ -960,7 +952,6 @@ describe('prepare — getPortalCssManaged helper (issue #9)', () => {
   let target: HTMLElement
 
   beforeEach(() => {
-    resetIndexCounter()
     target = { tagName: 'DIV' } as unknown as HTMLElement
   })
 
@@ -1006,7 +997,6 @@ describe('reflow — cssManaged:false portal children participate in layout (iss
   let nestedTarget: HTMLElement
 
   beforeEach(() => {
-    resetIndexCounter()
     target = { tagName: 'DIV' } as unknown as HTMLElement
     nestedTarget = { tagName: 'DIV' } as unknown as HTMLElement
   })
@@ -1167,7 +1157,6 @@ describe('reflow — cssManaged:false portal children participate in layout (iss
 
 describe('commitFull — cssManaged:false portal children get inline layout styles (issue #9)', () => {
   beforeEach(() => {
-    resetIndexCounter()
   })
 
   test('cssManaged:false portal children have position:absolute and transform applied', () => {

@@ -516,14 +516,14 @@ describe('bind — textarea and select', () => {
   // `this.window` is not fully initialized for standalone-created elements.
   // The bind() implementation correctly accepts HTMLSelectElement (type guard + BindableElement union).
   // Integration coverage for select can be added once we upgrade happy-dom or use a Page context.
-  test.skip('bind works with select: signal→DOM (skipped: happy-dom select.value limitation)', () => {
+  test.skip('bind works with select: signal→DOM (skipped: happy-dom select.value limitation; decision 2026-10-16, backlog D5: keep skipped until the runner upgrades)', () => {
     const sig = signal('option2')
     const select = happyWindow.document.createElement('select') as unknown as HTMLSelectElement
     bind(sig, select)
     expect(select.value).toBe('option2')
   })
 
-  test.skip('bind works with select: DOM→signal (skipped: happy-dom select.value limitation)', () => {
+  test.skip('bind works with select: DOM→signal (skipped: happy-dom select.value limitation; decision 2026-10-16, backlog D5: keep skipped until the runner upgrades)', () => {
     const sig = signal('')
     const select = happyWindow.document.createElement('select') as unknown as HTMLSelectElement
     bind(sig, select)
