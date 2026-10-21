@@ -9,9 +9,10 @@
  *
  * Reverts are associated with original commits by inverse patch identity,
  * never by subject or the revert's parent alone. An entry (including an
- * interior commit of a reverted merge) is phantom only when its changed
- * paths return to their pre-entry state at the revert AND at range head.
- * Restored changes and ancestors whose changes survive are not phantom.
+ * interior commit of a reverted merge) is phantom only when the revert
+ * restored its changed paths to their pre-entry state AND the change did not
+ * survive at the range head. A later unrelated edit to the same file does
+ * not hide the removal, and a restored change is not reported.
  *
  * Usage:
  *   bun run scripts/validate-release-notes.ts [--base <ref>] [--head <ref>]
@@ -80,7 +81,8 @@ if (argv.includes("--help") || argv.includes("-h")) {
 			"Fails (exit 1) when CHANGELOG.md at <head> lists an entry whose linked commit",
 			'was undone by a `Revert "<subject>"` commit inside <base>..<head>.',
 			"Inverse patches identify the target; changed paths must be restored to their",
-			"pre-entry state both at the revert and at head. Reverted merges include interior commits.",
+			"pre-entry state at the revert, and the change must not survive at head.",
+			"Reverted merges include their interior commits.",
 			"Unknown arguments, ambiguous SHAs, invalid ranges and Git inspection errors fail closed.",
 			"",
 			"Defaults: --head HEAD, --base most recent tag reachable from head (root commit if none).",
@@ -312,12 +314,36 @@ function pathState(ref: string, path: string): string {
 	return gitOrExit(["ls-tree", "-z", ref, "--", `:(literal)${path}`]);
 }
 
-function removedAt(entry: string, revert: string, tip: string): boolean {
+/**
+ * True when `tip` still contains the change that `entry` introduced.
+ *
+ * The check is per path and asks whether the entry's post-image survives at
+ * the tip, not whether the whole path is byte-identical to the pre-entry
+ * state. A later, unrelated edit to the same file must not hide a revert,
+ * and a surviving change must not be reported as removed.
+ */
+function changeSurvivesAt(entry: string, tip: string): boolean {
+	const paths = changedFiles(entry);
+	if (paths.size === 0) return false;
+	for (const path of paths) {
+		// Absent at both ends: the path was added and then removed again.
+		if (pathState(`${entry}^1`, path) === "" && pathState(tip, path) === "") continue;
+		// The entry's own post-image is still there: the change survived.
+		if (pathState(`${entry}`, path) === pathState(tip, path)) return true;
+	}
+	return false;
+}
+
+/**
+ * True when the revert actually undid the entry's change: every path the
+ * entry touched is back to its pre-entry content at the revert commit.
+ */
+function removedAt(entry: string, revert: string): boolean {
 	const paths = changedFiles(entry);
 	if (paths.size === 0) return false;
 	for (const path of paths) {
 		const before = pathState(`${entry}^1`, path);
-		if (pathState(revert, path) !== before || pathState(tip, path) !== before) return false;
+		if (pathState(revert, path) !== before) return false;
 	}
 	return true;
 }
@@ -345,7 +371,13 @@ for (const entry of entries) {
 
 	for (const revert of revertCommits) {
 		for (const target of targets.get(revert.sha) ?? []) {
-			if (isAncestor(commit.sha, target.sha) && removedAt(commit.sha, revert.sha, head)) {
+			// The entry is inside the reverted change, the revert restored the
+			// pre-entry content, and the change did not come back afterwards.
+			if (
+				isAncestor(commit.sha, target.sha) &&
+				removedAt(commit.sha, revert.sha) &&
+				!changeSurvivesAt(commit.sha, head)
+			) {
 				matchedRevert = revert;
 				const candidate = entry.candidates.find((subject) => subject === commit.subject);
 				matchedSubject = candidate !== undefined && candidate !== entry.subject
