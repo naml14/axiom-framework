@@ -13,6 +13,10 @@ import {
   SAFE_STYLE_KEYS,
 } from '../src/features/style.js'
 import type { SafeStyleProps, ThemeTokens, Theme } from '../src/features/style.js'
+import { commitFull, commitHydrate, applyOps } from '../src/render/commit.js'
+import { prepare } from '../src/render/prepare.js'
+import { reflow } from '../src/render/reflow.js'
+import { defineComponent } from '../src/render/component.js'
 
 // Setup happy-dom for DOM tests
 beforeAll(() => {
@@ -290,20 +294,87 @@ describe('applyStyleToElement — dev-mode whitelist enforcement (H-9)', () => {
     }
   })
 
-  it('production: behavior unchanged — no validation overhead, no warnings', () => {
+  it('production: skips key validation and warnings, retaining the value security floor', () => {
     globalThis.__AXIOM_DEV__ = false
     const warnSpy = spyOn(console, 'warn').mockImplementation(() => {})
     try {
       const el = document.createElement('div')
-      const props = { color: 'red', evilPropC: 'javascript:alert(1)' } as unknown as SafeStyleProps
+      const props = { color: 'red', evilPropC: 'literal' } as unknown as SafeStyleProps
       applyStyleToElement(el, props)
       expect(el.style.color).toBe('red')
-      // Prod path assumes pre-validated props: raw assignment lands exactly as today.
-      expect((el.style as unknown as Record<string, unknown>).evilPropC).toBe('javascript:alert(1)')
+      // Production still skips key validation, but no longer skips value security.
+      expect((el.style as unknown as Record<string, unknown>).evilPropC).toBe('literal')
       expect(warnSpy).not.toHaveBeenCalled()
     } finally {
       warnSpy.mockRestore()
     }
+  })
+})
+
+describe('S121 style regressions', () => {
+  const savedDev = globalThis.__AXIOM_DEV__
+  afterEach(() => { globalThis.__AXIOM_DEV__ = savedDev })
+
+  it('blocks remote CSS URLs in production, including escaped and nested forms', () => {
+    globalThis.__AXIOM_DEV__ = false
+    for (const value of [
+      'url(https://attacker.invalid/pixel)',
+      'URL("//attacker.invalid/pixel")',
+      'url(/pixel)',
+      'u\\\\72l(https://attacker.invalid/pixel)',
+      'u/**/rl(https://attacker.invalid/pixel)',
+      'image-set("https://attacker.invalid/pixel" 1x)',
+      'url(data:text/html;base64,YQ==)',
+    ]) {
+      const el = document.createElement('div')
+      applyStyleToElement(el, { backgroundImage: value })
+      expect(el.style.backgroundImage).toBe('')
+    }
+    const el = document.createElement('div')
+    applyStyleToElement(el, { backgroundImage: 'url("data:image/png;base64,YQ==")' })
+    expect(el.style.backgroundImage).toContain('data:image/png;base64,YQ==')
+  })
+
+  it('clears an explicitly empty whitelisted value through applyOps, retaining omitted keys', () => {
+    globalThis.__AXIOM_DEV__ = true
+    const warn = spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const root = document.createElement('div')
+      const el = document.createElement('div')
+      applyStyleToElement(el, { letterSpacing: '2px', color: 'red' })
+      applyOps([{ type: 'update', index: 0, newStyle: { letterSpacing: '' } }], root, [el])
+      expect(el.style.letterSpacing).toBe('')
+      expect(el.style.color).toBe('red')
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(String(warn.mock.calls[0]![0])).toContain('empty style value for key "letterSpacing"')
+    } finally { warn.mockRestore() }
+  })
+
+  it('validates raw attrs.style in full commit, inserts and hydration with shared warn-once', () => {
+    globalThis.__AXIOM_DEV__ = true
+    const warn = spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const component = defineComponent(() => ({
+        type: 'element' as const, tag: 'div', attrs: { style: 'min-width:123px;color:red' },
+      }))
+      const prepared = prepare(component, undefined)
+      const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+      const root = document.createElement('div')
+      const state = { domNodes: [], portalRoots: new Map() }
+      commitFull(layout, prepared, root, state)
+      const full = root.firstElementChild as HTMLElement
+      expect(full.style.minWidth).toBe('')
+      expect(full.style.color).toBe('red')
+      applyOps([{ type: 'insert', index: 0, tag: 'div', attrs: { style: 'min-width:123px;color:red' } }], root, [])
+      expect((root.lastElementChild as HTMLElement).style.minWidth).toBe('')
+      root.innerHTML = '<div data-axiom-id="0" style="min-width:123px;color:red"></div>'
+      commitHydrate(layout, prepared, root, state)
+      expect((root.firstElementChild as HTMLElement).style.minWidth).toBe('')
+      expect((root.firstElementChild as HTMLElement).style.color).toBe('red')
+      applyStyleToElement(full, { minWidth: '2px' } as unknown as SafeStyleProps)
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(String(warn.mock.calls[0]![0])).toContain('minWidth')
+    } finally { warn.mockRestore() }
   })
 })
 
