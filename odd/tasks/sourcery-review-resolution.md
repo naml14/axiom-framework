@@ -132,4 +132,10 @@ después.
   v1.0.0. Se corrigió la redacción para enumerar lo que el validador sí rechaza.
 - D8 (decisión): los hallazgos se resolvieron sin subagentes de IA por indicación del
   mantenedor: la implementación y la verificación se hicieron directamente sobre los worktrees.
+- D9 (limitación del entorno): el switch RDD nativo no pudo activarse en esta sesión porque
+  `.git/gentle-ai` (el directorio de autoridad de RAR) pertenece a un SID ilegible y su ACL
+  rechaza `icacls /setowner` y `takeown` sin privilegios de administrador. `.git` en sí sí se
+  corrigió. La revisión nativa queda **no disponible**, no ejecutada: la resolución de los
+  hallazgos de Sourcery no dependía de ella y se verificó con la suite completa, `typecheck`,
+  `validate:api` y un run real de Actions.
 - L3 (usuario, verbatim): «retome, pero no utilice GPT para los subagentes.»
