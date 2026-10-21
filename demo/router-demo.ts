@@ -22,6 +22,8 @@ import {
 } from '../src/index.ts'
 import type { Route, Router, RouteState } from '../src/index.ts'
 
+import { HERO_TITLE_HEIGHT } from './components.ts'
+
 // ============================================================
 // Rutas
 // ============================================================
@@ -29,7 +31,7 @@ import type { Route, Router, RouteState } from '../src/index.ts'
 const Home = defineComponent(() =>
   stack({ gap: 10, padding: 16 },
     h('div', { class: ['hero-badge'] }, '🏠 HOME'),
-    h('h2', { class: ['hero-title'] }, 'Bienvenido al Router Demo'),
+    h('h2', { class: ['hero-title'], height: HERO_TITLE_HEIGHT }, 'Bienvenido al Router Demo'),
     h('p', { class: ['hero-body'] },
       'Este demo usa createRouter para gestionar rutas sin librerías externas. ' +
       'La URL del navegador se sincroniza con el signal $route, y los componentes ' +
@@ -41,7 +43,7 @@ const Home = defineComponent(() =>
 const About = defineComponent(() =>
   stack({ gap: 10, padding: 16 },
     h('div', { class: ['hero-badge'] }, 'ℹ️ ABOUT'),
-    h('h2', { class: ['hero-title'] }, 'Acerca de Axiom Router'),
+    h('h2', { class: ['hero-title'], height: HERO_TITLE_HEIGHT }, 'Acerca de Axiom Router'),
     h('p', { class: ['hero-body'] },
       'Axiom Router soporta rutas estáticas (/about), dinámicas (/users/:id), ' +
       'y wildcard (*). El matching es determinista con specificity score.',
@@ -68,7 +70,7 @@ const FAKE_USERS: Record<string, UserRecord> = {
 const UsersIndex = defineComponent(() =>
   stack({ gap: 8, padding: 16 },
     h('div', { class: ['hero-badge'] }, '👥 USERS'),
-    h('h2', { class: ['hero-title'] }, 'Lista de usuarios'),
+    h('h2', { class: ['hero-title'], height: HERO_TITLE_HEIGHT }, 'Lista de usuarios'),
     h('div', { flex: 'column', gap: 4, padding: 0 },
       ...Object.values(FAKE_USERS).map((u) =>
         h('div', {
@@ -87,7 +89,7 @@ const UsersIndex = defineComponent(() =>
 const NotFound = defineComponent(() =>
   stack({ gap: 8, padding: 16 },
     h('div', { class: ['hero-badge'] }, '🚫 404'),
-    h('h2', { class: ['hero-title'] }, 'Página no encontrada'),
+    h('h2', { class: ['hero-title'], height: HERO_TITLE_HEIGHT }, 'Página no encontrada'),
     h('p', { class: ['hero-body'] }, 'La ruta solicitada no coincide con ninguna ruta registrada.'),
   )
 )
@@ -97,13 +99,13 @@ const UserDetail = defineComponent((props: { userId: string }) => {
   if (user === undefined) {
     return stack({ gap: 8, padding: 16 },
       h('div', { class: ['hero-badge'] }, '⚠️ NOT FOUND'),
-      h('h2', { class: ['hero-title'] }, `Usuario "${props.userId}" no existe`),
+      h('h2', { class: ['hero-title'], height: HERO_TITLE_HEIGHT }, `Usuario "${props.userId}" no existe`),
       h('p', { class: ['hero-body'] }, 'IDs válidos: 1, 2, 3'),
     )
   }
   return stack({ gap: 8, padding: 16 },
     h('div', { class: ['hero-badge'] }, `👤 USER #${user.id}`),
-    h('h2', { class: ['hero-title'] }, user.name),
+    h('h2', { class: ['hero-title'], height: HERO_TITLE_HEIGHT }, user.name),
     h('p', { class: ['hero-body'] }, `Role: ${user.role}`),
     h('p', { class: ['hero-body'] }, `ID param: "${props.userId}"`),
   )
@@ -116,7 +118,7 @@ const UserDetail = defineComponent((props: { userId: string }) => {
 const AsyncFallback = defineComponent(() =>
   stack({ gap: 8, padding: 16 },
     h('div', { class: ['hero-badge'] }, '⏳ ASYNC'),
-    h('h2', { class: ['hero-title'] }, 'Cargando componente async…'),
+    h('h2', { class: ['hero-title'], height: HERO_TITLE_HEIGHT }, 'Cargando componente async…'),
     h('p', { class: ['hero-body'] }, 'defineAsyncComponent espera un loader que retorne Promise<{ default: ComponentDefinition }>.'),
   )
 )
@@ -124,7 +126,7 @@ const AsyncFallback = defineComponent(() =>
 const LazyDashboard = defineComponent(() =>
   stack({ gap: 8, padding: 16 },
     h('div', { class: ['hero-badge'] }, '📦 LAZY DASHBOARD'),
-    h('h2', { class: ['hero-title'] }, 'Cargado dinámicamente'),
+    h('h2', { class: ['hero-title'], height: HERO_TITLE_HEIGHT }, 'Cargado dinámicamente'),
     h('p', { class: ['hero-body'] },
       'Este componente fue cargado vía defineAsyncComponent con un delay simulado de 500ms. ' +
       'Mientras carga, renderiza el fallback.',
