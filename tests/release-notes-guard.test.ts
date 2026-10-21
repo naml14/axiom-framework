@@ -272,6 +272,28 @@ describe("release-notes-guard", () => {
 		expect(result.stderr).toBe("");
 	});
 
+	test("a later unrelated edit to a reverted file does not hide the revert", async () => {
+		// The real 0.9.14 shape: the feature is reverted, and a later commit
+		// legitimately touches the same file. Requiring the whole file to be
+		// byte-identical to its pre-entry state would hide the removal.
+		const dir = await initRepo();
+		const base = commit(dir, "initial");
+		await writeFile(join(dir, "cli.ts"), "export const cli = 1\n");
+		const feat = commit(dir, "feat: add cli flag");
+		gitWithIdentity(dir, ["revert", "--no-edit", feat]);
+		await writeFile(join(dir, "cli.ts"), "export const cli = 2\n");
+		const later = commit(dir, "fix(cli): unrelated follow-up");
+		await writeFile(join(dir, "CHANGELOG.md"), `## [1.2.3]\n* add cli flag (${feat})\n`);
+		const head = commit(dir, "notes");
+
+		const result = runGuard(dir, base, head);
+		expect(result.exitCode).toBe(1);
+		expect(result.stderr).toContain(feat.slice(0, 7));
+		expect(result.stderr).toContain("Remove these entries");
+		// The unrelated follow-up commit must not be reported either.
+		expect(result.stderr).not.toContain(later.slice(0, 7));
+	});
+
 	for (const sameSubject of [false, true]) {
 		test(`S120-H/I/J preserved ancestor and revert parent, same subject=${sameSubject}`, async () => {
 			const dir = await initRepo();

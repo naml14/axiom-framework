@@ -644,11 +644,14 @@ revert's parent are not evidence of identity. This also handles GitHub reverts w
 PR title (no target SHA) and entries linked to interior commits of a reverted merge, as in
 PR #109 / 0.9.14. Both rename paths are included using NUL-delimited `--name-status -M`.
 
-The entry must be an ancestor of the identified target, and all its changed paths must match
-their pre-entry tree entries both at the revert and at head. This deliberately conservative
-whole-path check avoids flagging surviving ancestor changes and restored features (a revert
-of a revert). Partial removals or later unrelated edits on those same paths may need manual
-review; this is not a semantic feature-presence proof. It only runs read-only Git commands.
+The entry must be an ancestor of the identified target, the revert must have restored the
+entry's changed paths to their pre-entry state, and the entry's change must not survive at
+head. The survival check is per path and compares the entry's own post-image, so a later
+unrelated edit to the same file does not hide the removal, while a change that is still
+present at head is not reported. This deliberately conservative whole-path check avoids
+flagging surviving ancestor changes and restored features (a revert of a revert). Partial
+removals or later unrelated edits on those same paths may need manual review; this is not a
+semantic feature-presence proof. It only runs read-only Git commands.
 Unknown CLI arguments are rejected before ref resolution; base must be an ancestor of head.
 Ambiguous in-range SHA prefixes and required Git inspection failures are errors, not clean results.
 
