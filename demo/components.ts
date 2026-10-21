@@ -1,6 +1,10 @@
 import { defineComponent } from '../src/index.ts'
 import { getTagWidth } from './layout.ts'
 
+// Shared engine row height: .hero-title uses 20px text with 1.3 line-height.
+// Declare it on each node; the default 20px row clips the 26px text.
+export const HERO_TITLE_HEIGHT = 26
+
 export const TagBubble = defineComponent((props: { label: string; color: string }) => {
   const calcWidth = getTagWidth(props.label)
 
@@ -54,6 +58,7 @@ export const HeroCard = defineComponent((props: { title: string; body: string })
       type: 'element' as const,
       tag: 'h2',
       classes: ['hero-title'],
+      layout: { height: HERO_TITLE_HEIGHT },
       children: [{ type: 'text' as const, content: props.title }],
     },
     {
