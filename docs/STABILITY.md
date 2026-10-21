@@ -1,7 +1,7 @@
 # API Stability Contract
 
 Version: 1.0.0
-Last Updated: 2026-09-16
+Last Updated: 2026-10-21
 
 ## Public Surface
 
@@ -176,8 +176,13 @@ Promotion to stable requires, per export:
 2. A documented contract (this file) plus tests covering its public behavior.
 3. An evidence entry in the release notes of the version that promotes it.
 
-`bun run validate:api` enforces that every public export keeps an explicit
-tag, so an untagged or silently promoted export fails CI.
+`bun run validate:api` enforces the tagging rules this contract depends on: an
+export may carry at most one stability tag, a `@stable` or `@beta` tag needs
+a `@since`, an `@internal` export may not live in a public entry point, and
+an unknown tag name is rejected. Untagged public exports are treated as
+stable since the contract version stated above, so adding a new export without
+a tag does not fail CI; what fails CI is a contract violation such as a
+conflicting or malformed tag.
 
 ## Enforcement
 
