@@ -80,3 +80,14 @@ describe("Demo viewport fit: the canvas must stay reachable on narrow viewports"
 		expect(fit).toContain("syncContainerWidth(");
 	});
 });
+
+describe("Demo grid controls: a button at its bound must not look broken", () => {
+	test("demo/ruta-b-showcase.ts disables the grid buttons when they cannot act", async () => {
+		const source = await readFile(rutaBPath, "utf8");
+
+		// The grid starts at its cap (6 of 6 cells), so "+Celda" had nothing
+		// to do and looked broken. The buttons must reflect the margin.
+		expect(source).toContain("addBtn.disabled");
+		expect(source).toContain("removeBtn.disabled");
+	});
+});
