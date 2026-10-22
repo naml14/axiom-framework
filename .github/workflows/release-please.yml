@@ -47,10 +47,17 @@ jobs:
           # Query after release-please updates the PR; do not assume action output shape.
           gh api --paginate --method GET "repos/$GITHUB_REPOSITORY/pulls" \
             -f state=open -f base="$DEFAULT_BRANCH" \
-            --jq '.[] | select(.head.ref | startswith("release-please--")) | [.head.repo.full_name, .head.sha] | @tsv' |
-          while IFS=$'\t' read -r repository sha; do
+            --jq '.[] | select(.head.ref | startswith("release-please--")) | [.head.repo.full_name, .head.ref] | @tsv' |
+          while IFS=$'\t' read -r repository ref; do
             # Never dispatch code from a fork, even if it uses the release branch prefix.
             [[ "$repository" == "$GITHUB_REPOSITORY" ]] || continue
+            # Resolve the tip from the branch, not from the pull request head.
+            # release-please rewrites the release branch, and the pull request
+            # head can still report the previous commit while the API catches
+            # up. Validating that commit would settle the status on a commit
+            # the branch no longer contains.
+            sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$ref" --jq '.sha')
+            [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || continue
             gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" \
               -f state=pending -f context="Release notes integrity" \
               -f description="Waiting for release notes guard"

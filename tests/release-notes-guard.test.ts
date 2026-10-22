@@ -129,6 +129,11 @@ describe("release-notes-guard", () => {
 		expect(release).toContain(
 			'gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" -f release-head="$sha"',
 		);
+		// The validated SHA must come from the branch tip. release-please
+		// rewrites the release branch, and the pull request head can report
+		// the previous commit while the API catches up.
+		expect(release).toContain('gh api "repos/$GITHUB_REPOSITORY/commits/$ref"');
+		expect(release).not.toContain("[.head.repo.full_name, .head.sha]");
 		expect(release).toContain("state=pending");
 	});
 
