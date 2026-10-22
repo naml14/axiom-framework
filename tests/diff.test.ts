@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
 import { Window } from 'happy-dom'
-import { fastDiff, fullDiff, type DOMOperation } from '../src/render/diff.js'
+import { fastDiff, fullDiff, type DOMOperation, type DOMUpdateOp } from '../src/render/diff.js'
 import {
   acquirePrevByIndex,
   acquireNewByIndex,
@@ -300,6 +300,34 @@ describe('fullDiff', () => {
     if (styleUpdate && styleUpdate.type === 'update') {
       expect(styleUpdate.newStyle?.color).toBe('blue')
     }
+  })
+
+  test('same-shape fast path incluye cambios de attrs en update ops (A1)', () => {
+    const comp1 = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'button',
+      attrs: { id: 'btn', disabled: 'true' },
+      children: [],
+    }))
+    const comp2 = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'button',
+      attrs: { id: 'btn', 'aria-busy': 'true' },
+      children: [],
+    }))
+
+    const prevPrepared = prepare(comp1, undefined, { textEngine: fakeTextEngine })
+    const prevLayout = createLayoutResult(prevPrepared)
+    const newPrepared = prepare(comp2, undefined, { textEngine: fakeTextEngine })
+    const newLayout = createLayoutResult(newPrepared)
+
+    const domNodes: (HTMLElement | Text | null)[] = [document.createElement('button')]
+
+    const ops = fullDiff(prevPrepared, prevLayout, newPrepared, newLayout, domNodes)
+    expect(ops.length).toBe(1)
+    const updateOp = ops[0] as DOMUpdateOp
+    expect(updateOp.type).toBe('update')
+    expect(updateOp.newAttrs).toEqual({ id: 'btn', 'aria-busy': 'true' })
   })
 
   test('same-shape fast path no duplica update cuando layout y texto cambian en el mismo índice', () => {

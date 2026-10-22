@@ -245,6 +245,33 @@ describe('applyOps', () => {
     expect(child.className).toBe('')
   })
 
+  test('updates apply modified, added and removed attrs (A1)', () => {
+    const root = document.createElement('div')
+    const button = document.createElement('button')
+    button.setAttribute('id', 'btn')
+    button.setAttribute('disabled', 'true')
+    button.setAttribute('data-old', 'remove-me')
+    ;(button as any)._managedAttrs = ['id', 'disabled', 'data-old']
+    root.appendChild(button)
+
+    const domNodes: (HTMLElement | Text | null)[] = [button]
+
+    const ops: DOMOperation[] = [
+      {
+        type: 'update',
+        index: 0,
+        newAttrs: { id: 'btn-updated', 'aria-label': 'Submit' },
+      },
+    ]
+
+    applyOps(ops, root, domNodes)
+
+    expect(button.getAttribute('id')).toBe('btn-updated')
+    expect(button.getAttribute('aria-label')).toBe('Submit')
+    expect(button.hasAttribute('disabled')).toBe(false)
+    expect(button.hasAttribute('data-old')).toBe(false)
+  })
+
   test('operations are applied in order: removes → updates → inserts', () => {
     const root = document.createElement('div')
     const oldChild = document.createElement('span')

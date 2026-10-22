@@ -56,6 +56,7 @@ const AXIOM_TRANSFORM_OWNED: unique symbol = Symbol('axiomTransformOwned')
 
 interface AxiomDOMElement extends HTMLElement {
   _listeners?: Record<string, EventListener>
+  _managedAttrs?: string[]
   [MANAGED_STYLE_KEYS_PROP]?: string[]
   [AXIOM_TRANSFORM_OWNED]?: string
   __axiomTransformImportant?: boolean
@@ -434,6 +435,33 @@ export function applyOps(
       if ('newClasses' in op && el instanceof HTMLElement) {
         el.className = (op.newClasses ?? []).join(' ')
       }
+
+      if ('newAttrs' in op && el instanceof HTMLElement) {
+        const axiomEl = el as AxiomDOMElement
+        const oldKeys = axiomEl._managedAttrs ?? []
+        const nextAttrs = sanitizeAttrs(op.newAttrs)
+        const nextKeys = nextAttrs ? Object.keys(nextAttrs) : []
+
+        for (const oldKey of oldKeys) {
+          if (!nextAttrs || !(oldKey in nextAttrs)) {
+            el.removeAttribute(oldKey)
+          }
+        }
+
+        if (nextAttrs) {
+          for (const [key, value] of Object.entries(nextAttrs)) {
+            if (key.toLowerCase() === 'style') {
+              const safe = sanitizeInlineStyle(value)
+              el.setAttribute(key, safe)
+              rememberInlineTransform(el, safe)
+            } else {
+              el.setAttribute(key, value)
+            }
+          }
+        }
+
+        axiomEl._managedAttrs = nextKeys
+      }
     }
 
     if (op.type === 'move') {
@@ -719,6 +747,7 @@ function buildDOMTree(
         rememberInlineTransform(el, safe)
       } else el.setAttribute(key, value)
     }
+    ;(el as AxiomDOMElement)._managedAttrs = Object.keys(attrs)
   }
 
   // Apply event listeners
@@ -776,6 +805,7 @@ function createDOMElement(op: import('./diff.js').DOMInsertOp, isPortalChild = f
         rememberInlineTransform(el, safe)
       } else el.setAttribute(key, value)
     }
+    ;(el as AxiomDOMElement)._managedAttrs = Object.keys(attrs)
   }
 
   if (op.on !== undefined) {
