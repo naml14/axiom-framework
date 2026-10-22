@@ -306,12 +306,46 @@ describe('applyStyleToElement — dev-mode whitelist enforcement (H-9)', () => {
     globalThis.__AXIOM_DEV__ = false
     const warnSpy = spyOn(console, 'warn').mockImplementation(() => {})
     try {
+      // Record what the library writes on the CSSStyleDeclaration instead of
+      // reading it back from the DOM. A real CSSStyleDeclaration only keeps
+      // known CSS properties, so it drops an unknown key no matter what the
+      // library does; asserting on the read-back would test the DOM, not this
+      // library. The contract under test is which keys the library forwards.
+      const writes: Record<string, unknown> = {}
       const el = document.createElement('div')
+      Object.defineProperty(el, 'style', {
+        configurable: true,
+        value: new Proxy({} as Record<string, unknown>, {
+          set(target, key, value) {
+            writes[String(key)] = value
+            return true
+          },
+        }),
+      })
       const props = { color: 'red', evilPropC: 'literal' } as unknown as SafeStyleProps
       applyStyleToElement(el, props)
-      expect(el.style.color).toBe('red')
+      expect(writes['color']).toBe('red')
       // Production still skips key validation, but no longer skips value security.
-      expect((el.style as unknown as Record<string, unknown>).evilPropC).toBe('literal')
+      expect(writes['evilPropC']).toBe('literal')
+      expect(warnSpy).not.toHaveBeenCalled()
+
+      // The value security floor still applies in production: an unsafe value
+      // is neutralised even though the key passes through.
+      const unsafeWrites: Record<string, unknown> = {}
+      const unsafeEl = document.createElement('div')
+      Object.defineProperty(unsafeEl, 'style', {
+        configurable: true,
+        value: new Proxy({} as Record<string, unknown>, {
+          set(target, key, value) {
+            unsafeWrites[String(key)] = value
+            return true
+          },
+        }),
+      })
+      applyStyleToElement(unsafeEl, {
+        backgroundImage: 'url(https://attacker.invalid/pixel)',
+      } as unknown as SafeStyleProps)
+      expect(unsafeWrites['backgroundImage']).toBe('')
       expect(warnSpy).not.toHaveBeenCalled()
     } finally {
       warnSpy.mockRestore()
