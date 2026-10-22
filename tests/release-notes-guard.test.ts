@@ -124,7 +124,11 @@ describe("release-notes-guard", () => {
 		expect(ci).toContain("ref: ${{ inputs.release-head || github.event.pull_request.head.sha || github.sha }}");
 		expect(ci).toContain('"repos/$GITHUB_REPOSITORY/statuses/$RELEASE_HEAD"');
 		expect(release).toContain("actions: write");
-		expect(release).toContain('gh workflow run ci.yml --ref "$DEFAULT_BRANCH" -f release-head="$sha"');
+		// The dispatch must name the repository: the release-please job runs
+		// without a checkout, so gh cannot infer the target from git remotes.
+		expect(release).toContain(
+			'gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" -f release-head="$sha"',
+		);
 		expect(release).toContain("state=pending");
 	});
 
