@@ -3,7 +3,7 @@
 // Fase 3: Ruta B
 // ============================================================
 
-import { describe, it, expect, beforeAll, afterEach, spyOn } from 'bun:test'
+import { describe, it, expect, beforeAll, beforeEach, afterEach, spyOn } from 'bun:test'
 import { Window } from 'happy-dom'
 import {
   validateStyleProps,
@@ -242,6 +242,14 @@ describe('applyStyleToElement', () => {
 // ---------------------------------------------------------------------------
 describe('applyStyleToElement — dev-mode whitelist enforcement (H-9)', () => {
   const savedDevFlag = globalThis.__AXIOM_DEV__
+
+  // Isolate the dev flag from other test files: bun runs test files in
+  // parallel within one process, so a sibling file that sets
+  // `__AXIOM_DEV__ = true` can leak into this describe block. Reset it
+  // before every test so each case declares the mode it exercises.
+  beforeEach(() => {
+    globalThis.__AXIOM_DEV__ = undefined
+  })
 
   afterEach(() => {
     globalThis.__AXIOM_DEV__ = savedDevFlag
