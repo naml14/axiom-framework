@@ -14,14 +14,14 @@
 
 ## Tasks
 
-- [ ] T1 (linked S5): Escapar backticks en `escapeHtml` (`src/ssr.ts`) con test unitario de XSS/template literals. Route: inline. Commit: pending.
-- [ ] T2 (linked S4): Rechazar symlinks en `validateStaticDir` y `resolveStaticFilePath` (`src/server.ts`) con tests de seguridad. Route: inline. Commit: pending.
-- [ ] T3 (linked S3): Aislar colas por scheduler en `src/scheduler.ts` con tests de multi-scheduler independiente. Route: inline. Commit: pending.
-- [ ] T4 (linked S2): Envolver `fullDiff` en `try ... finally { resetDiffScratch() }` en `src/render/diff.ts` con test de liberación de memoria scratch. Route: inline. Commit: pending.
-- [ ] T5 (linked S7): Cambiar remoción en `applyOps` a `node.parentNode?.removeChild(node)` en `src/render/commit.ts` con test en `ShadowRoot` / `DocumentFragment`. Route: inline. Commit: pending.
-- [ ] T6 (linked S6): Verificar `portalTarget.isConnected` en CSR (`buildDOMTree` y `applyOps`) con warn en dev/test en `src/render/commit.ts`. Route: inline. Commit: pending.
-- [ ] T7 (linked S1): Implementar diffing reactivo de `attrs` en `fastDiff` y `fullDiff` (`src/render/diff.ts`) y aplicación/remoción en `applyOps` (`src/render/commit.ts`) con tests TDD. Route: inline. Commit: pending.
-- [ ] T8 (linked S1-S7): Sincronizar `odd/tasks/backlog-pendientes.md` marcando los 7 ítems P1 como cerrados y verificar suite completa. Route: inline. Commit: pending.
+- [x] T1 (linked S5): Escapar backticks en `escapeHtml` (`src/ssr.ts`) con test unitario de XSS/template literals. Route: inline. Commit: `8a87512`.
+- [x] T2 (linked S4): Rechazar symlinks en `validateStaticDir` y `resolveStaticFilePath` (`src/server.ts`) con tests de seguridad. Route: inline. Commit: `5c29bf8`.
+- [x] T3 (linked S3): Aislar colas por scheduler en `src/scheduler.ts` con tests de multi-scheduler independiente. Route: inline. Commit: `e3be6ef`.
+- [x] T4 (linked S2): Envolver `fullDiff` en `try ... finally { resetDiffScratch() }` en `src/render/diff.ts` con test de liberación de memoria scratch. Route: inline. Commit: `4bcc0c8`.
+- [x] T5 (linked S7): Cambiar remoción en `applyOps` a `node.parentNode?.removeChild(node)` en `src/render/commit.ts` con test en `ShadowRoot` / `DocumentFragment`. Route: inline. Commit: `ca451ef`.
+- [x] T6 (linked S6): Verificar `portalTarget.isConnected` en CSR (`buildDOMTree` y `applyOps`) con warn en dev/test en `src/render/commit.ts`. Route: inline. Commit: `cd245ba`.
+- [x] T7 (linked S1): Implementar diffing reactivo de `attrs` en `fastDiff` y `fullDiff` (`src/render/diff.ts`) y aplicación/remoción en `applyOps` (`src/render/commit.ts`) con tests TDD. Route: inline. Commit: `2cc737b`.
+- [x] T8 (linked S1-S7): Sincronizar `odd/tasks/backlog-pendientes.md` marcando los 7 ítems P1 como cerrados y verificar suite completa. Route: inline. Commit: pending.
 
 ## Log
 
