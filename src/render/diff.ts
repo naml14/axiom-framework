@@ -179,11 +179,22 @@ export function fullDiff(
   newLayout: LayoutResult,
   domNodes: Array<HTMLElement | Text | null>
 ): DOMOperation[] {
-  const ops: DOMOperation[] = []
-
-  // Reset the scratch pool once per fullDiff call. All Maps/Sets below
-  // come from the pool — cleared, not re-allocated.
   resetDiffScratch()
+  try {
+    return runFullDiff(prevPrepared, prevLayout, newPrepared, newLayout, domNodes)
+  } finally {
+    resetDiffScratch()
+  }
+}
+
+function runFullDiff(
+  prevPrepared: PreparedComponent | null,
+  prevLayout: LayoutResult | null,
+  newPrepared: PreparedComponent,
+  newLayout: LayoutResult,
+  domNodes: Array<HTMLElement | Text | null>
+): DOMOperation[] {
+  const ops: DOMOperation[] = []
 
   // First render — all inserts
   if (prevPrepared === null) {
