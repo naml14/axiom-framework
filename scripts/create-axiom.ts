@@ -110,9 +110,11 @@ async function main(): Promise<void> {
 		console.error(
 			`  Install failed. Run 'bun install' manually in ${projectDir}`,
 		);
-	} else {
-		console.log(`  Dependencies installed`);
+		process.exitCode = 1;
+		return;
 	}
+
+	console.log(`  Dependencies installed`);
 
 	console.log(`\n  Ready! Run:\n`);
 	console.log(`    cd ${projectName}`);

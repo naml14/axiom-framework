@@ -518,6 +518,28 @@ ${betaRows || '| (none) | - | - |'}
 |--------|--------|
 ${experimentalRows || '| (none) | - |'}
 
+### Promotion policy (1.0 decision, 2026-10-16)
+
+The five experimental surfaces (streaming SSR and the built-in server) ship
+**as experimental in 1.0.0**: they are young APIs whose contracts may still
+need to move, and freezing them as stable would extend SemVer guarantees the
+project cannot yet honor. Experimental exports may change in minor versions
+and are excluded from the stability guarantees above.
+
+Promotion to stable requires, per export:
+
+1. One full minor-release cycle without a breaking change to that export.
+2. A documented contract (this file) plus tests covering its public behavior.
+3. An evidence entry in the release notes of the version that promotes it.
+
+\`bun run validate:api\` enforces the tagging rules this contract depends on: an
+export may carry at most one stability tag, a \`@stable\` or \`@beta\` tag needs
+a \`@since\`, an \`@internal\` export may not live in a public entry point, and
+an unknown tag name is rejected. Untagged public exports are treated as
+stable since the contract version stated above, so adding a new export without
+a tag does not fail CI; what fails CI is a contract violation such as a
+conflicting or malformed tag.
+
 ## Enforcement
 
 - Run: bun run validate:api

@@ -1,0 +1,122 @@
+[
+	{
+		"pr": 120,
+		"threadId": "PRRT_kwDOR5e6LM6taPxM",
+		"commentId": 4300197402,
+		"body": "Corregido. Confirmé el problema con evidencia antes de tocar nada: el run de CI del PR de release-please (`38952332592`) tiene `event=pull_request` pero conclude `failure` con **0 jobs ejecutados**, porque GitHub no dispara workflows para PRs creados o actualizados con `GITHUB_TOKEN`. El job `release-notes` era código muerto.\n\nLa solución no necesita ningún PAT:\n\n- `.github/workflows/release-please.yml` ahora, después de que release-please actualice el PR, crea un commit status `pending` con el contexto `Release notes integrity` y **despacha explícitamente** el CI con el SHA exacto del head del PR (`gh workflow run ci.yml --ref <default> -f release-head=<sha>`). `workflow_dispatch` está exento de la supresión de eventos de `GITHUB_TOKEN`.\n- `.github/workflows/ci.yml` acepta `workflow_dispatch` con el input `release-head`, hace checkout de ese SHA (`fetch-depth: 0` para tags e historial) y publica `success`/`failure` de vuelta **en ese mismo SHA**, incluso si el checkout o la validación fallan (`if: always()`).\n- La rama de release también queda cubierta por `push: branches: [main, \"release-please--**\"]`.\n- Solo se despacha para PRs cuyo head.repo es el propio repositorio: nunca se ejecuta código de un fork.\n\nVerificación real en Actions, no solo local: publiqué una rama de prueba con una entrada fantasma en el CHANGELOG y el run `39656976978` terminó en `conclusion: failure` con el job `Release notes guard` en `failure` y el commit en `state: failure` bajo el contexto `Release notes integrity` — el merge queda bloqueado. La misma rama limpia pasa en verde.\n\nDocumenté en `docs/TESTING-GUIDE.md` que hace falta configurar `Release notes integrity` como required status en las reglas de protección de la rama de release (los archivos de workflow no cambian la configuración del repositorio) y que el comportamiento de dispatch/status de GitHub requiere un run real de Actions, no solo tests locales.\n\nCommits: `aadf6d0`, `3d828a0`. Tests: `tests/release-notes-guard.test.ts` (S120-A)."
+	},
+	{
+		"pr": 120,
+		"threadId": "PRRT_kwDOR5e6LM6taPxW",
+		"commentId": 4300197415,
+		"body": "Corregido. `isAncestor` ahora distingue el resultado esperado de git (`merge-base --is-ancestor` devuelve 1 cuando no es ancestro) de un error operativo: cualquier exit code mayor que 1 hace fallar el guard con el stderr de git en lugar de devolver `false`.\n\n`changedFiles` ya no convierte un `git diff` fallido en un conjunto vacío: usa `gitOrExit`, que aborta con un error explícito si el diff falla.\n\nTambién endurecí la resolución del CHANGELOG: `git show <head>:CHANGELOG.md` fallaba en silencio y se reportaba como \"no hay CHANGELOG\"; ahora se comprueba con `ls-tree` y la lectura es `gitOrExit`.\n\nTest: `S120-B a missing tree fails closed instead of skipping a diff` — borra el árbol y verifica que el guard falla en vez de devolver un resultado limpio.\n\nCommit: `aadf6d0`."
+	},
+	{
+		"pr": 120,
+		"threadId": "PRRT_kwDOR5e6LM6taPxd",
+		"commentId": 4300197428,
+		"body": "Corregido. `findRangeCommit` ya no devuelve la primera coincidencia por prefijo: cuenta las coincidencias y, si hay más de una, falla con un error de ambigüedad explícito (`ambiguous commit prefix: <sha> matches <n> commits in range`) en lugar de inspeccionar el commit equivocado.\n\nTest: `S120-C ambiguous seven-character SHAs fail explicitly` — construye dos commits con el mismo prefijo de 7 caracteres (búsqueda determinista de colisión + `git hash-object`/`git commit-tree`) y verifica que el guard falla nombrando la ambigüedad.\n\nCommit: `aadf6d0`."
+	},
+	{
+		"pr": 120,
+		"threadId": "PRRT_kwDOR5e6LM6taPxi",
+		"commentId": 4300197433,
+		"body": "Corregido. `changedFiles` pasó de `--name-only` a `--name-status -z -M` (con detección de renames y separador NUL, que preserva nombres de archivo con espacios). Para los estados `R` y `C` se incluyen **ambas** rutas, la origen y la destino, de modo que el revert de un rename intersecta con el conjunto del cambio original.\n\nAdemás el emparejamiento revert↔original ya no depende del asunto: se hace por identidad de parche inverso (`git patch-id --stable` del diff invertido del revert contra el diff del candidato), que es la forma robusta de reconocer un revert cuyo mensaje cita un título de PR en lugar del SHA.\n\nTest: `S120-D a reverted rename is detected regardless of its subject` — revierte un rename, cambia el asunto del revert a `Revert \"different PR title\"` y verifica que la entrada se sigue detectando.\n\nCommit: `aadf6d0`."
+	},
+	{
+		"pr": 120,
+		"threadId": "PRRT_kwDOR5e6LM6taPxm",
+		"commentId": 4300197436,
+		"body": "Corregido. El script valida los argumentos de la línea de comandos **antes** de resolver o comprobar refs: cualquier argumento que no sea `--base`, `--head`, `--help` o `-h` hace fallar con `unknown argument: <arg>` y código de salida 1. Un flag mal escrito ya no puede revisar un rango por defecto y salir con 0.\n\nTest: `S120-E rejects unknown arguments before resolving refs` — pasa `--baes missing` (typo deliberado) y verifica el error exacto y el código de salida.\n\nCommit: `aadf6d0`."
+	},
+	{
+		"pr": 120,
+		"threadId": "PRRT_kwDOR5e6LM6taPxr",
+		"commentId": 4300197443,
+		"body": "Corregido. El guard verifica que `base` sea ancestro de `head` antes de calcular el rango y falla con `base must be an ancestor of head` si no lo es. Un rango invertido ya no produce un rango vacío que se reporta como limpio.\n\nTest: `S120-F rejects reversed ranges` — invoca el guard con base y head invertidos y verifica el error.\n\nCommit: `aadf6d0`."
+	},
+	{
+		"pr": 120,
+		"threadId": "PRRT_kwDOR5e6LM6taPxx",
+		"commentId": 4300197450,
+		"body": "Corregido. La detección ya no usa el asunto del revert como evidencia. Cada revert se empareja con el commit que deshace por **identidad de parche inverso** (`git patch-id --stable` del diff invertido del revert), y la condición de fantasma es: el revert restauró los paths cambiados al contenido previo a la entrada **y** el cambio no sobrevivió en el head del rango.\n\nCon esa comprobación de supervivencia por path, un revert de un revert (la feature restaurada) ya no se reporta: el cambio vuelve a estar presente en el head, así que no es fantasma. Es exactamente el caso que señalabas.\n\nTest: `S120-G a revert of a revert restores the feature` — revierte el revert y verifica que el guard sale con 0.\n\nCommit: `aadf6d0`."
+	},
+	{
+		"pr": 120,
+		"threadId": "PRRT_kwDOR5e6LM6taPx1",
+		"commentId": 4300197456,
+		"body": "Corregido. La heurística anterior (ancestro + paths compartidos) se eliminó por completo: un path compartido ya no es prueba de nada. Ahora el revert debe **restaurar** los paths cambiados de la entrada a su contenido previo (`pathState(revert, path) === pathState(entry^1, path)`), y además el cambio no debe haber sobrevivido en el head.\n\nVerifiqué además el caso inverso, que es el que señalas: un ancestro cuyo cambio **sí** sobrevive en el árbol no se reporta, porque la condición de supervivencia lo descarta.\n\nTest: `S120-H/I/J preserved ancestor and revert parent, same subject=false` y el caso `same subject=true`.\n\nCommit: `aadf6d0`."
+	},
+	{
+		"pr": 120,
+		"threadId": "PRRT_kwDOR5e6LM6taPx6",
+		"commentId": 4300197465,
+		"body": "Corregido. `firstParentInRange` (que asumía que el primer padre del revert era el commit revertido) se eliminó. El objetivo real de un revert se determina por la identidad de su parche inverso: se calcula `git patch-id --stable` del diff invertido del revert y se busca el commit del rango cuyo diff tiene ese mismo patch-id.\n\nEsto resuelve también el caso de los commits interiores de un merge revertido: el revert se empareja con el merge por parche y la entrada enlazada al commit interior se reconoce por ancestría con ese objetivo, sin confundirla con el padre del revert.\n\nVerificado sobre el caso real: el guard sigue detectando tanto el merge `62062aa` como el commit interior `2681565` del PR #109, y el padre del revert (`62062aa` en ese caso) ya no se confunde con el objetivo.\n\nCommit: `aadf6d0`."
+	},
+	{
+		"pr": 120,
+		"threadId": "PRRT_kwDOR5e6LM6taPx-",
+		"commentId": 4300197469,
+		"body": "Corregido. `revertsBySubject` (que devolvía el mismo revert para toda entrada con ese asunto) se eliminó. El emparejamiento es por commit: el revert se asocia al commit concreto que deshace mediante la identidad de parche inverso, y una entrada solo se marca si ese commit es ancestro del objetivo identificado.\n\nAsí, dos commits con el mismo asunto donde solo uno fue revertido no marcan la entrada del otro.\n\nTest: `S120-H/I/J preserved ancestor and revert parent, same subject=true` — dos commits con asunto idéntico, se revierte solo uno, y se verifica que la entrada del otro no se reporta.\n\nCommit: `aadf6d0`."
+	},
+	{
+		"pr": 121,
+		"threadId": "PRRT_kwDOR5e6LM6taQj4",
+		"commentId": 4300202469,
+		"body": "Corregido. Los valores de CSS ahora se sanean en **todos** los builds, no solo en dev: `applyStyleToElement` pasa cada valor por un piso de seguridad que rechaza `url()` remoto o relativo, escapes, comentarios, `image-set()`, `@import`, `expression()`, `behavior:` y `javascript:`. Solo sobreviven las data URLs base64 de medios que `isSafeDataUrl()` (`src/core/attrs.ts`) ya acepta, con la misma política de la escalera de URLs documentada en `SECURITY.md`.\n\nLa sanitización **rechaza** en vez de reescribir: reescribir tokens CSS puede reconstruir otro token peligroso, así que el enfoque conservador es no aplicar el valor.\n\nVerificación independiente (probe propio, no solo el test del repo): comprobé 15 casos contra `applyStyleToElement` y todos dieron el resultado esperado — se rechazan `url(https://attacker.invalid/pixel)`, `URL(...)`, `u\\\\72l(...)` (escape), `url(/relative.png)`, `image-set(\"https://...\" 1x)`, `url(data:text/html;base64,...)`, `expression(alert(1))`, `behavior:url(x.htc)` y `@import \"x.css\"`; y se preservan `url(data:image/png;base64,AAA=)`, `linear-gradient(red, blue)`, `red` y `12px solid #333`.\n\nEl cambio se documenta en `SECURITY.md` como nuevo piso de seguridad, con la nota de que no es un parser CSS completo ni sustituye CSP.\n\nTest: `blocks remote CSS URLs in production, including escaped and nested forms`. Commit: `d2ba618`."
+	},
+	{
+		"pr": 121,
+		"threadId": "PRRT_kwDOR5e6LM6taQj9",
+		"commentId": 4300202475,
+		"body": "Corregido. `attrs.style` ya no evade la whitelist: pasa por `sanitizeInlineStyle()` en el commit completo, en los inserts y en la hidratación, con el mismo criterio de whitelist de propiedades y el mismo registro warn-once que las style props. Las declaraciones no soportadas se descartan sin eliminar el escape hatch público de atributos crudos.\n\nEl sanitizador analiza las declaraciones sin leer el CSSOM, rechaza CSS unbalanced o escapado, y en dev aplica la whitelist (camel-case) como el resto de la API de estilos. En producción sigue aplicando el piso de seguridad de valores.\n\nTest: `validates raw attrs.style in full commit, inserts and hydration with shared warn-once` — verifica los tres caminos (commit completo, insert y `commitHydrate`) con `min-width:123px` (no whitelisted) y `color:red` (whitelisted).\n\nCommit: `d2ba618`."
+	},
+	{
+		"pr": 121,
+		"threadId": "PRRT_kwDOR5e6LM6taQkD",
+		"commentId": 4300202483,
+		"body": "Corregido. El handler de `resize` ahora **programa un render** cuando las constraints cambian de verdad: `handleResize` compara las constraints nuevas con las cacheadas y llama a `scheduleRender(performUpdate, scheduler)` solo si hay diferencia, lo que además evita bucles de render porque el propio commit escribe la altura del root y vuelve a notificar al observer.\n\nPara el cambio de tamaño de la raíz sin cambio de tamaño de ventana añadí un `ResizeObserver` sobre el root, desconectado en `unmount()`.\n\nEl invariante se mantiene: las lecturas siguen ocurriendo solo en mount y en eventos de resize, nunca por frame. El test `app steady state performs zero DOM reads` sigue en verde, y las nuevas lecturas llevan su marcador `// dom-read-allowlist:` con justificación.\n\nTest: `window resize schedules layout without a signal update and disconnects on unmount` y `root resize schedules layout without a signal update and disconnects on unmount` (el segundo sustituye el `ResizeObserver` por uno falso que dispara el callback).\n\nCommit: `d2ba618`."
+	},
+	{
+		"pr": 121,
+		"threadId": "PRRT_kwDOR5e6LM6taQkJ",
+		"commentId": 4300202490,
+		"body": "Corregido. Una key whitelisted con valor `''` ahora **borra el valor CSS aplicado previamente** y aun así avisa de que el valor es inválido. En dev la comprobación de valor vacío ya no descarta la propiedad en silencio.\n\nCoordinado con `applyOps()`: el camino de actualización borra el valor previo, y el contrato existente se respeta — las keys que no aparecen en las nuevas props **no** se borran (sigue en verde el test `does NOT remove existing styles for keys not in the new props`).\n\nTest: `clears an explicitly empty whitelisted value through applyOps, retaining omitted keys` — aplica `letterSpacing: '2px'` y `color: 'red'`, luego actualiza solo `letterSpacing` a `''`, y verifica que `letterSpacing` queda vacío, `color` sigue en `red` y se emitió exactamente un aviso.\n\nCommit: `d2ba618`."
+	},
+	{
+		"pr": 121,
+		"threadId": "PRRT_kwDOR5e6LM6taQkL",
+		"commentId": 4300202494,
+		"body": "Corregido. `applyFrameworkLayout` ya no lee el CSSOM en la ruta de update. El transform que escribe el framework y su prioridad `!important` se cachean desde las entradas ya validadas (`AXIOM_TRANSFORM_OWNED` y `__axiomTransformImportant`), y el CSSOM solo se consulta en dos casos: la adopción inicial del elemento, o cuando el consumidor opta por el diagnóstico externo con `onTransformConflict`.\n\nAmbos comportamientos se conservan: el hook de conflicto sigue detectando transforms externos (incluidos `!important`) y el respeto por `!important` sigue intacto en las actualizaciones por defecto.\n\nEl test lo verifica de forma fuerte: sustituyo `el.style` por un Proxy que **lanza** ante cualquier lectura de `transform` o `getPropertyPriority`, y compruebo que `applyOps` de tipo `update` y de tipo `move` no lanzan.\n\nTests: `owned elements do not read CSSOM during layout updates or moves`, `raw important transform remains protected on default owned updates`, `opt-in conflict hook still observes external important transforms`.\n\nTambién actualicé el JSDoc de `commitHydrate` para que la allowlist describa la realidad (lecturas CSSOM en la adopción y con el hook, en lugar de solo en hidratación).\n\nCommit: `d2ba618`."
+	},
+	{
+		"pr": 121,
+		"threadId": "PRRT_kwDOR5e6LM6taQkP",
+		"commentId": 4300202500,
+		"body": "Corregido. `stripCommentsAndStrings` ya no es un conjunto de regex: ahora es un analizador que enmascara el texto de las plantillas literales pero **conserva y analiza las expresiones de interpolación ejecutables**, incluyendo plantillas anidadas. Las comillas, los comentarios de bloque y de línea se tratan con su profundidad real, y el marcador de allowlist solo sobrevive donde es un comentario real.\n\nConfirmé el RED de forma independiente: reimplementé el analizador anterior y comprobé que `` `width: ${root.clientWidth}` `` quedaba sin `clientWidth` (la lectura quedaba oculta), mientras que el analizador nuevo la detecta.\n\nAdemás el escáner ahora cubre también las lecturas CSSOM de la fase de commit (`.style.transform` y `.getPropertyPriority(`), que antes no estaban en la lista de patrones prohibidos.\n\nTests: `detects a DOM read in a simple template interpolation` y `scans executable template interpolations, including nested templates`.\n\nCommit: `d2ba618`."
+	},
+	{
+		"pr": 122,
+		"threadId": "PRRT_kwDOR5e6LM6taQKj",
+		"commentId": 4300199974,
+		"body": "Corregido. `escapeStyleText` restauraba cada URL preservada con un `split`/`join` sobre toda la cadena CSS, lo que producía recorridos y copias cuadráticos. La restauración es ahora **una sola pasada** global: se construye una `RegExp` con el nonce de la llamada y se sustituyen todos los marcadores de una vez con un callback, que inserta la URL de forma literal sin semántica de `$` en la cadena de reemplazo.\n\nSe conservan las dos propiedades que importan: el nonce sigue siendo aleatorio por llamada, así que el texto de usuario no puede adivinar ni forjar un placeholder, y la URL se reinserta literalmente. El test existente de placeholder falsificado sigue en verde.\n\nTest: `many preserved URLs use a single global restoration pass` — con 1000 URLs preservadas verifica que el bloque de restauración no contiene bucles `for`/`while` y hace una sola llamada a `.replace(`, y que las 1000 URLs se restauran íntegras.\n\nCommit: `0467101`."
+	},
+	{
+		"pr": 122,
+		"threadId": "PRRT_kwDOR5e6LM6taQKn",
+		"commentId": 4300199978,
+		"body": "Corregido. La política de promoción ahora vive en la plantilla del generador (`scripts/validate-api-stability.ts`), de modo que `bun run validate:api --generate-docs` la reproduce y regenerar el documento ya no la pierde.\n\nVerificado comparando el documento antes y después de regenerarlo: el único diff es la fecha (`2026-09-16` → `2026-10-21`); la sección de política queda intacta.\n\nAproveché para corregir una afirmación inexacta de la política que el propio worker señaló: decía que un export sin tag falla CI, pero el validador trata los exports públicos sin tag como estables desde v1.0.0. El texto ahora enumera lo que el validador sí rechaza (tags múltiples, `@stable`/`@beta` sin `@since`, `@internal` en un entry point público, nombres de tag desconocidos) y dice con claridad que un export sin tag no falla CI.\n\nTest: `generator preserves the complete promotion policy from the published contract` — extrae la política del documento publicado y comprueba que la plantilla del generador la contiene tras escapar las comillas invertidas del template literal.\n\nCommit: `0467101`."
+	},
+	{
+		"pr": 122,
+		"threadId": "PRRT_kwDOR5e6LM6taQKs",
+		"commentId": 4300199985,
+		"body": "Corregido. El umbral estricto de reloj (`elapsed < 500ms`) se eliminó porque depende de la velocidad del runner, pero **el pin de ReDoS se conserva**: ahora es estructural, no temporal.\n\nEl test comprueba que el alfabeto de la carga útil base64 (`[A-Za-z0-9+/=]`) no se solapa con el cierre `\\1\\s*\\)`, que es la causa del backtracking cuadrático, y comprueba explícitamente que la variante vulnerable (con `\\s` añadido al alfabeto) **no** pasa ese guard. Así, el ReDoS real (que tardaba ~9,6s) sigue detectándose sin depender de la máquina, y la aserción de salida inerte (`sin url(` vivo) se mantiene.\n\nTests: `base64 payload alphabet excludes whitespace overlapping the closing delimiter` y `unterminated base64 url( with 200KB of spaces is inert without a wall-clock threshold`.\n\nCommit: `0467101`."
+	},
+	{
+		"pr": 123,
+		"threadId": "PRRT_kwDOR5e6LM6taQHE",
+		"commentId": 4300199628,
+		"body": "Corregido. `HeroCard` (en `demo/components.ts`) renderizaba su `h2.hero-title` de 26px dentro de la fila por defecto de 20px del motor, así que el encabezado de la página principal quedaba recortado. Ahora el nodo declara su altura de forma explícita.\n\nAproveché para eliminar la duplicación: la constante `HERO_TITLE_HEIGHT = 26` pasó a exportarse desde `demo/components.ts` y `demo/router-demo.ts` y `demo/portal-demo.ts` la importan, de modo que los tres sitios ya no pueden divergir. La constante no cambia de valor (sigue siendo 26, la misma que miden las mediciones de `odd/evidence/release-0.9.14/diagnostic.json`).\n\nNota técnica: `HeroCard` construye nodos literales, no con el helper `h()`, así que la altura se declara como `layout: { height: HERO_TITLE_HEIGHT }` y no como prop `height` — que es la forma que corresponde a nodos literales.\n\nEl test de secciones del demo ahora cubre `HeroCard` y exige que los tres archivos reutilicen la constante compartida, de modo que la regresión queda pizada.\n\nTest: `demo/components.ts pins HeroCard's hero-title row to the shared 26px height`.\n\nCommit: `da50147`."
+	}
+]

@@ -59,31 +59,6 @@ function allocIndex(ctx: PrepareContext): number {
   return index
 }
 
-/**
- * No-op retained for backward compatibility with v0.x callers.
- *
- * @deprecated Since v1.0.0 this function does nothing. The index counter
- * is now isolated per `prepare()` invocation — there is no global counter
- * to reset. Code that depends on resetting shared state will silently fail;
- * remove the call or migrate to the per-invocation contract.
- *
- * This export will be removed in v1.1.0.
- *
- * @example
- * ```ts
- * // Before (v0.x):
- * resetIndexCounter()
- * const prepared = prepare(component, undefined)
- *
- * // After (v1.0.0+): just remove the call.
- * const prepared = prepare(component, undefined)
- * ```
- */
-export function resetIndexCounter(): void {
-  // Compatibilidad pública:
-  // El contador ahora es local por invocación de `prepare`, por lo que
-  // ya no existe estado global que reiniciar.
-}
 
 // ============================================================
 // Brand type implementation

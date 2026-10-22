@@ -622,3 +622,60 @@ test('onTransformConflict fires on post-hydration update', () => {
   app.unmount()
 })
 ```
+
+---
+
+## Release notes guard (CI)
+
+`scripts/validate-release-notes.ts` catches "phantom" CHANGELOG entries: entries whose linked
+commit was reverted inside the same release range (release-please does not understand
+`Revert "<subject>"` commits, so a release PR can otherwise announce features that are not in
+the tree — see PR #118 / 0.9.14).
+
+```bash
+bun run validate:release-notes                       # base = latest tag reachable from HEAD
+bun run scripts/validate-release-notes.ts --base <ref> --head <ref>
+```
+
+The script reads `CHANGELOG.md` at `<head>`, takes the newest `## [x.y.z]` section, and for every
+entry whose linked commit SHA is inside `<base>..<head>` checks for a `Revert "..."` commit
+whose inverse patch ID matches an original commit's first-parent patch. Subjects and the
+revert's parent are not evidence of identity. This also handles GitHub reverts with only a
+PR title (no target SHA) and entries linked to interior commits of a reverted merge, as in
+PR #109 / 0.9.14. Both rename paths are included using NUL-delimited `--name-status -M`.
+
+The entry must be an ancestor of the identified target, the revert must have restored the
+entry's changed paths to their pre-entry state, and the entry's change must not survive at
+head. The survival check is per path and compares the entry's own post-image, so a later
+unrelated edit to the same file does not hide the removal, while a change that is still
+present at head is not reported. This deliberately conservative whole-path check avoids
+flagging surviving ancestor changes and restored features (a revert of a revert). Partial
+removals or later unrelated edits on those same paths may need manual review; this is not a
+semantic feature-presence proof. It only runs read-only Git commands.
+Unknown CLI arguments are rejected before ref resolution; base must be an ancestor of head.
+Ambiguous in-range SHA prefixes and required Git inspection failures are errors, not clean results.
+
+Exit codes:
+
+- `0` — no phantom entries (also when there is no CHANGELOG version section to check yet).
+- `1` — phantom entries, invalid arguments/range, ambiguous SHAs, or a Git inspection failure.
+  Each phantom entry is printed with its subject, commit SHA, and reverting SHA.
+
+CI runs it in the `release-notes` job of `.github/workflows/ci.yml` for release-please PRs,
+release branch pushes, and explicit `workflow_dispatch` runs. **Neither pushes nor PR updates
+made with `GITHUB_TOKEN` trigger another workflow**; the push trigger alone is not a fix.
+After release-please updates a same-repository release PR, `release-please.yml` creates a pending
+`Release notes integrity` commit status and explicitly dispatches CI on the default branch with
+the PR's exact head SHA. CI checks out that SHA and publishes success/failure back to that SHA,
+including when checkout or validation fails. No PAT is needed: dispatch requires `actions: write`
+and status reporting requires `statuses: write` on the workflow's `GITHUB_TOKEN`.
+
+Configure **Release notes integrity** as a required status in the release branch protection/ruleset
+to enforce the merge gate (repository settings are not changed by these workflow files). A failed
+dispatch leaves the status pending, not successful. Workflow changes must land on the default
+branch before dispatch works. Runtime GitHub dispatch/status behavior still needs an Actions run;
+local tests only pin the workflow wiring, not GitHub's event service.
+
+Behavior is covered by `tests/release-notes-guard.test.ts`, which builds synthetic Git repositories
+in system temp directories and never reads real repository history. Run the focused tests with
+`bun test tests/release-notes-guard.test.ts`, then `bun test` and `bun run typecheck`.
