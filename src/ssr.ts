@@ -364,4 +364,5 @@ function escapeHtml(value: string): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;')
+    .replaceAll('`', '&#96;')
 }

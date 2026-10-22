@@ -44,6 +44,23 @@ describe('SSR: renderToString', () => {
     expect(html).not.toContain('<script>alert("x")</script>')
   })
 
+  test('escapa backticks en texto y atributos para mitigar XSS en contextos de template (F3-T9b)', async () => {
+    const App = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      attrs: {
+        'data-expr': '`${alert(1)}`',
+      },
+      children: [{ type: 'text' as const, content: 'user `backtick` text' }],
+    }))
+
+    const html = await renderToString(App)
+
+    expect(html).toContain('data-expr="&#96;${alert(1)}&#96;"')
+    expect(html).toContain('user &#96;backtick&#96; text')
+    expect(html).not.toContain('`')
+  })
+
   test('preserva estructura, attrs y classes, e incluye estilos de layout inline', async () => {
     const App = defineComponent(() => ({
       type: 'element' as const,
