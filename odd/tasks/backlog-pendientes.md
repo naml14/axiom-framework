@@ -43,8 +43,8 @@ cuál es su siguiente acción concreta.
 
 | ID | Pendiente | Origen | Siguiente acción |
 | --- | --- | --- | --- |
-| R4 | Configurar `Release notes integrity` como required status en las reglas de protección de la rama `main` | `sourcery-review-resolution.md` S120-A | Activar el check requerido en GitHub Settings → Branches |
-| U2 | Revocar el token npm de larga duración y eliminar `secrets.NPM_TOKEN` tras el publish OIDC exitoso de `1.0.0` | npm-oidc U2 | Revocar en npmjs.com y borrar el secret en GitHub |
+| R4 | Configurar `Release notes integrity` como required status en las reglas de protección de la rama `main` | `sourcery-review-resolution.md` S120-A | `ci.yml` emitiendo status en todos los PRs; ruleset `Main Protection` actualizado para requerirlo |
+| U2 | Revocar el token npm de larga duración en npmjs.com tras el publish OIDC exitoso de `1.0.0` | npm-oidc U2 | `secrets.NPM_TOKEN` eliminado de GitHub; pendiente revocar en npmjs.com por el usuario |
 | U3 | Marcar Publishing access con 2FA requerida y sin tokens | npm-oidc U3 | Configurar en npmjs.com |
 
 ## P1 — Seguridad y correctness en runtime (Fase 3 del hardening + auditoría post-1.0.0)
