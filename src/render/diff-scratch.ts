@@ -1,15 +1,15 @@
 // ============================================================
 // Scratch pool for diff maps and sets.
 //
-// fullDiff() allocates 4-6 Maps and Sets per call: prevByIndex, newByIndex,
-// portalMap, layoutChangedSet, allChangedSet, prevIndices, newIndices,
-// prevByKey. In a 60fps reactive tree this generates hundreds of Map/Set
-// allocations per second, each followed by O(n) entries.
+// Without pooling, each fullDiff() call would allocate 9 fresh Map and Set
+// instances (prevByIndex, newByIndex, portalMap, prevByKey, newByKey,
+// prevIndices, newIndices, layoutChangedSet, allChangedSet) — hundreds of
+// container allocations per second in a 60fps reactive tree.
 //
-// This module provides a module-scoped scratch pool of three Maps and two Sets
-// that are cleared (not re-allocated) at the start of each fullDiff call.
-// Cleared Maps/Sets are O(n) to clear but the n here is bounded by the tree
-// size, which is the same as what a fresh allocation would walk during GC.
+// This module constructs those five Maps and four Sets once at module load
+// and clears them in-place via resetDiffScratch() at the start of each
+// fullDiff() call, avoiding per-call container allocations while paying only
+// the O(n) entry clear/insert work bounded by the tree size.
 // ============================================================
 
 /**
