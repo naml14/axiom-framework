@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'bun:test'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { symlinkSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createServer } from '../src/server.js'
@@ -205,6 +206,32 @@ describe('createServer()', () => {
     }
   })
 
+  test('throws when staticDir is a symlink (F3-T9a)', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'axiom-server-test-'))
+    const realDir = join(tmpDir, 'real')
+    const symlinkDir = join(tmpDir, 'symlink')
+    await mkdir(realDir)
+    try {
+      symlinkSync(realDir, symlinkDir, process.platform === 'win32' ? 'junction' : 'dir')
+    } catch {
+      await rm(tmpDir, { recursive: true, force: true })
+      return
+    }
+
+    const component = defineComponent(() => h('div', null, 'Home'))
+
+    try {
+      expect(() =>
+        createServer({
+          routes: [{ path: '/', component }],
+          staticDir: symlinkDir,
+        })
+      ).toThrow('createServer() staticDir cannot be a symlink')
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
   test('starts and serves a route', async () => {
     const component = defineComponent(() => h('div', null, 'Hello Server'))
     const server = createServer({
@@ -308,6 +335,40 @@ describe('createServer()', () => {
       server.stop()
       await rm(staticDir, { recursive: true, force: true })
       await rm(outsideFile, { force: true })
+    }
+  })
+
+  test('rejects symlinks in staticDir resolving outside root (F3-T9a)', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'axiom-server-static-symlink-'))
+    const staticDir = join(tmpDir, 'static')
+    const outsideDir = join(tmpDir, 'outside')
+    await mkdir(staticDir)
+    await mkdir(outsideDir)
+    const secretFile = join(outsideDir, 'secret.txt')
+    await writeFile(secretFile, 'secret-data', 'utf8')
+
+    const symlinkPath = join(staticDir, 'symlink-dir')
+    try {
+      symlinkSync(outsideDir, symlinkPath, process.platform === 'win32' ? 'junction' : 'dir')
+    } catch {
+      await rm(tmpDir, { recursive: true, force: true })
+      return
+    }
+
+    const component = defineComponent(() => h('div', null, 'Home'))
+    const server = createServer({
+      routes: [{ path: '/', component }],
+      staticDir,
+      port: 0,
+    })
+
+    try {
+      server.serve()
+      const res = await fetch(`http://localhost:${server.port}/symlink-dir/secret.txt`)
+      expect(res.status).toBe(404)
+    } finally {
+      server.stop()
+      await rm(tmpDir, { recursive: true, force: true })
     }
   })
 

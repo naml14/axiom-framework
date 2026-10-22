@@ -3,7 +3,7 @@
 // ============================================================
 
 import { isAbsolute, relative, resolve } from 'node:path'
-import { statSync } from 'node:fs'
+import { lstatSync, realpathSync, statSync } from 'node:fs'
 import type { ComponentDefinition } from './core/types.js'
 import type { StreamSSROptions, SSRMetadata } from './ssr-stream.js'
 import { renderToReadableStream } from './ssr-stream.js'
@@ -73,7 +73,25 @@ function resolveStaticFilePath(staticDir: string, requestPath: string): string |
 
   const staticRoot = resolve(staticDir)
   const candidate = resolve(staticRoot, decodedPath.replace(/^[/\\]+/, ''))
-  return isPathInside(staticRoot, candidate) ? candidate : null
+  if (!isPathInside(staticRoot, candidate)) {
+    return null
+  }
+
+  try {
+    const stats = lstatSync(candidate)
+    if (stats.isSymbolicLink()) {
+      return null
+    }
+    const realCandidate = realpathSync(candidate)
+    const realRoot = realpathSync(staticRoot)
+    if (!isPathInside(realRoot, realCandidate)) {
+      return null
+    }
+  } catch {
+    return null
+  }
+
+  return candidate
 }
 
 function normalizeAllowedOrigins(allowedOrigins?: string[]): string[] | undefined {
@@ -99,11 +117,14 @@ function normalizeAllowedOrigins(allowedOrigins?: string[]): string[] | undefine
 function validateStaticDir(staticDir: string | undefined): void {
   if (staticDir === undefined) return
   const resolved = resolve(staticDir)
-  let stats: ReturnType<typeof statSync>
+  let stats: ReturnType<typeof lstatSync>
   try {
-    stats = statSync(resolved)
+    stats = lstatSync(resolved)
   } catch {
     throw new Error(`createServer() staticDir does not exist: ${staticDir}`)
+  }
+  if (stats.isSymbolicLink()) {
+    throw new Error(`createServer() staticDir cannot be a symlink: ${staticDir}`)
   }
   if (!stats.isDirectory()) {
     throw new Error(`createServer() staticDir must be a directory: ${staticDir}`)
