@@ -40,27 +40,26 @@ cuál es su siguiente acción concreta.
 - **R4 (Required status check `Release notes integrity` en `main`).** Entregado en PR #131 y
   ruleset `Main Protection` (`id: 14692155`) actualizado con `required_status_checks` para el
   contexto `Release notes integrity`.
-- **U2 parcial (GitHub).** Secreto `NPM_TOKEN` eliminado de GitHub (`gh secret delete NPM_TOKEN`).
+- **U2 y U3 (Gobernanza npm OIDC y 2FA).** Secreto `NPM_TOKEN` eliminado de GitHub (`gh secret delete NPM_TOKEN`),
+  token revocado en npmjs.com por el mantenedor y Publishing access configurado con 2FA requerida y sin tokens.
+- **P1 — Seguridad y correctness en runtime (A1, A2, A3, F3-T9a, F3-T9b, K1, K2).** Entregados en
+  `odd/tasks/runtime-hardening-p1.md`:
+  - `A1`: diffing y aplicación reactiva de `attrs` en `diff.ts` y `commit.ts` con tests TDD (`2cc737b`).
+  - `A2`: limpieza de pool scratch en `finally` en `fullDiff()` (`4bcc0c8`).
+  - `A3`: aislamiento de colas y flag `scheduled` por `SchedulerFn` en `src/scheduler.ts` (`e3be6ef`).
+  - `F3-T9a`: rechazo de symlinks con `lstatSync`/`realpathSync` en `server.ts` (`5c29bf8`).
+  - `F3-T9b`: escape de backticks en `escapeHtml` en `src/ssr.ts` (`8a87512`).
+  - `K1`: verificación de `isConnected` en `portalTarget` en CSR con advertencia (`cd245ba`).
+  - `K2`: remoción de nodos vía `node.parentNode?.removeChild(node)` en `applyOps` (`ca451ef`).
 - **demo-ui-polish T1-T6**, **hardening-docs-sync T1-T4**, **npm-oidc T1-T4**, **Hardening Fases 0, 1 y 2** (salvo F2-T7): entregados.
 
-## P0 — Gobernanza de repositorio y npm (configuración externa post-1.0.0)
+## P0 — Gobernanza de repositorio y npm (post-1.0.0)
 
-| ID | Pendiente | Origen | Siguiente acción |
-| --- | --- | --- | --- |
-| U2 | Revocar el token npm de larga duración en npmjs.com tras el publish OIDC exitoso de `1.0.0` | npm-oidc U2 | Pendiente revocar token en npmjs.com (Settings → Tokens) por el mantenedor |
-| U3 | Marcar Publishing access con 2FA requerida y sin tokens | npm-oidc U3 | Configurar en npmjs.com (Package settings → Publishing access) |
+*Completado al 100% (R4, U2 y U3 cerrados).*
 
 ## P1 — Seguridad y correctness en runtime (Fase 3 del hardening + auditoría post-1.0.0)
 
-| ID | Pendiente | Origen | Siguiente acción |
-| --- | --- | --- | --- |
-| A1 | `fastDiff` y `fullDiff` no comparan ni emiten operaciones para `attrs` en actualizaciones reactivas (`src/render/diff.ts:212-304, 409-473`) | auditoría post-1.0.0 | Difear `attrs` y aplicar cambios/remociones en `commit.ts` + test |
-| A2 | `diff-scratch.ts` retiene referencias fuertes a nodos y portales tras `fullDiff()` (`src/render/diff-scratch.ts:34-55`) | auditoría post-1.0.0 | Limpiar `scratch` en bloque `finally` al terminar `fullDiff()` + test |
-| A3 | `scheduleRender` comparte un único flag `scheduled` global entre múltiples apps con `scheduler` distinto (`src/scheduler.ts:8-27`) | auditoría post-1.0.0 | Aislar la cola por `scheduler` o por instancia + test |
-| F3-T9a | L-3: `validateStaticDir` y `resolveStaticFilePath` aceptan symlinks (`src/server.ts:69-80, 107-118`) | plan FASE 3 | Rechazar symlinks con `lstatSync`/`realpathSync` + test |
-| F3-T9b | L-4: `escapeHtml` no escapa backticks (`src/ssr.ts:360`) | plan FASE 3 | Añadir backtick al escape + test |
-| K1 | H-12: `buildDOMTree` y `applyOps` no verifican `portalTarget.isConnected` en CSR (`src/render/commit.ts:402-419, 557-573`) | catálogo | Verificar `isConnected` y degradar con warn como en hidratación + test |
-| K2 | H-13: la fase de remoción de `applyOps` usa `node.parentElement` en lugar de `node.parentNode` (`src/render/commit.ts:342-344`) | catálogo | Cambiar a `node.parentNode?.removeChild(node)` + test con `ShadowRoot`/`DocumentFragment` |
+*Completado al 100% (A1, A2, A3, F3-T9a, F3-T9b, K1 y K2 cerrados).*
 
 ## P2 — Contratos, invariantes y cobertura
 

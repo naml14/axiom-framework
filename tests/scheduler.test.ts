@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test'
-import { scheduleRender, cancelScheduled, resetScheduler, setScheduler } from '../src/scheduler.js'
+import { scheduleRender, cancelScheduled, resetScheduler, setScheduler, type SchedulerFn } from '../src/scheduler.js'
 
 describe('scheduler', () => {
   test('executes callback via injectable scheduler', () => {
@@ -74,6 +74,54 @@ describe('scheduler', () => {
     expect(storedCb).not.toBeNull()
     storedCb!()
     expect(value).toBe(3)
+  })
+
+  test('multiple schedulers remain isolated from each other (A3)', () => {
+    resetScheduler()
+    let flushed1 = false
+    let flushed2 = false
+    let trigger1: (() => void) | null = null
+    let trigger2: (() => void) | null = null
+
+    const scheduler1: SchedulerFn = (cb) => { trigger1 = cb }
+    const scheduler2: SchedulerFn = (cb) => { trigger2 = cb }
+
+    scheduleRender(() => { flushed1 = true }, scheduler1)
+    scheduleRender(() => { flushed2 = true }, scheduler2)
+
+    expect(trigger1).not.toBeNull()
+    expect(trigger2).not.toBeNull()
+
+    // Flushing scheduler 1 only executes its own callback
+    trigger1!()
+    expect(flushed1).toBe(true)
+    expect(flushed2).toBe(false)
+
+    // Flushing scheduler 2 executes its own callback
+    trigger2!()
+    expect(flushed2).toBe(true)
+  })
+
+  test('cancelScheduled with specific scheduler only cancels that scheduler queue', () => {
+    resetScheduler()
+    let executed1 = false
+    let executed2 = false
+    let trigger1: (() => void) | null = null
+    let trigger2: (() => void) | null = null
+
+    const scheduler1: SchedulerFn = (cb) => { trigger1 = cb }
+    const scheduler2: SchedulerFn = (cb) => { trigger2 = cb }
+
+    scheduleRender(() => { executed1 = true }, scheduler1)
+    scheduleRender(() => { executed2 = true }, scheduler2)
+
+    cancelScheduled(scheduler1)
+
+    trigger1!()
+    trigger2!()
+
+    expect(executed1).toBe(false)
+    expect(executed2).toBe(true)
   })
 })
 

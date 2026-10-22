@@ -10,7 +10,7 @@ import { signal } from '../src/reactivity/signals.js'
 import { createApp } from '../src/app.js'
 import { resetScheduler } from '../src/scheduler.js'
 import type { PortalNode, ElementNode } from '../src/core/types.js'
-import { fullDiff } from '../src/render/diff.js'
+import { fullDiff, type DOMOperation } from '../src/render/diff.js'
 
 // ============================================================
 // DOM setup for commit/app tests
@@ -417,6 +417,49 @@ describe('commitFull — portal children appended to targetElement', () => {
     const rootDiv = root.childNodes[0] as HTMLElement
     expect(rootDiv.tagName).toBe('DIV')
     expect(rootDiv.childNodes.length).toBe(0)
+  })
+
+  test('CSR portal emits warning when portalTarget is not connected to document (K1)', () => {
+    const warnings: string[] = []
+    const originalWarn = console.warn
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args.join(' '))
+    }
+
+    try {
+      const disconnectedTarget = document.createElement('div')
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const component = defineComponent(() => ({
+        type: 'element' as const,
+        tag: 'div',
+        children: [
+          createPortal(
+            [{ type: 'element' as const, tag: 'span', children: [] }],
+            disconnectedTarget
+          ),
+        ],
+      }))
+
+      const prepared = prepare(component, undefined)
+      const layout = reflow(prepared, { maxWidth: 800, maxHeight: 600 })
+      const state: DOMState = { domNodes: [], portalRoots: new Map() }
+
+      commitFull(layout, prepared, root, state)
+
+      expect(warnings.some(w => w.includes('Portal target is not connected'))).toBe(true)
+
+      // applyOps path test
+      warnings.length = 0
+      const ops: DOMOperation[] = [
+        { type: 'insert', index: 1, tag: 'span', portalTarget: disconnectedTarget },
+      ]
+      applyOps(ops, root, state.domNodes)
+      expect(warnings.some(w => w.includes('Portal target is not connected'))).toBe(true)
+    } finally {
+      console.warn = originalWarn
+    }
   })
 
   test('two portals to two different targets each receive their own children', () => {

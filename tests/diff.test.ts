@@ -1,6 +1,15 @@
 import { describe, test, expect, beforeAll } from 'bun:test'
 import { Window } from 'happy-dom'
-import { fastDiff, fullDiff, type DOMOperation } from '../src/render/diff.js'
+import { fastDiff, fullDiff, type DOMOperation, type DOMUpdateOp } from '../src/render/diff.js'
+import {
+  acquirePrevByIndex,
+  acquireNewByIndex,
+  acquirePortalMap,
+  acquirePrevByKey,
+  acquireNewByKey,
+  acquirePrevIndices,
+  acquireNewIndices,
+} from '../src/render/diff-scratch.js'
 import { createLayoutResult } from '../src/render/reflow.js'
 import { defineComponent } from '../src/render/component.js'
 import { prepare } from '../src/render/prepare.js'
@@ -291,6 +300,34 @@ describe('fullDiff', () => {
     if (styleUpdate && styleUpdate.type === 'update') {
       expect(styleUpdate.newStyle?.color).toBe('blue')
     }
+  })
+
+  test('same-shape fast path incluye cambios de attrs en update ops (A1)', () => {
+    const comp1 = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'button',
+      attrs: { id: 'btn', disabled: 'true' },
+      children: [],
+    }))
+    const comp2 = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'button',
+      attrs: { id: 'btn', 'aria-busy': 'true' },
+      children: [],
+    }))
+
+    const prevPrepared = prepare(comp1, undefined, { textEngine: fakeTextEngine })
+    const prevLayout = createLayoutResult(prevPrepared)
+    const newPrepared = prepare(comp2, undefined, { textEngine: fakeTextEngine })
+    const newLayout = createLayoutResult(newPrepared)
+
+    const domNodes: (HTMLElement | Text | null)[] = [document.createElement('button')]
+
+    const ops = fullDiff(prevPrepared, prevLayout, newPrepared, newLayout, domNodes)
+    expect(ops.length).toBe(1)
+    const updateOp = ops[0] as DOMUpdateOp
+    expect(updateOp.type).toBe('update')
+    expect(updateOp.newAttrs).toEqual({ id: 'btn', 'aria-busy': 'true' })
   })
 
   test('same-shape fast path no duplica update cuando layout y texto cambian en el mismo índice', () => {
@@ -726,5 +763,25 @@ describe('diff scratch pool', () => {
     const ops3 = fullDiff(tree2, layout, tree3, layout, [])
     expect(ops3.length).toBe(1)
     expect(ops3[0]!.type).toBe('update')
+  })
+
+  test('cleans up scratch pool in finally so no strong references linger after fullDiff (A2)', () => {
+    const compA = defineComponent(() => ({ type: 'element' as const, tag: 'div', children: [{ type: 'text' as const, content: 'A' }] }))
+    const compB = defineComponent(() => ({ type: 'element' as const, tag: 'div', children: [{ type: 'text' as const, content: 'B' }] }))
+    const prevPrepared = prepare(compA, undefined)
+    const newPrepared = prepare(compB, undefined)
+    const layout = createLayoutResultFor(2)
+    const domNodes: Array<HTMLElement | Text | null> = [null, null]
+
+    fullDiff(prevPrepared, layout, newPrepared, layout, domNodes)
+
+    // All scratch maps and sets must be empty immediately after fullDiff returns
+    expect(acquirePrevByIndex().size).toBe(0)
+    expect(acquireNewByIndex().size).toBe(0)
+    expect(acquirePortalMap().size).toBe(0)
+    expect(acquirePrevByKey().size).toBe(0)
+    expect(acquireNewByKey().size).toBe(0)
+    expect(acquirePrevIndices().size).toBe(0)
+    expect(acquireNewIndices().size).toBe(0)
   })
 })

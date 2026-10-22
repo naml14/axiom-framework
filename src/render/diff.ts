@@ -71,6 +71,7 @@ export interface DOMUpdateOp {
   newOn?: Record<string, EventListener>
   newStyle?: import('../features/style.js').SafeStyleProps
   newClasses?: string[]
+  newAttrs?: Record<string, string>
   portalTarget?: HTMLElement
   portalCssManaged?: boolean
 }
@@ -148,6 +149,22 @@ function classesEqual(a: string[] | undefined, b: string[] | undefined): boolean
   return true
 }
 
+function attrsEqual(a: Record<string, string> | undefined, b: Record<string, string> | undefined): boolean {
+  if (a === b) return true
+  if (a === undefined) return b === undefined || Object.keys(b).length === 0
+  if (b === undefined) return Object.keys(a).length === 0
+
+  const keysA = Object.keys(a)
+  const keysB = Object.keys(b)
+  if (keysA.length !== keysB.length) return false
+
+  for (let i = 0; i < keysA.length; i++) {
+    const key = keysA[i]!
+    if (a[key] !== b[key]) return false
+  }
+  return true
+}
+
 // ============================================================
 // Fast Diff — value changes only
 // ============================================================
@@ -179,11 +196,22 @@ export function fullDiff(
   newLayout: LayoutResult,
   domNodes: Array<HTMLElement | Text | null>
 ): DOMOperation[] {
-  const ops: DOMOperation[] = []
-
-  // Reset the scratch pool once per fullDiff call. All Maps/Sets below
-  // come from the pool — cleared, not re-allocated.
   resetDiffScratch()
+  try {
+    return runFullDiff(prevPrepared, prevLayout, newPrepared, newLayout, domNodes)
+  } finally {
+    resetDiffScratch()
+  }
+}
+
+function runFullDiff(
+  prevPrepared: PreparedComponent | null,
+  prevLayout: LayoutResult | null,
+  newPrepared: PreparedComponent,
+  newLayout: LayoutResult,
+  domNodes: Array<HTMLElement | Text | null>
+): DOMOperation[] {
+  const ops: DOMOperation[] = []
 
   // First render — all inserts
   if (prevPrepared === null) {
@@ -263,6 +291,11 @@ export function fullDiff(
         if (!classesEqual(newClasses, oldClasses)) {
           markChanged(idx)
         }
+        const newAttrs = getAttrs(node)
+        const oldAttrs = oldNode ? getAttrs(oldNode) : undefined
+        if (!attrsEqual(newAttrs, oldAttrs)) {
+          markChanged(idx)
+        }
       }
     })
 
@@ -309,6 +342,11 @@ export function fullDiff(
         const oldClasses = oldNode ? getClasses(oldNode) : undefined
         if (!classesEqual(newClasses, oldClasses)) {
           op.newClasses = newClasses
+        }
+        const newAttrs = getAttrs(newNode)
+        const oldAttrs = oldNode ? getAttrs(oldNode) : undefined
+        if (!attrsEqual(newAttrs, oldAttrs)) {
+          op.newAttrs = newAttrs
         }
       }
 
@@ -424,6 +462,13 @@ function fullTreeDiff(
                 metadataUpdate.newClasses = currentClasses
                 hasMetadataUpdate = true
               }
+
+              const oldAttrs = getAttrs(oldNode)
+              const currentAttrs = getAttrs(node)
+              if (!attrsEqual(currentAttrs, oldAttrs)) {
+                metadataUpdate.newAttrs = currentAttrs
+                hasMetadataUpdate = true
+              }
             }
 
             if (hasMetadataUpdate) {
@@ -466,6 +511,8 @@ function fullTreeDiff(
       let newStyle: import('../features/style.js').SafeStyleProps | undefined
       let classesChanged = false
       let newClassesVal: string[] | undefined
+      let attrsChanged = false
+      let newAttrsVal: Record<string, string> | undefined
 
       if (nodeType === 'text') {
         const oldNode = prevByIndex.get(idx)
@@ -495,9 +542,15 @@ function fullTreeDiff(
           classesChanged = true
           newClassesVal = currentClasses
         }
+        const oldAttrs = oldNode ? getAttrs(oldNode) : undefined
+        const currentAttrs = getAttrs(node)
+        if (!attrsEqual(currentAttrs, oldAttrs)) {
+          attrsChanged = true
+          newAttrsVal = currentAttrs
+        }
       }
 
-      if (layoutChanged || textChanged || onChanged || styleChanged || classesChanged) {
+      if (layoutChanged || textChanged || onChanged || styleChanged || classesChanged || attrsChanged) {
         const op: DOMOperation = {
           type: 'update',
           index: idx,
@@ -520,6 +573,9 @@ function fullTreeDiff(
         }
         if (classesChanged) {
           op.newClasses = newClassesVal
+        }
+        if (attrsChanged) {
+          op.newAttrs = newAttrsVal
         }
         ops.push(op)
       }

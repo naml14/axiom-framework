@@ -75,6 +75,27 @@ describe('applyOps', () => {
     expect(domNodes[0]).toBeNull()
   })
 
+  test('removes delete DOM nodes attached to ShadowRoot or DocumentFragment (K2)', () => {
+    const host = document.createElement('div')
+    const shadow = host.attachShadow({ mode: 'open' })
+    const child = document.createElement('span')
+    shadow.appendChild(child)
+
+    expect(child.parentElement).toBeNull()
+    expect(child.parentNode).toBe(shadow)
+
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+    const ops: DOMOperation[] = [
+      { type: 'remove', index: 0 },
+    ]
+
+    applyOps(ops, host, domNodes)
+
+    expect(shadow.childNodes.length).toBe(0)
+    expect(child.parentNode).toBeNull()
+    expect(domNodes[0]).toBeNull()
+  })
+
   test('updates modify existing nodes', () => {
     const root = document.createElement('div')
     const child = document.createElement('div')
@@ -222,6 +243,33 @@ describe('applyOps', () => {
     applyOps(ops, root, domNodes)
 
     expect(child.className).toBe('')
+  })
+
+  test('updates apply modified, added and removed attrs (A1)', () => {
+    const root = document.createElement('div')
+    const button = document.createElement('button')
+    button.setAttribute('id', 'btn')
+    button.setAttribute('disabled', 'true')
+    button.setAttribute('data-old', 'remove-me')
+    ;(button as any)._managedAttrs = ['id', 'disabled', 'data-old']
+    root.appendChild(button)
+
+    const domNodes: (HTMLElement | Text | null)[] = [button]
+
+    const ops: DOMOperation[] = [
+      {
+        type: 'update',
+        index: 0,
+        newAttrs: { id: 'btn-updated', 'aria-label': 'Submit' },
+      },
+    ]
+
+    applyOps(ops, root, domNodes)
+
+    expect(button.getAttribute('id')).toBe('btn-updated')
+    expect(button.getAttribute('aria-label')).toBe('Submit')
+    expect(button.hasAttribute('disabled')).toBe(false)
+    expect(button.hasAttribute('data-old')).toBe(false)
   })
 
   test('operations are applied in order: removes → updates → inserts', () => {

@@ -162,6 +162,37 @@ describe('createApp', () => {
     expect(root.textContent).toContain('Count: 5')
   })
 
+  test('reactive updates of attributes via signals (A1)', () => {
+    resetScheduler()
+    const mockScheduler = (cb: () => void) => { cb() }
+
+    const isBusy = signal(true)
+    const comp = defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'button',
+      attrs: isBusy.value
+        ? ({ 'aria-busy': 'true', disabled: 'true' } as Record<string, string>)
+        : ({ 'aria-busy': 'false' } as Record<string, string>),
+      children: [{ type: 'text' as const, content: 'Submit' }],
+    }))
+
+    const root = document.createElement('div')
+    const app = createApp(comp, root, {
+      textEngine: fakeTextEngine,
+      scheduler: mockScheduler,
+    })
+    app.mount()
+
+    const btn = root.querySelector('button')!
+    expect(btn.getAttribute('aria-busy')).toBe('true')
+    expect(btn.getAttribute('disabled')).toBe('true')
+
+    isBusy.value = false
+
+    expect(btn.getAttribute('aria-busy')).toBe('false')
+    expect(btn.hasAttribute('disabled')).toBe(false)
+  })
+
   test('enableProfiling() emits prepare/reflow/commit/total in order per cycle', () => {
     const scheduled: Array<() => void> = []
     const mockScheduler = (cb: () => void) => {

@@ -56,6 +56,7 @@ const AXIOM_TRANSFORM_OWNED: unique symbol = Symbol('axiomTransformOwned')
 
 interface AxiomDOMElement extends HTMLElement {
   _listeners?: Record<string, EventListener>
+  _managedAttrs?: string[]
   [MANAGED_STYLE_KEYS_PROP]?: string[]
   [AXIOM_TRANSFORM_OWNED]?: string
   __axiomTransformImportant?: boolean
@@ -387,8 +388,8 @@ export function applyOps(
             listeners.unmount({ type: 'unmount', target: node } as unknown as Event)
           }
         }
-        if (node.parentElement) {
-          node.parentElement.removeChild(node)
+        if (node.parentNode) {
+          node.parentNode.removeChild(node)
         }
       }
       domNodes[op.index] = null
@@ -434,6 +435,33 @@ export function applyOps(
       if ('newClasses' in op && el instanceof HTMLElement) {
         el.className = (op.newClasses ?? []).join(' ')
       }
+
+      if ('newAttrs' in op && el instanceof HTMLElement) {
+        const axiomEl = el as AxiomDOMElement
+        const oldKeys = axiomEl._managedAttrs ?? []
+        const nextAttrs = sanitizeAttrs(op.newAttrs)
+        const nextKeys = nextAttrs ? Object.keys(nextAttrs) : []
+
+        for (const oldKey of oldKeys) {
+          if (!nextAttrs || !(oldKey in nextAttrs)) {
+            el.removeAttribute(oldKey)
+          }
+        }
+
+        if (nextAttrs) {
+          for (const [key, value] of Object.entries(nextAttrs)) {
+            if (key.toLowerCase() === 'style') {
+              const safe = sanitizeInlineStyle(value)
+              el.setAttribute(key, safe)
+              rememberInlineTransform(el, safe)
+            } else {
+              el.setAttribute(key, value)
+            }
+          }
+        }
+
+        axiomEl._managedAttrs = nextKeys
+      }
     }
 
     if (op.type === 'move') {
@@ -456,6 +484,11 @@ export function applyOps(
   const fragments = new Map<HTMLElement, DocumentFragment>()
   for (const op of ops) {
     if (op.type === 'insert') {
+      if (op.portalTarget !== undefined && !op.portalTarget.isConnected) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn(`[axiom/portal] Portal target is not connected to the document for index ${op.index}.`)
+        }
+      }
       // Portal inserts: CSS-managed by default (portalTarget set, portalCssManaged not false).
       // When portalCssManaged===false, framework applies layout styles even to portal children.
       const isPortalChild = op.portalTarget !== undefined && op.portalCssManaged !== false
@@ -660,6 +693,11 @@ function buildDOMTree(
     // Portal: redirect children to the portalTarget, not the current parent
     const portalTarget = getPortalTarget(prepared)
     if (portalTarget !== undefined) {
+      if (!portalTarget.isConnected) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn(`[axiom/portal] Portal target is not connected to the document for index ${idx}.`)
+        }
+      }
       const entry: PortalEntry = { target: portalTarget, nodes: [] }
       state.portalRoots.set(idx, entry)
       // cssManaged:false → children participate in framework layout (portalChild=false)
@@ -709,6 +747,7 @@ function buildDOMTree(
         rememberInlineTransform(el, safe)
       } else el.setAttribute(key, value)
     }
+    ;(el as AxiomDOMElement)._managedAttrs = Object.keys(attrs)
   }
 
   // Apply event listeners
@@ -766,6 +805,7 @@ function createDOMElement(op: import('./diff.js').DOMInsertOp, isPortalChild = f
         rememberInlineTransform(el, safe)
       } else el.setAttribute(key, value)
     }
+    ;(el as AxiomDOMElement)._managedAttrs = Object.keys(attrs)
   }
 
   if (op.on !== undefined) {

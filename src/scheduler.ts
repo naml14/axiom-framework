@@ -6,21 +6,35 @@
 type RenderCallback = () => void
 export type SchedulerFn = (cb: RenderCallback) => void
 
-const pendingRenders = new Set<RenderCallback>()
-let scheduled = false
+interface SchedulerQueue {
+  callbacks: Set<RenderCallback>
+  scheduled: boolean
+}
+
+const queues = new Map<SchedulerFn, SchedulerQueue>()
 let _globalScheduler: SchedulerFn = defaultScheduler
 
-export function scheduleRender(callback: RenderCallback, scheduler?: SchedulerFn): void {
-  pendingRenders.add(callback)
+function getQueue(scheduler: SchedulerFn): SchedulerQueue {
+  let queue = queues.get(scheduler)
+  if (!queue) {
+    queue = { callbacks: new Set(), scheduled: false }
+    queues.set(scheduler, queue)
+  }
+  return queue
+}
 
-  if (!scheduled) {
-    scheduled = true
-    const sched = scheduler ?? _globalScheduler
+export function scheduleRender(callback: RenderCallback, scheduler?: SchedulerFn): void {
+  const sched = scheduler ?? _globalScheduler
+  const queue = getQueue(sched)
+  queue.callbacks.add(callback)
+
+  if (!queue.scheduled) {
+    queue.scheduled = true
 
     sched(() => {
-      scheduled = false
-      const cbs = Array.from(pendingRenders)
-      pendingRenders.clear()
+      queue.scheduled = false
+      const cbs = Array.from(queue.callbacks)
+      queue.callbacks.clear()
       for (const cb of cbs) {
         cb()
       }
@@ -28,14 +42,24 @@ export function scheduleRender(callback: RenderCallback, scheduler?: SchedulerFn
   }
 }
 
-export function cancelScheduled(): void {
-  pendingRenders.clear()
-  scheduled = false
+export function cancelScheduled(scheduler?: SchedulerFn): void {
+  if (scheduler !== undefined) {
+    const queue = queues.get(scheduler)
+    if (queue) {
+      queue.callbacks.clear()
+      queue.scheduled = false
+    }
+  } else {
+    for (const queue of queues.values()) {
+      queue.callbacks.clear()
+      queue.scheduled = false
+    }
+    queues.clear()
+  }
 }
 
 export function resetScheduler(): void {
-  pendingRenders.clear()
-  scheduled = false
+  cancelScheduled()
   _globalScheduler = defaultScheduler
 }
 
