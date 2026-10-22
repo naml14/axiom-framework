@@ -456,6 +456,11 @@ export function applyOps(
   const fragments = new Map<HTMLElement, DocumentFragment>()
   for (const op of ops) {
     if (op.type === 'insert') {
+      if (op.portalTarget !== undefined && !op.portalTarget.isConnected) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn(`[axiom/portal] Portal target is not connected to the document for index ${op.index}.`)
+        }
+      }
       // Portal inserts: CSS-managed by default (portalTarget set, portalCssManaged not false).
       // When portalCssManaged===false, framework applies layout styles even to portal children.
       const isPortalChild = op.portalTarget !== undefined && op.portalCssManaged !== false
@@ -660,6 +665,11 @@ function buildDOMTree(
     // Portal: redirect children to the portalTarget, not the current parent
     const portalTarget = getPortalTarget(prepared)
     if (portalTarget !== undefined) {
+      if (!portalTarget.isConnected) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn(`[axiom/portal] Portal target is not connected to the document for index ${idx}.`)
+        }
+      }
       const entry: PortalEntry = { target: portalTarget, nodes: [] }
       state.portalRoots.set(idx, entry)
       // cssManaged:false → children participate in framework layout (portalChild=false)
