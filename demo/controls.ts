@@ -64,6 +64,7 @@ export function initControls(deps: ControlsDeps) {
     const next = containerWidth.value + animDir * ANIM_STEP
     if (next >= ANIM_MAX || next <= ANIM_MIN) animDir *= -1
     const newWidth = Math.max(ANIM_MIN, Math.min(ANIM_MAX, next))
+    userWidth = newWidth
     containerWidth.value = newWidth
     syncContainerWidth(newWidth)
 
@@ -90,8 +91,46 @@ export function initControls(deps: ControlsDeps) {
   const metricsBtn = document.getElementById('metrics-btn')!
   const metricsFooter = document.getElementById('metrics-footer')!
 
+  // ============================================================
+  // Canvas width fitting
+  // ============================================================
+
+  // The engine writes the canvas width as a fixed pixel width on #app and
+  // never shrinks it to fit: it measures and writes it as given. On a viewport
+  // narrower than the canvas the excess overflowed the host region, and the
+  // region clipped it, so that part of the demo could not be reached at all.
+  // Fit the canvas to the space the host actually offers, and keep the slider
+  // in sync so the control never lies about the current width.
+  const CANVAS_MIN_WIDTH = 320
+  const CANVAS_STEP = 8
+
+  // El ancho que el usuario elige. El ancho aplicado nunca lo supera: si el
+  // canvas no cabe en la region, esta lo desplaza en horizontal. Guardar el
+  // ancho elegido aparte permite restaurarlo cuando la ventana crece.
+  let userWidth = containerWidth.value
+
+  function availableCanvasWidth(): number {
+    const host = appEl.parentElement
+    if (host === null) return CANVAS_MIN_WIDTH
+    const style = getComputedStyle(host)
+    const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0)
+    const usable = Math.floor((host.clientWidth - padding) / CANVAS_STEP) * CANVAS_STEP
+    return Math.max(CANVAS_MIN_WIDTH, usable)
+  }
+
+  function fitCanvasWidth(): void {
+    const available = availableCanvasWidth()
+    const next = Math.min(userWidth, available)
+    if (containerWidth.value === next) return
+    containerWidth.value = next
+    widthSlider.value = String(next)
+    widthDisplay.textContent = `${next}px`
+    syncContainerWidth(next)
+  }
+
   widthSlider.addEventListener('input', () => {
     const w = Number(widthSlider.value)
+    userWidth = w
     containerWidth.value = w
     widthDisplay.textContent = `${w}px`
     syncContainerWidth(w)
@@ -124,4 +163,13 @@ export function initControls(deps: ControlsDeps) {
 
   // Initial metrics display
   requestAnimationFrame(() => updateMetrics())
+
+  // Fit the canvas to the region on load, and keep it fitting when the
+  // viewport changes. The user choice always wins: the slider can still ask
+  // for a wider canvas, and the host scrolls horizontally to reach it.
+  fitCanvasWidth()
+  window.addEventListener('resize', () => {
+    fitCanvasWidth()
+    requestAnimationFrame(() => updateMetrics())
+  })
 }

@@ -231,7 +231,9 @@ body {
 }
 
 .btn-toggle.is-disabled,
-.btn-toggle.is-disabled:hover {
+.btn-toggle.is-disabled:hover,
+.btn-toggle:disabled,
+.btn-toggle:disabled:hover {
   opacity: 0.55;
   cursor: not-allowed;
   border-color: var(--border);
@@ -312,11 +314,38 @@ body {
 .dashboard-main {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   background: var(--bg);
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
   padding: 24px 32px;
+}
+
+/* ============================================================
+    Narrow viewports
+
+    The engine writes the canvas width as a fixed pixel width on #app and
+    never shrinks it to fit, so a narrow viewport used to clip the excess
+    with no way to reach it. Stacking the dashboard gives the canvas the
+    full width, and the host scrolls horizontally if the canvas is still
+    wider than the region.
+    ============================================================ */
+
+@media (max-width: 900px) {
+  .dashboard-layout {
+    flex-direction: column;
+  }
+
+  .dashboard-sidebar {
+    width: 100%;
+    max-height: 42vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .dashboard-main {
+    padding: 16px;
+  }
 }
 
 .dashboard-main::-webkit-scrollbar { width: 5px; }
