@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [1.0.1](https://github.com/naml14/axiom-framework/compare/axiom-framework-v1.0.0...axiom-framework-v1.0.1) (2026-10-22)
+
+
+### Bug Fixes
+
+* **commit:** use node.parentNode for element removal in applyOps (K2) ([ca451ef](https://github.com/naml14/axiom-framework/commit/ca451ef7a98945f450e2c8c6cfdd2d540f298ed9))
+* **commit:** verify portalTarget.isConnected in CSR and warn when disconnected (K1) ([cd245ba](https://github.com/naml14/axiom-framework/commit/cd245ba181aa897eba446e09511b232be3a22dd1))
+* **diff:** reset diff scratch pool in finally to release references (A2) ([4bcc0c8](https://github.com/naml14/axiom-framework/commit/4bcc0c837b0654a67e6580c2628aa121ac04e975))
+* **render:** implement reactive attribute diffing and application (A1) ([2cc737b](https://github.com/naml14/axiom-framework/commit/2cc737b9e919e96356e5c51a62d0835051cb7b62))
+* **runtime:** hardening and correctness across attributes, scheduler, server and portals ([34b6adc](https://github.com/naml14/axiom-framework/commit/34b6adc7bf09718f07bd59d686490e13456ecf2f))
+* **scheduler:** isolate render queues by scheduler function (A3) ([e3be6ef](https://github.com/naml14/axiom-framework/commit/e3be6ef8a6380e97f7008e675e1603faa385d1fd))
+* **server:** reject symlinks in validateStaticDir and resolveStaticFilePath (F3-T9a) ([5c29bf8](https://github.com/naml14/axiom-framework/commit/5c29bf8ddebaa10983ef8b9912b041eefe7e77f3))
+* **ssr:** escape backticks in escapeHtml (F3-T9b) ([8a87512](https://github.com/naml14/axiom-framework/commit/8a875125773c92337d23e18a6a25722cb39110ba))
+
 ## [1.0.0](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.13...axiom-framework-v1.0.0) (2026-10-22)
 
 
