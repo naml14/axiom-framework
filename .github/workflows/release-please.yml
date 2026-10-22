@@ -54,7 +54,10 @@ jobs:
             gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$sha" \
               -f state=pending -f context="Release notes integrity" \
               -f description="Waiting for release notes guard"
-            gh workflow run ci.yml --ref "$DEFAULT_BRANCH" -f release-head="$sha"
+            # This job runs without a checkout, so gh cannot infer the target
+            # repository from the git remotes. Name it explicitly, otherwise
+            # the dispatch fails with "not a git repository".
+            gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" -f release-head="$sha"
           done
 
   # Publish to npm only when release-please actually creates a release.
