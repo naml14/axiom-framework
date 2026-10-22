@@ -154,4 +154,21 @@ después.
   footer) sí se aplica: `title: chore(main): release axiom-framework 1.0.0`. Se elige el commit
   one-shot y no `release-as` en la config, porque el segundo fijaría todas las releases futuras
   a 1.0.0 y dejaría residuo permanente en el repo.
+- D13 (hallazgo, fallo de CI en el merge a `main`): el job `Test` falló en CI aunque en local
+  pasara. La causa no era la librería: el lockfile commiteado fija `happy-dom@20.14.6`, cuya
+  `CSSStyleDeclaration` sigue la especificación y descarta las propiedades CSS desconocidas,
+  mientras que el `node_modules` local tenía `20.9.0` (más permisivo). El test afirmaba que una
+  clave fuera del whitelist conservaba su valor literal, lo cual no ocurre en un navegador real.
+  Se reescribió para registrar lo que la librería escribe en la declaración de estilo y afirmar
+  sobre eso el contrato real: en producción reenvía la clave sin validarla ni avisar, y aun así
+  neutraliza un valor inseguro. El test pasa con `20.9.0` y con `20.14.6`.
+- D14 (hallazgo, dos defectos del dispatch del guard): al fusionar a `main`, el dispatch del
+  release-notes guard falló dos veces y se corrigieron ambos. (1) El job de release-please corre
+  sin checkout, así que `gh workflow run` no podía deducir el repositorio y fallaba con «not a
+  git repository»: el estado `pending` se publicaba pero ningún run lo liquidaba. Se añadió
+  `--repo "$GITHUB_REPOSITORY"`. (2) release-please reescribe la rama de release y el head del
+  pull request puede seguir reportando el commit anterior mientras la API se pone al día, así que
+  el dispatch validaba un commit intermedio que la rama ya no contenía y el resultado del guard
+  nunca llegaba al pull request. Se resolvió el tip desde la rama en lugar del head del PR.
+  Verificado en Actions: `Release notes integrity: success` en el head real del PR de release.
 - L3 (usuario, verbatim): «retome, pero no utilice GPT para los subagentes.»
