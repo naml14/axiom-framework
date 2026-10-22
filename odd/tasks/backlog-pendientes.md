@@ -10,8 +10,9 @@ cuál es su siguiente acción concreta.
 
 - **Release `v1.0.0` publicada (`f0968d7`, tag `axiom-framework-v1.0.0`).** Unidades WU1–WU4
   fusionadas (#120–#129), release PR #125 fusionado, publicado en npm vía OIDC (run `39701949134`) y
-  `release-please-config.json` anclado en `f0968d7e88ee6c5c267a20c547d3bbb48e5db14b` sin banderas
-  `pre-major`.
+  `release-please-config.json` limpiado tras `v1.0.0` (se retiró `last-release-sha` —ya cubierto por
+  el tag `axiom-framework-v1.0.0` posterior a los reverts de septiembre— y las banderas `pre-major`,
+  para que `release-please` avance su línea base automáticamente en cada release futura).
 - **Release 0.9.14 fantasma (PR #118 y PR #119).** PR #118 y PR #119 cerrados sin mergear,
   ramas remotas de release-please eliminadas y 6 ramas huérfanas remotas con el typo `create-aviom`
   purgadas de GitHub.

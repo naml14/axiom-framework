@@ -35,7 +35,11 @@ export interface SSRRenderOptions {
   textEngine?: TextLayoutEngine
   metadata?: SSRMetadata
   /**
-   * URL inicial para SSR (por ejemplo, para hidratar o resolver contexto de ruta en servidor).
+   * Campo conservado por compatibilidad del contrato `SSRRenderOptions`.
+   *
+   * Nota: `renderToString` no lee `options.url` directamente; para resolver rutas
+   * durante SSR (el router es SSR-safe desde v0.9.0), pase `initialPath` a
+   * `createRouter({ routes, initialPath })` antes de renderizar.
    */
   url?: string
   /** ID del elemento raíz donde se monta la app. Por defecto: `"app"`. */
