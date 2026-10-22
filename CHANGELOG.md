@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [1.0.0](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.13...axiom-framework-v1.0.0) (2026-10-22)
+
+
+### Features
+
+* **release:** add a release-notes guard against reverted phantom entries ([dd8ab70](https://github.com/naml14/axiom-framework/commit/dd8ab70e97d1f0759413a809cf98ccc4c24489b6))
+* **release:** WU1 release integrity — release-notes guard, CLI exit code, CI root-cause ([09e31a7](https://github.com/naml14/axiom-framework/commit/09e31a73576d38c3bb76229de12c48036a2f06dd))
+
+
+### Bug Fixes
+
+* **app:** cache layout constraints so the hot path performs zero DOM reads ([1c9c9c0](https://github.com/naml14/axiom-framework/commit/1c9c9c05a1ee47a3fd62bca5795e3723d98deb1e))
+* **ci:** dispatch the release notes guard with an explicit repository ([19c36e7](https://github.com/naml14/axiom-framework/commit/19c36e7766869160b1e68ef62ac27096a7107ab3))
+* **ci:** name the repository when dispatching the release notes guard ([6b39b83](https://github.com/naml14/axiom-framework/commit/6b39b83222c9d8bc6466fb07baeef5229d18d39a))
+* **ci:** validate the release branch tip instead of the pull request head ([4941f20](https://github.com/naml14/axiom-framework/commit/4941f2026f7beadb6442963497c67191841768c3))
+* **ci:** validate the release branch tip instead of the pull request head ([6e543cd](https://github.com/naml14/axiom-framework/commit/6e543cd167867bcf3bff7a84751dac4abc80c6d0))
+* **core:** enforce the framework promises in style values, resize and the scan ([d2ba618](https://github.com/naml14/axiom-framework/commit/d2ba618cf43aa18ae2aeb49035a8f1a6a636ede9))
+* **core:** WU2 enforce the framework promises — zero DOM reads in steady state, dev style whitelist, hydration allowlist ([913efd2](https://github.com/naml14/axiom-framework/commit/913efd2c6dbfca1c04644ff3b1c9057e07870b72))
+* **create-axiom:** exit 1 and skip the Ready block when install fails ([2dc584c](https://github.com/naml14/axiom-framework/commit/2dc584c0d2221232a07ddca3af926549633ce763))
+* **demo:** give the main demo heading an explicit engine row height ([da50147](https://github.com/naml14/axiom-framework/commit/da50147226037afcf253003459541d524d6ecb78))
+* **demo:** let the engine own layout in the Syntax, Grid and hero-title areas ([653bba6](https://github.com/naml14/axiom-framework/commit/653bba6e1daf4b294ed5e9f08a598ff18d40ca34))
+* **demo:** WU4 let the engine own layout in Syntax, Grid and hero-title areas; record demo scope decisions ([81490cf](https://github.com/naml14/axiom-framework/commit/81490cfee59cf63f3ca92648069ce9502463db68))
+* **release:** keep a reverted change detected after a later edit to the same file ([3d828a0](https://github.com/naml14/axiom-framework/commit/3d828a0b068c1722c8d589ce6b3300d672a64010))
+* **release:** make the release-notes guard sound and actually run on bot PRs ([aadf6d0](https://github.com/naml14/axiom-framework/commit/aadf6d0db72f7b6a348a7bc4e5b18716aa3d1fe2))
+* **ssr:** allow base64 media data URLs in inline styles without weakening the sanitizer ([fe6cfc9](https://github.com/naml14/axiom-framework/commit/fe6cfc971757ed0704bddab14136d5d8b01688c0))
+* **ssr:** restore preserved URLs in one pass and keep the stability policy generated ([0467101](https://github.com/naml14/axiom-framework/commit/0467101cc04ae785d0aa927fd8b703fb0aef6bb8))
+* **ssr:** WU3 contract closure — base64 data URLs in inline styles, dead API removal, stability policy, 1.0 traceability ([a49c0dd](https://github.com/naml14/axiom-framework/commit/a49c0dd66dd613cd1337f7494eddbd1a52cecd3f))
+* **style:** enforce the style whitelist in dev builds (H-9) ([1b34ea3](https://github.com/naml14/axiom-framework/commit/1b34ea31681394268bf2604aec52e314c30d6d8e))
+* **test:** assert the style whitelist contract instead of a DOM quirk ([dcdb1d7](https://github.com/naml14/axiom-framework/commit/dcdb1d75368fd089e25f89766611afafacc4e136))
+* **test:** isolate the dev flag in the style whitelist suite ([14d93bf](https://github.com/naml14/axiom-framework/commit/14d93bff4680f3272cb563e25c94b3fb0dfa6918))
+
+
+### Miscellaneous Chores
+
+* release 1.0.0 ([d374cce](https://github.com/naml14/axiom-framework/commit/d374cce3f2046514c1ff2e9bbcc11f71c38beb6c))
+
 ## [0.9.13](https://github.com/naml14/axiom-framework/compare/axiom-framework-v0.9.12...axiom-framework-v0.9.13) (2026-09-23)
 
 
