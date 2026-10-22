@@ -37,15 +37,18 @@ cuál es su siguiente acción concreta.
 - **G3, G4 y T8 (higiene post-1.0.0).** Artefactos locales limpiados (`clean-test/`,
   `gh-run-latest-test.log`), ramas locales y remotas obsoletas podadas, y comentarios desfasados en
   `src/render/diff-scratch.ts`, `src/ssr.ts` y `docs/ARCHITECTURE.md` sincronizados.
+- **R4 (Required status check `Release notes integrity` en `main`).** Entregado en PR #131 y
+  ruleset `Main Protection` (`id: 14692155`) actualizado con `required_status_checks` para el
+  contexto `Release notes integrity`.
+- **U2 parcial (GitHub).** Secreto `NPM_TOKEN` eliminado de GitHub (`gh secret delete NPM_TOKEN`).
 - **demo-ui-polish T1-T6**, **hardening-docs-sync T1-T4**, **npm-oidc T1-T4**, **Hardening Fases 0, 1 y 2** (salvo F2-T7): entregados.
 
 ## P0 — Gobernanza de repositorio y npm (configuración externa post-1.0.0)
 
 | ID | Pendiente | Origen | Siguiente acción |
 | --- | --- | --- | --- |
-| R4 | Configurar `Release notes integrity` como required status en las reglas de protección de la rama `main` | `sourcery-review-resolution.md` S120-A | `ci.yml` emitiendo status en todos los PRs; ruleset `Main Protection` actualizado para requerirlo |
-| U2 | Revocar el token npm de larga duración en npmjs.com tras el publish OIDC exitoso de `1.0.0` | npm-oidc U2 | `secrets.NPM_TOKEN` eliminado de GitHub; pendiente revocar en npmjs.com por el usuario |
-| U3 | Marcar Publishing access con 2FA requerida y sin tokens | npm-oidc U3 | Configurar en npmjs.com |
+| U2 | Revocar el token npm de larga duración en npmjs.com tras el publish OIDC exitoso de `1.0.0` | npm-oidc U2 | Pendiente revocar token en npmjs.com (Settings → Tokens) por el mantenedor |
+| U3 | Marcar Publishing access con 2FA requerida y sin tokens | npm-oidc U3 | Configurar en npmjs.com (Package settings → Publishing access) |
 
 ## P1 — Seguridad y correctness en runtime (Fase 3 del hardening + auditoría post-1.0.0)
 
