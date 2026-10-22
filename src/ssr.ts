@@ -35,11 +35,7 @@ export interface SSRRenderOptions {
   textEngine?: TextLayoutEngine
   metadata?: SSRMetadata
   /**
-   * URL inicial para SSR.
-   *
-   * Nota v0.2.6: el router actual depende de `window` y no es SSR-safe,
-   * por lo que este valor se acepta como parte del contrato pero no se
-   * integra aún al matching de rutas en servidor.
+   * URL inicial para SSR (por ejemplo, para hidratar o resolver contexto de ruta en servidor).
    */
   url?: string
   /** ID del elemento raíz donde se monta la app. Por defecto: `"app"`. */
