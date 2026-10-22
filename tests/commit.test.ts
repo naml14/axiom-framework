@@ -75,6 +75,27 @@ describe('applyOps', () => {
     expect(domNodes[0]).toBeNull()
   })
 
+  test('removes delete DOM nodes attached to ShadowRoot or DocumentFragment (K2)', () => {
+    const host = document.createElement('div')
+    const shadow = host.attachShadow({ mode: 'open' })
+    const child = document.createElement('span')
+    shadow.appendChild(child)
+
+    expect(child.parentElement).toBeNull()
+    expect(child.parentNode).toBe(shadow)
+
+    const domNodes: (HTMLElement | Text | null)[] = [child]
+    const ops: DOMOperation[] = [
+      { type: 'remove', index: 0 },
+    ]
+
+    applyOps(ops, host, domNodes)
+
+    expect(shadow.childNodes.length).toBe(0)
+    expect(child.parentNode).toBeNull()
+    expect(domNodes[0]).toBeNull()
+  })
+
   test('updates modify existing nodes', () => {
     const root = document.createElement('div')
     const child = document.createElement('div')

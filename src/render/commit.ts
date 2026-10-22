@@ -387,8 +387,8 @@ export function applyOps(
             listeners.unmount({ type: 'unmount', target: node } as unknown as Event)
           }
         }
-        if (node.parentElement) {
-          node.parentElement.removeChild(node)
+        if (node.parentNode) {
+          node.parentNode.removeChild(node)
         }
       }
       domNodes[op.index] = null
