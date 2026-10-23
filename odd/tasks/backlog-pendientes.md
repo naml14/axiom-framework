@@ -57,6 +57,10 @@ cuál es su siguiente acción concreta.
 
 *Completado al 100% (R4, U2 y U3 cerrados).*
 
+| ID | Pendiente | Origen | Siguiente acción |
+| --- | --- | --- | --- |
+| G2 | Regla de versionado: una corrección que solo toca el demo (`demo/`, `tests/demo-*`) no puede avanzar la versión; solo lo hace un cambio del framework (`src/`) | revisión del demo en `main` (2026-10-22) | Usar `chore(demo):` para los cambios solo de demo. Verificado en el código de release-please 17.6.0: `chore` cae en una sección `hidden` del preset, así que no produce entrada de changelog; con el changelog vacío release-please omite el release (`No user facing commits found - skipping`) y la versión no se mueve. `fix`/`feat` sí avanzan la versión |
+
 ## P1 — Seguridad y correctness en runtime (Fase 3 del hardening + auditoría post-1.0.0)
 
 *Completado al 100% (A1, A2, A3, F3-T9a, F3-T9b, K1 y K2 cerrados).*
@@ -89,6 +93,10 @@ cuál es su siguiente acción concreta.
 ## Log
 
 - L1 (usuario, verbatim): «ahora renueve toda la lista de los pendientes por hacer del proyecto».
+- D2 (decisión): una corrección al demo que no toca el desarrollo no puede avanzar la versión.
+  Se aplica con el tipo de commit `chore(demo):`, no con `fix(demo):`: release-please solo avanza
+  la versión por commits que dejan entrada de changelog, y `chore` es una sección oculta del
+  preset. Verificado contra release-please 17.6.0 (`changelogEmpty` → el release se omite).
 - D1 (decisión): la renovación consolida cinco documentos fuente más los hallazgos de la
   verificación de 0.9.14 y el estado de GitHub de 2026-10-16; lo ya cerrado se lista como cerrado
   para que no reaparezca como pendiente.

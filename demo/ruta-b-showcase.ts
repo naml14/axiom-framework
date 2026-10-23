@@ -41,6 +41,10 @@ function initGridDemo(): void {
   // Estado: cuántas celdas mostrar
   const cellCount = signal(6)
 
+  // La celda Hero tiene rowSpan=2, así que el grid conserva siempre una
+  // celda como mínimo.
+  const MIN_CELLS = 1
+
   const CELL_LABELS = [
     { label: 'Hero\n(rowSpan=2)', rowSpan: 2, colSpan: 1, accent: 'violet', height: '100%' as const },
     { label: 'A', rowSpan: 1, colSpan: 1, accent: 'teal', height: 60 },
@@ -100,8 +104,8 @@ function initGridDemo(): void {
   // Note: addBtn/removeBtn are static HTML elements outside the Axiom tree (in static.html).
   // addEventListener is the correct escape hatch here. If these buttons were rendered
   // by Axiom (inside defineComponent), they would use `on: { click: handler }` instead.
-  const addBtn = document.getElementById('ruta-b-grid-add')
-  const removeBtn = document.getElementById('ruta-b-grid-remove')
+  const addBtn = document.getElementById('ruta-b-grid-add') as HTMLButtonElement | null
+  const removeBtn = document.getElementById('ruta-b-grid-remove') as HTMLButtonElement | null
   const statusEl = document.getElementById('ruta-b-grid-status')
 
   function updateStatus(): void {
@@ -110,6 +114,11 @@ function initGridDemo(): void {
     const hasRowSpan = count >= 1
     const hasColSpan = count >= 4
     statusEl.textContent = `${count}/${CELL_LABELS.length} celdas | rowSpan: ${hasRowSpan ? '✓' : '—'} | colSpan: ${hasColSpan ? '✓' : '—'}`
+    // Los botones reflejan el margen disponible. El grid arranca en su tope
+    // (6/6), así que "+Celda" no tenía nada que hacer y aparentaba estar
+    // roto: deshabilitado dice la verdad sin abrir el estado inicial.
+    if (addBtn) addBtn.disabled = count >= CELL_LABELS.length
+    if (removeBtn) removeBtn.disabled = count <= MIN_CELLS
   }
 
   addBtn?.addEventListener('click', () => {
@@ -120,7 +129,7 @@ function initGridDemo(): void {
   })
 
   removeBtn?.addEventListener('click', () => {
-    if (cellCount.value > 1) {
+    if (cellCount.value > MIN_CELLS) {
       cellCount.value--
       updateStatus()
     }
