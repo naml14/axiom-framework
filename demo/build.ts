@@ -4,6 +4,7 @@
  * Responsible for:
  * - Compiling the framework (tsc → dist/)
  * - Bundling the client demo app (Bun.build → demo/app.js)
+ * - Delivering the isolated comparison as classic JS + HTML in demo/
  * - Generating a static build snapshot via buildStatic() → demo/static-out/
  * - Optional file-system watch that triggers a rebuild on change
  */
@@ -11,6 +12,7 @@
 import { dirname, join } from 'node:path'
 import { watch, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { copyFile, stat } from 'node:fs/promises'
 import type { WatchOptionsWithStringEncoding } from 'node:fs'
 import { buildStatic } from '../src/build.js'
 import { defineComponent } from '../src/index.js'
@@ -26,6 +28,8 @@ type BunBuildRuntime = {
     outdir: string
     target: 'browser'
     minify?: boolean
+    format?: 'iife'
+    naming?: string
   }) => Promise<{ success: boolean; logs: unknown[] }>
 }
 
@@ -90,6 +94,39 @@ export async function doBuild(): Promise<boolean> {
   }
 
   console.log('[build] Built demo/app.js (from src/)')
+
+  // Step 3 — classic external script works with both the server CSP and file://.
+  console.log('[build] Building comparison bundle (dom-comparison.js)...')
+  try {
+    const comparison = await bun.build({
+      entrypoints: [join(ROOT_DIR, 'benchmarks', 'dom-comparison-browser.ts')],
+      outdir: join(ROOT_DIR, 'demo'),
+      naming: 'dom-comparison.js',
+      target: 'browser',
+      format: 'iife',
+      minify: true,
+    })
+    if (!comparison.success) {
+      console.error('[build] Comparison build failed:')
+      for (const msg of comparison.logs) console.error(msg)
+      return false
+    }
+    await copyFile(
+      join(ROOT_DIR, 'benchmarks', 'dom-comparison.html'),
+      join(ROOT_DIR, 'demo', 'dom-comparison.html'),
+    )
+    for (const filename of ['dom-comparison.js', 'dom-comparison.html']) {
+      const artifact = await stat(join(ROOT_DIR, 'demo', filename))
+      if (!artifact.isFile() || artifact.size === 0) {
+        throw new Error(`Missing or empty comparison artifact: ${filename}`)
+      }
+    }
+  } catch (error) {
+    console.error('[build] Comparison build failed:')
+    console.error(error)
+    return false
+  }
+  console.log('[build] Built demo/dom-comparison.js and demo/dom-comparison.html')
   return true
 }
 
