@@ -23,6 +23,7 @@ import {
 import type { Route, Router, RouteState } from '../src/index.ts'
 
 import { HERO_TITLE_HEIGHT } from './components.ts'
+import { wireShowcase } from './wire-showcase.ts'
 
 // ============================================================
 // Rutas
@@ -202,21 +203,8 @@ export function initRouterDemo(): void {
   const app = createApp(RouteView, container)
   app.mount()
 
-  // Inspector update via rAF poll (lightweight, no monkey-patching)
-  let lastRoute = router.$route.value
-  let rafId = 0
-  const tick = (): void => {
-    const current = router.$route.value
-    if (current !== lastRoute) {
-      lastRoute = current
-      updateInspector(current)
-    }
-    rafId = requestAnimationFrame(tick)
-  }
-  rafId = requestAnimationFrame(tick)
-
-  function updateInspector(route: RouteState): void {
-    if (outputEl === null) return
+  const stopInspector = wireShowcase(() => {
+    const route = router.$route.value
     const matched = route.matched
     outputEl.textContent = JSON.stringify(
       {
@@ -229,9 +217,7 @@ export function initRouterDemo(): void {
       null,
       2,
     )
-  }
-
-  updateInspector(router.$route.value)
+  })
 
   // ============================================================
   // Nav button handlers (escape hatch: addEventListener)
@@ -251,7 +237,7 @@ export function initRouterDemo(): void {
 
   // Cleanup hook for hot-reload safety
   ;(window as { __ROUTER_DEMO_CLEANUP__?: () => void }).__ROUTER_DEMO_CLEANUP__ = () => {
-    cancelAnimationFrame(rafId)
+    stopInspector()
     router.dispose()
     app.unmount()
   }

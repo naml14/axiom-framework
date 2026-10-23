@@ -1,4 +1,5 @@
-import { createApp, defineComponent } from '../src/index.ts'
+import { createApp, defineComponent, signal } from '../src/index.ts'
+import { wireShowcase } from './wire-showcase.ts'
 import type { App, AppErrorContext, ProfileEvent } from '../src/index.ts'
 
 interface DxShowcaseDeps {
@@ -22,7 +23,7 @@ interface DevHookWindow extends Window {
   }
 }
 
-export function initDxShowcase(deps: DxShowcaseDeps): void {
+export function initDxShowcase(deps: DxShowcaseDeps): () => void {
   const { app } = deps
 
   // These buttons (dx-profiling-btn, dx-hotreload-btn, etc.) are static HTML elements
@@ -38,8 +39,21 @@ export function initDxShowcase(deps: DxShowcaseDeps): void {
   const devHookOutput = document.getElementById('dx-devhook-output') as HTMLElement
   const errorOutput = document.getElementById('dx-error-output') as HTMLElement
 
-  let profilingEnabled = true
-  let hotReloadEnabled = false
+  const profilingEnabled = signal(true)
+  const hotReload = signal({ enabled: false, text: hotReloadBtn.textContent })
+  // Runtime callbacks and explicit refresh actions bridge non-signal APIs.
+  const profileText = signal(profileOrder.textContent)
+  const devHookText = signal(devHookOutput.textContent)
+  const errorText = signal(errorOutput.textContent)
+  const stop = wireShowcase(() => {
+    profileOrder.textContent = profileText.value
+    devHookOutput.textContent = devHookText.value
+    errorOutput.textContent = errorText.value
+    profilingBtn.classList.toggle('active', profilingEnabled.value)
+    profilingBtn.textContent = profilingEnabled.value ? '📈 Profiling: ON' : '📈 Profiling: OFF'
+    hotReloadBtn.classList.toggle('active', hotReload.value.enabled)
+    hotReloadBtn.textContent = hotReload.value.text
+  })
   let unsubscribeProfiling: (() => void) | null = null
 
   const cycleEvents = new Map<number, ProfileEvent[]>()
@@ -58,12 +72,12 @@ export function initDxShowcase(deps: DxShowcaseDeps): void {
       .reduce((acc, curr) => acc + curr.durationMs, 0)
 
     if (hasAll) {
-      profileOrder.textContent = `cycle #${event.cycle}: ${eventOrder} | total observado=${total.toFixed(2)}ms`
+      profileText.value = `cycle #${event.cycle}: ${eventOrder} | total observado=${total.toFixed(2)}ms`
       for (const [cycle] of cycleEvents) {
         if (cycle < event.cycle - 4) cycleEvents.delete(cycle)
       }
     } else {
-      profileOrder.textContent = `cycle #${event.cycle}: ${eventOrder}`
+      profileText.value = `cycle #${event.cycle}: ${eventOrder}`
     }
   }
 
@@ -82,7 +96,7 @@ export function initDxShowcase(deps: DxShowcaseDeps): void {
   function refreshDevHookSnapshot(): void {
     const hook = (window as DevHookWindow).__AXIOM__
     if (hook === undefined) {
-      devHookOutput.textContent = 'window.__AXIOM__ no disponible (modo no-dev o app no montada).'
+      devHookText.value = 'window.__AXIOM__ no disponible (modo no-dev o app no montada).'
       return
     }
 
@@ -95,7 +109,7 @@ export function initDxShowcase(deps: DxShowcaseDeps): void {
       immutable = true
     }
 
-    devHookOutput.textContent = JSON.stringify(
+    devHookText.value = JSON.stringify(
       {
         version: hook.version,
         mounted: hook.mounted,
@@ -135,36 +149,34 @@ export function initDxShowcase(deps: DxShowcaseDeps): void {
     }
 
     if (captured === null) {
-      errorOutput.textContent = 'No se capturó contexto de error.'
+      errorText.value = 'No se capturó contexto de error.'
       return
     }
 
-    errorOutput.textContent = JSON.stringify(captured, null, 2)
+    errorText.value = JSON.stringify(captured, null, 2)
   }
 
   profilingBtn.addEventListener('click', () => {
-    profilingEnabled = !profilingEnabled
-    profilingBtn.classList.toggle('active', profilingEnabled)
-    profilingBtn.textContent = profilingEnabled ? '📈 Profiling: ON' : '📈 Profiling: OFF'
+    profilingEnabled.value = !profilingEnabled.value
 
-    if (profilingEnabled) {
+    if (profilingEnabled.value) {
       attachProfiling()
     } else {
       detachProfiling()
-      profileOrder.textContent = 'Profiling detenido.'
+      profileText.value = 'Profiling detenido.'
     }
 
     refreshDevHookSnapshot()
   })
 
   hotReloadBtn.addEventListener('click', () => {
-    hotReloadEnabled = !hotReloadEnabled
-    hotReloadBtn.classList.toggle('active', hotReloadEnabled)
-    hotReloadBtn.textContent = hotReloadEnabled
-      ? '♻️ Hot Reload Recovery: ON'
-      : '♻️ Hot Reload Recovery: OFF'
+    const enabled = !hotReload.value.enabled
+    hotReload.value = {
+      enabled,
+      text: enabled ? '♻️ Hot Reload Recovery: ON' : '♻️ Hot Reload Recovery: OFF',
+    }
 
-    if (hotReloadEnabled) {
+    if (enabled) {
       app.enableHotReloadRecovery()
     } else {
       app.disableHotReloadRecovery()
@@ -181,4 +193,5 @@ export function initDxShowcase(deps: DxShowcaseDeps): void {
 
   attachProfiling()
   refreshDevHookSnapshot()
+  return () => { stop(); detachProfiling() }
 }
