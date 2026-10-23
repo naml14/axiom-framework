@@ -25,6 +25,7 @@
         <p class="tagline">"El DOM es solo la pantalla de salida"</p>
       </div>
 
+
       <!-- Controles del canvas -->
       <section class="sidebar-section" aria-label="Controles del canvas">
         <h2 class="sidebar-section-title">Canvas Controls</h2>
@@ -50,6 +51,8 @@
           </div>
         </div>
       </section>
+
+      <p class="sidebar-note">DOM reads mide lecturas reales de dimensiones: los cambios de tamaño del canvas y los observadores pueden producir lecturas al usar controles. El hot path de reflow calcula en memoria; este contador no mide reflows del navegador.</p>
 
       <!-- DX Showcase — Sprint 6 -->
       <section class="sidebar-section dx-panel" aria-label="DX Showcase">
@@ -249,9 +252,6 @@
           ============================================================ -->
       <section class="sidebar-section syntax-section syntax-bench-section" aria-label="Syntax v2 — Benchmark">
         <h2 class="sidebar-section-title">⚡ Syntax v2 — Benchmark</h2>
-        <p class="ruta-b-desc">
-          Mide <code>prepare()</code> con la nueva sintaxis. Compara vs Golden Standard (2.228ms / 5000 nodos).
-        </p>
         <div class="ruta-b-actions">
           <button id="syntax-bench-run-btn" class="btn-toggle active">▶ Ejecutar</button>
         </div>
@@ -364,14 +364,14 @@
       <span class="metric-value" id="m-total">—</span>
     </div>
     <div class="metric-item fps">
-      <span class="metric-label">FPS</span>
+      <span class="metric-label" title="Ciclos de actualización muestreados; no son frames pintados por el navegador.">ciclos/s</span>
       <span class="metric-value" id="m-fps">—</span>
     </div>
     <div class="metric-item pool">
       <span class="metric-label">POOL</span>
       <span class="metric-value" id="m-pool">—</span>
     </div>
-    <span class="metric-badge">0 DOM reads en hot path</span>
+    <span class="metric-badge" id="m-dom-reads" title="Lecturas medidas de clientWidth/clientHeight de #app e innerWidth/innerHeight de window; se reinicia por interacción.">DOM reads: 0 en el último ciclo</span>
   </footer>
 
   <script src="./app.js"></script>

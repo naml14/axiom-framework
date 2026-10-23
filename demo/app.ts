@@ -4,6 +4,7 @@ import { TEXTS, TAGS, COLORS } from './data.ts'
 import { computeColumns, distributeToColumns } from './layout.ts'
 import { TagBubble, Card, HeroCard } from './components.ts'
 import { initControls } from './controls.ts'
+import { installDomReadCounter } from './dom-read-counter.js'
 import { initPortalDemo } from './portal-demo.ts'
 import { initDxShowcase } from './dx-showcase.ts'
 import { initRutaBShowcase } from './ruta-b-showcase.ts'
@@ -105,8 +106,10 @@ const App = defineComponent(() => {
 const appEl = document.getElementById('app')!
 appEl.style.width = `${containerWidth.value}px`
 
+const domReads = installDomReadCounter(appEl, window)
 const app = createApp(App, appEl, { lineHeight: 20 })
 app.mount()
+domReads.reset()
 
 function syncContainerWidth(w: number) {
   appEl.style.width = `${w}px`
@@ -116,7 +119,7 @@ function syncContainerWidth(w: number) {
 // Controls & metrics
 // ============================================================
 
-initControls({ containerWidth, itemCount, app, appEl })
+initControls({ containerWidth, itemCount, app, appEl, domReads })
 initDxShowcase({ app })
 
 // ============================================================
@@ -160,3 +163,5 @@ initSyntaxShowcase()
 // ============================================================
 
 initJsxFeature()
+// All showcases share window dimensions; exclude their initial mount reads.
+domReads.reset()
