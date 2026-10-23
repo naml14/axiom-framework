@@ -13,6 +13,7 @@ import { initJsxFeature } from './syntax-jsx-feature.tsx'
 import { initRouterDemo } from './router-demo.ts'
 import { initContextDemo } from './context-demo.ts'
 import { initFormsDemo } from './forms-demo.ts'
+import { initSidebarNavigation } from './sidebar-navigation.js'
 
 // Activar modo desarrollo para que __AXIOM__ dev hook esté disponible en el demo
 ;(globalThis as { __AXIOM_DEV__?: boolean }).__AXIOM_DEV__ = true
@@ -163,5 +164,6 @@ initSyntaxShowcase()
 // ============================================================
 
 initJsxFeature()
+initSidebarNavigation()
 // All showcases share window dimensions; exclude their initial mount reads.
 domReads.reset()

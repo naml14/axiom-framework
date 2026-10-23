@@ -1,0 +1,72 @@
+/* The index scrolls independently; cap its height to leave room for demos,
+   especially in the stacked sidebar at 480px. No engine-owned hosts change. */
+.sidebar-index {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+  max-height: min(180px, 18vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 16px;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: thin;
+}
+
+.sidebar-index:empty {
+  display: none;
+}
+
+.sidebar-index h2 {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.sidebar-index h3 {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin: 6px 0 3px;
+}
+
+.sidebar-index a {
+  display: inline-block;
+  padding: 4px 6px;
+  margin: 1px;
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.sidebar-index a:hover,
+.sidebar-index a[aria-current="location"] {
+  background: var(--surface-3);
+  color: var(--text);
+  box-shadow: inset 3px 0 var(--accent-violet);
+}
+
+.sidebar-index a:focus-visible {
+  outline: 2px solid var(--accent-violet);
+  outline-offset: 1px;
+}
+
+.dashboard-sidebar > .sidebar-section {
+  flex-shrink: 0;
+  scroll-margin-top: calc(var(--sidebar-index-height, 0px) + 4px);
+}
+
+.dashboard-sidebar > .sidebar-brand {
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .dashboard-sidebar {
+    min-height: 0;
+    flex-shrink: 0;
+  }
+
+  .sidebar-index {
+    padding: 6px 12px;
+  }
+}
