@@ -1,32 +1,5 @@
-// Shared domain mapping for the index and the later view-selection work.
-export const SIDEBAR_DOMAINS = [
-  { title: 'Core & Layout Engine', sections: [
-    ['section-canvas', 'Controles del canvas'],
-    ['section-grid', 'Grid MVP'],
-    ['section-responsive', 'Breakpoints'],
-    ['section-style', 'Style API — Tokens'],
-    ['section-motion', 'Motion — Transiciones'],
-  ] },
-  { title: 'Syntax & Reactivity', sections: [
-    ['section-syntax-h', 'h() vs Literal'],
-    ['section-syntax-layout', 'Layout DSL'],
-    ['section-syntax-flow', 'Control de flujo'],
-    ['section-syntax-events', 'Eventos + Atributos'],
-    ['section-syntax-jsx', 'JSX'],
-  ] },
-  { title: 'Application Layer', sections: [
-    ['section-portal', 'Portal'],
-    ['section-router', 'Router'],
-    ['section-context', 'Context API'],
-    ['section-forms', 'Forms'],
-  ] },
-  { title: 'DX & Runtime', sections: [
-    ['section-dx', 'Herramientas DX'],
-    ['section-plugin', 'Plugins — Ciclo de vida'],
-    ['section-error', 'Error Envelope'],
-    ['section-benchmark', 'Benchmark'],
-  ] },
-] as const
+import { DEFAULT_VIEW, VIEWS, VIEW_HIDDEN_CLASS, activeView, applyView, viewOfSection } from './demo-views.ts'
+import type { ViewId } from './demo-views.ts'
 
 /** Wire the static sidebar; the returned disposer supports remounts and tests. */
 export function initSidebarNavigation(doc: Document = document): () => void {
@@ -37,15 +10,32 @@ export function initSidebarNavigation(doc: Document = document): () => void {
 
   const links = new Map<string, HTMLAnchorElement>()
   const sections: HTMLElement[] = []
+
+  // The index is the map of the eighteen sections grouped by view (D5b). Each
+  // group title doubles as the tab that selects its view, so every view is one
+  // click away and the index only lists the entries of the active view.
+  const tabButtons = new Map<ViewId, HTMLButtonElement>()
+  const groupEntries = new Map<ViewId, HTMLElement>()
   const heading = doc.createElement('h2')
   heading.textContent = 'Índice de secciones'
   nav.replaceChildren(heading)
-  for (const domain of SIDEBAR_DOMAINS) {
+  for (const domain of VIEWS) {
     const group = doc.createElement('div')
+    group.className = 'index-group'
     const title = doc.createElement('h3')
-    title.textContent = domain.title
-    group.append(title)
-    for (const [id, label] of domain.sections) {
+    const tab = doc.createElement('button')
+    tab.type = 'button'
+    tab.className = 'view-tab'
+    tab.setAttribute('role', 'tab')
+    tab.dataset.view = domain.id
+    tab.textContent = domain.title
+    tab.addEventListener('click', () => selectView(domain.id))
+    tabButtons.set(domain.id, tab)
+    title.append(tab)
+    const entries = doc.createElement('div')
+    entries.className = 'index-entries'
+    groupEntries.set(domain.id, entries)
+    for (const { id, label } of domain.sections) {
       const section = doc.getElementById(id)
       if (!section) continue
       const link = doc.createElement('a')
@@ -53,9 +43,21 @@ export function initSidebarNavigation(doc: Document = document): () => void {
       link.textContent = label
       links.set(id, link)
       sections.push(section)
-      group.append(link)
+      entries.append(link)
     }
+    group.append(title, entries)
     nav.append(group)
+  }
+
+  function setActiveView(view: ViewId): void {
+    activeView.value = view
+    applyView(doc, view)
+    for (const [id, tab] of tabButtons) {
+      tab.setAttribute('aria-selected', String(id === view))
+    }
+    for (const [id, entries] of groupEntries) {
+      entries.classList.toggle(VIEW_HIDDEN_CLASS, id !== view)
+    }
   }
 
   function highlight(id: string): void {
@@ -67,8 +69,30 @@ export function initSidebarNavigation(doc: Document = document): () => void {
 
   function navigate(id: string): void {
     if (!links.has(id)) return
+    // A section of another view is only reachable once that view is active.
+    const view = viewOfSection(id)
+    if (view && view !== activeView.value) setActiveView(view)
     doc.getElementById(id)?.scrollIntoView({ block: 'start', behavior: 'instant' })
     highlight(id)
+  }
+
+  function replaceHash(id: string): void {
+    // replaceState does not notify the router's popstate listener or change its path.
+    // Hash-only URLs also work from file:// without a server or a router base.
+    try {
+      win!.history.replaceState(win!.history.state, '', `#${id}`)
+    } catch {
+      win!.location.hash = id
+    }
+  }
+
+  function selectView(view: ViewId): void {
+    const first = VIEWS.find(candidate => candidate.id === view)?.sections[0]
+    if (!first) return
+    setActiveView(view)
+    // The URL keeps identifying a section, and the section identifies the view.
+    replaceHash(first.id)
+    navigate(first.id)
   }
 
   function followHash(): void {
@@ -82,13 +106,7 @@ export function initSidebarNavigation(doc: Document = document): () => void {
     const id = link?.hash.slice(1)
     if (!id || !links.has(id)) return
     event.preventDefault()
-    // replaceState does not notify the router's popstate listener or change its path.
-    // Hash-only URLs also work from file:// without a server or a router base.
-    try {
-      win!.history.replaceState(win!.history.state, '', `#${id}`)
-    } catch {
-      win!.location.hash = id
-    }
+    replaceHash(id)
     navigate(id)
   }
 
@@ -130,6 +148,9 @@ export function initSidebarNavigation(doc: Document = document): () => void {
     }, { root: sidebar, rootMargin: `-${height}px 0px 0px 0px`, threshold: 0 })
     for (const section of sections) observer.observe(section)
   }
+  // The first contact shows the first view; a deep link opens its own view.
+  const initialHash = win.location.hash.slice(1)
+  setActiveView(links.has(initialHash) ? viewOfSection(initialHash) ?? DEFAULT_VIEW : DEFAULT_VIEW)
   resizeIndex()
   const resizeObserver = typeof win.ResizeObserver === 'function'
     ? new win.ResizeObserver(resizeIndex) : undefined

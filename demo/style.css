@@ -322,6 +322,79 @@ body {
 }
 
 /* ============================================================
+    Views (D5b)
+
+    The sidebar holds eighteen showcases; a view is the group of them that
+    belongs to one audience. The active view is a signal (demo/demo-views.ts)
+    and marks the layout with data-view, so a view is a state change in the
+    same page — one URL, still openable as a local file.
+   ============================================================ */
+
+.view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.view-tab {
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  width: 100%;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.view-tab:hover {
+  color: var(--text);
+}
+
+.view-tab[aria-selected="true"] {
+  background: var(--surface-3);
+  color: var(--text);
+  box-shadow: inset 3px 0 var(--accent-violet);
+}
+
+.view-tab:focus-visible {
+  outline: 2px solid var(--accent-violet);
+  outline-offset: 1px;
+}
+
+/* The sections of the other views stay in the DOM; only the active view shows. */
+.is-view-hidden {
+  display: none;
+}
+
+/* The layout playground belongs to the Core view. The other views give the
+   full width to the API showcase instead of the masonry canvas. */
+.dashboard-layout[data-view]:not([data-view="core"]) .dashboard-main {
+  display: none;
+}
+
+.dashboard-layout[data-view]:not([data-view="core"]) .dashboard-sidebar {
+  width: 100%;
+  border-right: none;
+}
+
+.dashboard-layout[data-view]:not([data-view="core"]) .dashboard-sidebar > .sidebar-section {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* The index keeps the same measure as the sections it points to. */
+.dashboard-layout[data-view]:not([data-view="core"]) .sidebar-index > * {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ============================================================
     Narrow viewports
 
     The engine writes the canvas width as a fixed pixel width on #app and
@@ -345,6 +418,13 @@ body {
 
   .dashboard-main {
     padding: 16px;
+  }
+
+  /* Without the canvas column the sidebar is the whole page: it scrolls with
+     it instead of keeping a 42vh window over an empty area. */
+  .dashboard-layout[data-view]:not([data-view="core"]) .dashboard-sidebar {
+    max-height: none;
+    border-bottom: none;
   }
 }
 
