@@ -1,5 +1,6 @@
 import {
   signal,
+  effect,
   defineComponent,
   createApp,
   createTransition,
@@ -34,7 +35,8 @@ interface RutaBShowcaseDeps {
 //    Incluye el fix principal de ruta-b: gridRowSpan + height:'100%'
 // ============================================================
 
-function initGridDemo(): void {
+/** Mount the grid independently and expose its state and teardown to demo consumers. */
+export function initGridDemo() {
   const container = document.getElementById('ruta-b-grid-root')
   if (container === null) return
 
@@ -121,21 +123,27 @@ function initGridDemo(): void {
     if (removeBtn) removeBtn.disabled = count <= MIN_CELLS
   }
 
-  addBtn?.addEventListener('click', () => {
-    if (cellCount.value < CELL_LABELS.length) {
-      cellCount.value++
-      updateStatus()
-    }
-  })
+  function addCell(): void {
+    if (cellCount.value < CELL_LABELS.length) cellCount.value++
+  }
 
-  removeBtn?.addEventListener('click', () => {
-    if (cellCount.value > MIN_CELLS) {
-      cellCount.value--
-      updateStatus()
-    }
-  })
+  function removeCell(): void {
+    if (cellCount.value > MIN_CELLS) cellCount.value--
+  }
 
-  updateStatus()
+  addBtn?.addEventListener('click', addCell)
+  removeBtn?.addEventListener('click', removeCell)
+  const stopStatus = effect(updateStatus)
+
+  return {
+    cellCount,
+    dispose(): void {
+      stopStatus()
+      addBtn?.removeEventListener('click', addCell)
+      removeBtn?.removeEventListener('click', removeCell)
+      gridApp.unmount()
+    },
+  }
 }
 
 // ============================================================
