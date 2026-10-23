@@ -403,6 +403,9 @@ Axiom automatically routes nodes to the most efficient layout algorithm:
 
 All positions (`x`, `y`) are **relative to the direct parent** — not absolute from the root. The DOM nests children inside parents, and `position: absolute` + `translate()` accumulates naturally.
 
+For client/SSR style ownership, precedence, and containers smaller than fixed geometry,
+see the [layout contract](./docs/LAYOUT_CONTRACT.md).
+
 ### Height calculation (bottom-up)
 
 - **Column direction**: height = sum of child heights + gaps
@@ -528,6 +531,10 @@ bun run build:static
 ## Streaming SSR (experimental)
 
 Axiom supports streaming server-side rendering via Web Streams API.
+The current implementation renders the complete HTML synchronously, emits a **single
+chunk**, then closes the stream; it does not progressively render async boundaries.
+The demo's `/ssr-stream` route uses artificial chunking (head/body with a delay),
+as [disclosed on the page](./demo/streaming-page.tsx).
 
 ```typescript
 import { renderToReadableStream } from 'axiom-framework'
