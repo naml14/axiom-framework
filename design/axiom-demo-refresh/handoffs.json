@@ -3,20 +3,24 @@
   "chosen": "01-launcher-hero.html",
   "handoffs": {
     "03-dashboard-shell.html": {
-      "status": "sent",
+      "status": "implemented",
       "queued": false,
       "sentAt": "2026-11-04T23:03:42.263Z",
       "startedAt": null,
-      "implementedAt": null,
-      "feature": "odd/tasks/demo-visual-refresh.md"
+      "implementedAt": "2026-11-04T23:05:51.815Z",
+      "feature": "odd/tasks/demo-visual-refresh.md",
+      "note": "Shell del dashboard implementado en demo/style.css + demo/sidebar-navigation.css (sidebar, chips con punto de color, hero, cards, barra de métricas).",
+      "previewUrl": "http://localhost:3000/static.html"
     },
     "01-launcher-hero.html": {
-      "status": "sent",
+      "status": "implemented",
       "queued": false,
       "sentAt": "2026-11-04T23:03:42.646Z",
       "startedAt": null,
-      "implementedAt": null,
-      "feature": "odd/tasks/demo-visual-refresh.md"
+      "implementedAt": "2026-11-04T23:05:51.683Z",
+      "feature": "odd/tasks/demo-visual-refresh.md",
+      "note": "Launcher implementado en demo/index.html + demo/style.css (portada hero, tres caminos, módulo createServer, stats).",
+      "previewUrl": "http://localhost:3000/"
     }
   }
 }
