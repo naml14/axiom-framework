@@ -80,3 +80,14 @@ product and speaks with the same palette as the logo. The framework version must
 - L10 (verificación, 2026-11-04): `demo/app.js` y `demo/dom-comparison.js` se regeneran sin cambios
   respecto al bundle previo salvo el vocabulario de colores (`blue`/`cyan`/`indigo` en lugar de
   `violet`/`teal`/`sky`); el framework publicado (`src/`, `dist/`) no se toca.
+- L11 (decisión, 2026-11-04): el usuario eligió en el canvas **Launcher hero** para la portada y
+  **Dashboard shell** para el static. La implementación se ajustó al artboard: los chips del canvas
+  llevan el punto de color (un `::before`, con su sitio reservado en el ancho declarado:
+  `getTagWidth` pasa de +26 a +40px, así el texto no se recoloca), el hero del launcher sube a 56px
+  con un lead de 18px, el módulo createServer a 1.1fr/0.9fr, el nav a Demo · Benchmarks · GitHub
+  (los tres enlaces reales: el demo server no sirve `docs/` ni `CHANGELOG.md`, que viven en la raíz
+  del repo) y la stat central a «1 commit por cambio de estado».
+- L12 (limite, 2026-11-04): dos elementos del artboard no son implementables sin romper el motor y
+  no se copian: el título del hero a 34px (la fila del motor declara 26px, `HERO_TITLE_HEIGHT`) y el
+  sidebar a 320px (el demo mide 340px porque sus secciones reales lo necesitan). El artboard es la
+  especificación visual; donde el motor es dueño del layout, manda el motor.

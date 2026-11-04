@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "chosen": "01-launcher-hero.html",
+  "handoffs": {
+    "03-dashboard-shell.html": {
+      "status": "sent",
+      "queued": false,
+      "sentAt": "2026-11-04T23:03:42.263Z",
+      "startedAt": null,
+      "implementedAt": null,
+      "feature": "odd/tasks/demo-visual-refresh.md"
+    },
+    "01-launcher-hero.html": {
+      "status": "sent",
+      "queued": false,
+      "sentAt": "2026-11-04T23:03:42.646Z",
+      "startedAt": null,
+      "implementedAt": null,
+      "feature": "odd/tasks/demo-visual-refresh.md"
+    }
+  }
+}

@@ -7,7 +7,9 @@ export function computeColumns(width: number): number {
 
 export function getTagWidth(label: string): number {
   // Las mayúsculas son más anchas (aprox 8.5px), minúsculas y otros (aprox 6.5px).
-  // +26px incluye padding y margen visual seguro.
+  // +40px cubre el padding (20), el punto de color (7), su separación (7) y
+  // el margen visual seguro (6). El punto es un ::before, así que el ancho
+  // declarado tiene que reserving su sitio: el texto no se recoloca.
   let textWidth = 0
   for (let i = 0; i < label.length; i++) {
     const char = label[i]!
@@ -17,7 +19,7 @@ export function getTagWidth(label: string): number {
       textWidth += 6.5
     }
   }
-  return Math.ceil(textWidth) + 26
+  return Math.ceil(textWidth) + 40
 }
 
 export function distributeToColumns<T extends { estimatedHeight: number }>(

@@ -644,9 +644,11 @@ body {
     Tag Bubbles
    ============================================================ */
 
-/* Neutral pills: the label carries the colour, the frame stays quiet.
-   The engine declares 20px of height for these nodes; the 1px border eats
-   2px, so the line box has to be 18px or the text overflows the pill. */
+/* Neutral pills: the label carries the colour in a dot, the frame stays
+   quiet. The engine declares 20px of height for these nodes; the 1px
+   border eats 2px, so the line box has to be 18px or the text overflows
+   the pill. The dot is a ::before, so the declared width (getTagWidth)
+   has to reserve its space: the text never moves. */
 .tag-bubble {
   padding: 0 10px;
   border-radius: var(--radius-pill);
@@ -656,13 +658,25 @@ body {
   background: var(--surface-2);
   border: 1px solid var(--border-subtle);
   letter-spacing: 0.3px;
+  color: var(--text-muted);
 }
 
-.tag-blue { color: var(--accent-blue); }
-.tag-cyan   { color: var(--accent-cyan); }
-.tag-amber  { color: var(--accent-amber); }
-.tag-rose   { color: var(--accent-rose); }
-.tag-indigo    { color: var(--accent-indigo); }
+.tag-bubble::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--dot-color, var(--accent-blue));
+  vertical-align: middle;
+}
+
+.tag-blue   { --dot-color: var(--accent-blue); }
+.tag-cyan   { --dot-color: var(--accent-cyan); }
+.tag-indigo { --dot-color: var(--accent-indigo); }
+.tag-amber  { --dot-color: var(--accent-amber); }
+.tag-rose   { --dot-color: var(--accent-rose); }
 
 /* ============================================================
     Metrics Footer — Fixed bottom bar
@@ -1353,7 +1367,7 @@ body.launcher-page {
 
 .launcher-hero {
   max-width: 880px;
-  padding: 48px 0 36px;
+  padding: 56px 0 40px;
 }
 
 .launcher-kicker {
@@ -1370,7 +1384,7 @@ body.launcher-page {
 
 .launcher-title {
   margin: 16px 0 20px;
-  font-size: 54px;
+  font-size: 56px;
   line-height: 1.06;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -1378,7 +1392,7 @@ body.launcher-page {
 
 .launcher-lead {
   max-width: 62ch;
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1.6;
   color: var(--text-muted);
 }
@@ -1387,7 +1401,7 @@ body.launcher-page {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 30px;
+  margin-top: 34px;
 }
 
 .launcher-btn {
@@ -1473,7 +1487,7 @@ body.launcher-page {
 }
 
 .launcher-section-title {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -1551,7 +1565,7 @@ body.launcher-page {
 
 .launcher-server {
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
+  grid-template-columns: 1.1fr 0.9fr;
   gap: 36px;
   margin-top: 44px;
   padding: 28px;
