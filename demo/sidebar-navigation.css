@@ -8,9 +8,9 @@
   max-height: min(220px, 24vh);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 8px 16px;
+  padding: 10px 16px;
   background: var(--bg-sidebar);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   scrollbar-width: thin;
 }
 
@@ -19,35 +19,49 @@
 }
 
 .sidebar-index h2 {
-  font-size: 12px;
-  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
 }
 
+/* Group labels read as micro-labels, exactly like .sidebar-section-title. */
 .sidebar-index h3 {
-  color: var(--text-muted);
-  font-size: 11px;
-  margin: 6px 0 3px;
+  margin: 0;
+}
+
+.sidebar-index .index-group + .index-group {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .sidebar-index a {
   display: inline-block;
-  padding: 4px 6px;
-  margin: 1px;
-  border-radius: 4px;
-  color: var(--text);
-  font-size: 11px;
+  padding: 4px 10px;
+  margin: 1px 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 12px;
   text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.sidebar-index a:hover,
-.sidebar-index a[aria-current="location"] {
-  background: var(--surface-3);
+.sidebar-index a:hover {
+  background: var(--surface-2);
   color: var(--text);
-  box-shadow: inset 3px 0 var(--accent-violet);
+}
+
+.sidebar-index a[aria-current="location"] {
+  background: rgba(94,163,247, 0.12);
+  color: var(--accent-blue);
+  box-shadow: inset 3px 0 var(--accent-blue);
 }
 
 .sidebar-index a:focus-visible {
-  outline: 2px solid var(--accent-violet);
+  outline: 2px solid var(--accent-blue);
   outline-offset: 1px;
 }
 
