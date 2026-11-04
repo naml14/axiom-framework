@@ -4,173 +4,132 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Axiom — Demo Launcher</title>
-  <meta name="description" content="Selector de demos de Axiom: estático puro y SSR.">
+  <meta name="description" content="Demo de axiom-framework: renderizado en dos fases, layout calculado en memoria, cero lecturas del DOM en el hot path.">
   <link rel="stylesheet" href="style.css">
-  <style>
-    .demo-launcher {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-      background: var(--bg);
-    }
-
-    .launcher-card {
-      width: min(860px, 100%);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      background: var(--surface-1);
-      padding: 22px;
-      box-shadow: var(--shadow-soft);
-    }
-
-    .launcher-title {
-      margin: 0 0 10px;
-      font-size: 20px;
-      color: var(--text);
-      letter-spacing: 0.3px;
-    }
-
-    .launcher-subtitle {
-      margin: 0 0 18px;
-      color: var(--text-muted);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .launcher-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 12px;
-    }
-
-    .launcher-demo {
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      background: var(--surface-2);
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .launcher-demo h2 {
-      margin: 0;
-      font-size: 14px;
-      color: var(--text);
-    }
-
-    .launcher-demo p {
-      margin: 0;
-      color: var(--text-muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .launcher-actions {
-      margin-top: 6px;
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .launcher-note {
-      margin-top: 14px;
-      color: var(--text-muted);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-  </style>
 </head>
-<body>
-  <main class="demo-launcher">
-    <section class="launcher-card" aria-label="Selector de demos Axiom">
-      <h1 class="launcher-title">⚡ Axiom Demo Launcher</h1>
-      <p class="launcher-subtitle">
-        Dos flujos separados para evitar confusión: <strong>estático puro</strong> (abre directo) y <strong>SSR</strong> (requiere servidor).
+<body class="launcher-page">
+
+  <header class="launcher-topbar">
+    <div class="launcher-brand">
+      <span class="launcher-brand-icon" aria-hidden="true">⚡</span>
+      <span class="launcher-brand-name">AXIOM</span>
+      <span class="launcher-version">v1.0.1</span>
+    </div>
+    <nav class="launcher-links" aria-label="Enlaces del proyecto">
+      <a href="https://github.com/naml14/axiom-framework" rel="noopener">GitHub</a>
+      <a href="./static.html">Demo</a>
+    </nav>
+  </header>
+
+  <main class="launcher-main">
+
+    <section class="launcher-hero">
+      <p class="launcher-kicker">Framework web · renderizado en dos fases</p>
+      <h1 class="launcher-title">El DOM solo es<br>la pantalla de salida.</h1>
+      <p class="launcher-lead">
+        Axiom calcula todo el layout en memoria: aritmética pura, cero lecturas del DOM.
+        El commit ocurre una sola vez, con el resultado ya resuelto.
       </p>
 
-      <div class="launcher-grid">
-        <article class="launcher-demo">
-          <h2>🧱 Demo Estático Puro</h2>
-          <p>
-            No depende de rutas SSR. Puedes abrirlo como archivo local o servirlo con cualquier servidor estático.
-          </p>
-          <div class="launcher-actions">
-            <a class="btn-toggle active" href="./static.html">Abrir static.html</a>
-          </div>
-        </article>
-
-        <article class="launcher-demo">
-          <h2>🧪 Demo SSR (clásico)</h2>
-          <p>
-            Renderizado del lado servidor usando <code>renderToString()</code> con hydration markers (<code>data-axiom-id</code>).
-            Solo funciona cuando el demo server está corriendo.
-          </p>
-          <div class="launcher-actions">
-            <a id="launcher-ssr-link" class="btn-toggle" href="/ssr?name=Dev&width=960&root=ssr-root">Abrir /ssr</a>
-          </div>
-        </article>
-
-        <article class="launcher-demo">
-          <h2>🌀 Demo Streaming SSR (experimental)</h2>
-          <p>
-            Usa <code>renderToReadableStream()</code> (experimental) y emite el HTML como un <code>ReadableStream</code> en chunks.
-            Ideal para progressive rendering y async boundaries futuras.
-          </p>
-          <div class="launcher-actions">
-            <a id="launcher-stream-link" class="btn-toggle" href="/ssr-stream">Abrir /ssr-stream</a>
-          </div>
-        </article>
+      <div class="launcher-actions">
+        <a class="launcher-btn launcher-btn--primary" href="./static.html">Abrir el demo estático</a>
+        <a class="launcher-btn launcher-btn--ghost" id="launcher-ssr-link" href="/ssr?name=Dev&amp;width=960&amp;root=ssr-root">Ver el render en servidor</a>
       </div>
 
-      <section class="launcher-section" aria-label="createServer">
-        <h2 class="launcher-section-title">⚙️ createServer — server wrapper</h2>
-        <p class="launcher-section-body">
-          El demo server usa <code>createServer()</code> (API <em>experimental</em> de <code>axiom-framework</code>) para
-          integrar <strong>SSR + static files + per-route metadata + CORS + rate limiting</strong> en una sola llamada.
-        </p>
-        <ul class="launcher-list">
-          <li><strong>Routing SSR</strong>: matchRoute() en <code>src/server.ts</code> — soporta static + dynamic.</li>
-          <li><strong>Static files</strong>: resolveStaticFilePath() con isPathInside() para prevenir path traversal.</li>
-          <li><strong>Per-route metadata</strong>: title, description, og, stylesheets, inlineStyles, bodyStyle.</li>
-          <li><strong>CORS</strong>: normalizeAllowedOrigins() — canonicaliza URLs, filtra wildcards inválidos.</li>
-          <li><strong>Rate limiting</strong>: 100 req/min por IP, pruning periódico.</li>
-        </ul>
-      </section>
-
-      <p class="launcher-note" id="launcher-note">
-        Tip: para SSR usa <code>bun run demo</code> y abre <code>http://localhost:3000</code>.
-      </p>
+      <dl class="launcher-stats">
+        <div class="launcher-stat">
+          <dt class="launcher-stat-label">lecturas del DOM en el hot path</dt>
+          <dd class="launcher-stat-value">0</dd>
+        </div>
+        <div class="launcher-stat">
+          <dt class="launcher-stat-label">fases de renderizado</dt>
+          <dd class="launcher-stat-value">2</dd>
+        </div>
+        <div class="launcher-stat">
+          <dt class="launcher-stat-label">línea base del motor de layout</dt>
+          <dd class="launcher-stat-value">20px</dd>
+        </div>
+      </dl>
     </section>
-  </main>
 
-  <style>
-    .launcher-section {
-      margin-top: 18px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
-    }
-    .launcher-section-title {
-      margin: 0 0 8px;
-      font-size: 14px;
-      color: var(--text);
-    }
-    .launcher-section-body {
-      margin: 0 0 10px;
-      color: var(--text-muted);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .launcher-list {
-      margin: 0;
-      padding-left: 20px;
-      color: var(--text-muted);
-      font-size: 12px;
-      line-height: 1.6;
-    }
-    .launcher-list strong { color: var(--text); }
-  </style>
+    <section class="launcher-section" aria-labelledby="launcher-paths-title">
+      <div class="launcher-section-head">
+        <h2 class="launcher-section-title" id="launcher-paths-title">Tres formas de verlo</h2>
+        <p class="launcher-section-sub">
+          Elige el flujo que quieras recorrer: archivo local, render en servidor o streaming progresivo.
+        </p>
+      </div>
+
+      <div class="launcher-grid">
+        <article class="launcher-card">
+          <span class="launcher-card-icon" aria-hidden="true">🧱</span>
+          <h3>Demo estático puro</h3>
+          <p>
+            No depende de rutas SSR. Puedes abrirlo como archivo local o servirlo con
+            cualquier servidor estático.
+          </p>
+          <a class="btn-toggle active" href="./static.html">Abrir static.html</a>
+        </article>
+
+        <article class="launcher-card launcher-card--featured">
+          <span class="launcher-card-icon" aria-hidden="true">🧪</span>
+          <h3>Demo SSR (clásico)</h3>
+          <p>
+            Renderizado del lado servidor con <code>renderToString()</code> y marcadores de
+            hidratación (<code>data-axiom-id</code>). Solo funciona con el demo server corriendo.
+          </p>
+          <a class="btn-toggle" id="launcher-ssr-card-link" href="/ssr?name=Dev&amp;width=960&amp;root=ssr-root">Abrir /ssr</a>
+        </article>
+
+        <article class="launcher-card">
+          <span class="launcher-card-icon" aria-hidden="true">🌀</span>
+          <h3>Demo Streaming SSR (experimental)</h3>
+          <p>
+            Usa <code>renderToReadableStream()</code> y emite el HTML como un
+            <code>ReadableStream</code> en chunks. Ideal para progressive rendering.
+          </p>
+          <a class="btn-toggle" id="launcher-stream-link" href="/ssr-stream">Abrir /ssr-stream</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="launcher-server" aria-labelledby="launcher-server-title">
+      <div>
+        <p class="launcher-kicker launcher-kicker--teal">createServer</p>
+        <h2 class="launcher-server-title" id="launcher-server-title">Un wrapper para SSR + archivos estáticos</h2>
+        <p class="launcher-server-body">
+          El framework expone <code>createServer()</code> para montar rutas, estáticos y metadata
+          con una sola llamada. El demo server, en cambio, usa el <code>serve()</code> de Bun
+          directamente: así el arranque del demo no depende de la API experimental.
+        </p>
+        <ul class="launcher-server-list">
+          <li><strong>Routing SSR</strong>: <code>matchRoute()</code> — estático y dinámico.</li>
+          <li><strong>Archivos estáticos</strong>: <code>resolveStaticFilePath()</code> con <code>isPathInside()</code> para prevenir path traversal.</li>
+          <li><strong>Metadata por ruta</strong>: title, description, og, stylesheets, inlineStyles, bodyStyle.</li>
+          <li><strong>CORS</strong>: <code>normalizeAllowedOrigins()</code> canonicaliza y filtra wildcards inválidos.</li>
+          <li><strong>Rate limiting</strong>: 100 req/min por IP, con pruning periódico.</li>
+        </ul>
+      </div>
+
+      <pre class="launcher-code"><span class="k">import</span> { createServer } <span class="k">from</span> <span class="s">'axiom-framework'</span>;
+
+<span class="k">const</span> server = <span class="f">createServer</span>({
+  routes: [
+    { path: <span class="s">'/'</span>,    render: home },
+    { path: <span class="s">'/ssr'</span>, render: ssrPage },
+  ],
+  staticDir: <span class="s">'./public'</span>,
+  cors: { origins: [<span class="s">'http://localhost:5173'</span>] },
+  rateLimit: { max: <span class="n">100</span>, windowMs: <span class="n">60_000</span> },
+});
+
+server.listen(<span class="n">3000</span>);</pre>
+    </section>
+
+    <p class="launcher-note" id="launcher-note">
+      Tip: para las rutas SSR ejecuta <code>bun run demo</code> y abre <code>http://localhost:3000</code>.
+    </p>
+  </main>
 
   <script src="./launcher.js"></script>
 </body>

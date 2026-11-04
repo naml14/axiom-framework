@@ -1267,3 +1267,369 @@ Portal Modal — Rendered by portal into #portal-modal-root
 
 .context-section .form-status--invalid,
 .forms-section .form-status--invalid { color: var(--accent-rose); }
+
+/* ============================================================
+    Demo Launcher — the landing page served at "/"
+
+    Plain HTML: nothing here is mounted by the engine, so the type
+    scale and spacing can use the full range.
+   ============================================================ */
+
+body.launcher-page {
+  overflow-y: auto;
+}
+
+.launcher {
+  min-height: 100vh;
+  padding-bottom: 72px;
+  background:
+    radial-gradient(900px 480px at 12% -8%, rgba(16,83,198, 0.28), transparent 62%),
+    radial-gradient(760px 420px at 88% 4%, rgba(38,199,217, 0.18), transparent 60%),
+    linear-gradient(180deg, #0b0e1a 0%, var(--bg) 46%);
+}
+
+.launcher-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 26px 64px;
+}
+
+.launcher-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.launcher-brand-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.launcher-brand-name {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.launcher-version {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+}
+
+.launcher-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+.launcher-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.launcher-links a:hover {
+  color: var(--text);
+}
+
+.launcher-main {
+  padding: 0 64px;
+}
+
+/* ---- Hero ---- */
+
+.launcher-hero {
+  max-width: 880px;
+  padding: 48px 0 36px;
+}
+
+.launcher-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-blue);
+}
+
+.launcher-kicker--teal {
+  color: var(--accent-cyan);
+}
+
+.launcher-title {
+  margin: 16px 0 20px;
+  font-size: 54px;
+  line-height: 1.06;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.launcher-lead {
+  max-width: 62ch;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.launcher-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.launcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.launcher-btn--primary {
+  background: linear-gradient(135deg, var(--accent-blue-deep), #2f7ae5);
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(16,83,198, 0.35);
+}
+
+.launcher-btn--primary:hover {
+  transform: translateY(-1px);
+}
+
+.launcher-btn--ghost {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.launcher-btn--ghost:hover {
+  border-color: rgba(94,163,247, 0.5);
+  background: rgba(94,163,247, 0.08);
+}
+
+.launcher-btn.is-disabled,
+.launcher-btn.is-disabled:hover {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  pointer-events: none;
+}
+
+/* ---- Stats ---- */
+
+.launcher-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px;
+  margin: 40px 0 0;
+  padding-top: 28px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.launcher-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+}
+
+.launcher-stat-value {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.launcher-stat-label {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* ---- Sections ---- */
+
+.launcher-section {
+  margin-top: 56px;
+}
+
+.launcher-section-head {
+  margin-bottom: 22px;
+}
+
+.launcher-section-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.launcher-section-sub {
+  margin-top: 8px;
+  max-width: 60ch;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.launcher-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.launcher-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.launcher-card:hover {
+  border-color: rgba(94,163,247, 0.45);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.launcher-card--featured {
+  background: linear-gradient(160deg, rgba(16,83,198, 0.14), var(--surface) 62%);
+  border-color: rgba(94,163,247, 0.35);
+}
+
+.launcher-card-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.launcher-card h3 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.launcher-card p {
+  flex: 1;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.launcher-card code,
+.launcher-server code,
+.launcher-note code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--surface-2);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.launcher-card .btn-toggle {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* ---- createServer module ---- */
+
+.launcher-server {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 36px;
+  margin-top: 44px;
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.launcher-server-title {
+  margin: 12px 0 10px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.launcher-server-body {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.launcher-server-list {
+  list-style: none;
+  margin-top: 16px;
+  display: grid;
+  gap: 9px;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.launcher-server-list li::before {
+  content: "—";
+  color: var(--accent-blue);
+  margin-right: 8px;
+}
+
+.launcher-server-list strong {
+  color: var(--text);
+}
+
+.launcher-code {
+  align-self: start;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  overflow-x: auto;
+}
+
+.launcher-code .k { color: var(--accent-blue); }
+.launcher-code .s { color: var(--accent-cyan); }
+.launcher-code .n { color: var(--accent-amber); }
+.launcher-code .f { color: var(--accent-indigo); }
+
+.launcher-note {
+  margin-top: 32px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .launcher-topbar,
+  .launcher-main {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .launcher-title {
+    font-size: 38px;
+  }
+
+  .launcher-server {
+    grid-template-columns: 1fr;
+  }
+}
