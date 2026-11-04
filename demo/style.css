@@ -549,7 +549,16 @@ body.metrics-off .dashboard-layout {
 }
 
 .dashboard-layout[data-view]:not([data-view="core"]) .sidebar-index h2 {
-  margin: 0 10px 0 0;
+  /* A caption, not another tab: sentence case, quiet, and separated from
+     the tabs by a hairline. */
+  margin: 0 12px 0 0;
+  padding-right: 12px;
+  border-right: 1px solid var(--border-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-dim);
 }
 
 /* Flatten the groups so the tabs and the entries can be ordered apart. */

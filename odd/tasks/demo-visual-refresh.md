@@ -117,3 +117,37 @@ product and speaks with the same palette as the logo. The framework version must
   no contenía la regla nueva mientras el servidor ya la servía). El server ahora responde
   `Cache-Control: no-store`: es un servidor de desarrollo y una hoja editada hace un segundo tiene
   que llegar al navegador.
+- L17 (usuario, 2026-11-04): "El título «Índice de secciones» parece que sea una sección para hacer
+  click y no lo es." En la barra de las vistas no-core la etiquetashares estilo con las pestañas:
+  ahora es una leyenda (frase, apagada, separada por un filete) y las pestañas quedan como lo
+  accionable.
+- L18 (hallazgos hacia el motor, 2026-11-04): el trabajo de visual no encontró **bugs** del motor —
+  el motor se comportó como se documentó — pero sí cuatro puntos donde el contrato con el CSS del
+  consumidor es frágil. Con evidencia en `src/`:
+  1. **La altura de fila no es consultable ni observable.** El texto se mide con una heurística
+     (8px por carácter, factor 1.4, `src/render/engines/text-measure.ts:9-39`), nunca contra el CSS,
+     y no hay aviso cuando el `line-height` del consumidor no cabe en la fila (medido: 6px de
+     desborde). El valor por defecto (20) está cableado en cuatro sitios (`src/app.ts:220`,
+     `src/ssr.ts:78`, `src/testing.ts:102`, `src/render/reflow.ts:44`) y no se expone: el consumidor
+     lo hardcodea (el demo: `createApp(..., { lineHeight: 20 })` más su propio
+     `HERO_TITLE_HEIGHT = 26`). Precedente en el propio motor: `onTransformConflict`
+     (`src/app.ts:137`).
+  2. **Lo que el CSS mueve no lo mide el motor.** `src/render/commit.ts:617` escribe la geometría
+     sin `box-sizing` ni compensar padding/border CSS, y `layout.padding` es aritmética de layout,
+     no padding CSS (`src/core/types.ts:135`, `src/render/engines/flex.ts:97`). Un `::before` no
+     existe para la medición: el ancho declarado tiene que reservarlo a mano (lo aprendí al meter el
+     punto de color de los chips).
+  3. **Un control DOM sin hijos no tiene tamaño** (`src/render/reflow.ts:95-109`): una hoja mide 0
+     salvo que declares `height`. Indicio aparte: el fast-path no aplicaría las dimensiones
+     declaradas de una hoja (`src/render/engines/fast-path.ts:72-102`).
+  4. **Los canales de diagnóstico están dispersos**: `onError` (`src/app.ts:333`), `console.warn` por
+     estilo rechazado (`src/features/style.ts:130`), warnings de sintaxis dev
+     (`src/syntax/h.dev.ts`), de hidratación (`src/render/commit.ts:344`) y de portales
+     (`src/render/commit.ts:492`). Y el criterio de dev no es uniforme: la app exige `development`,
+     los estilos consideran dev todo lo que no sea `production`.
+  Lo que **no** es un hallazgo: el diff de `attrs` ya existe (`src/render/diff.ts:152`,
+     `src/render/commit.ts:443`) —lo que sí es cierto es que mutar y reutilizar el mismo objeto
+     `attrs` puede ocultar cambios por igualdad de identidad (`src/render/diff.ts:153`); y el camino
+     composable de transform (`--animation-transform`) y `onTransformConflict` ya existen.
+  Pendiente de decidir por el usuario: los puntos 1 y 4 tocan `src/` y **avanzan la versión**
+  (regla G2 del repo); el punto 2 se resuelve documentando el contrato, sin tocar `src/`.
