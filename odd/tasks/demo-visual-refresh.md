@@ -91,3 +91,29 @@ product and speaks with the same palette as the logo. The framework version must
   no se copian: el título del hero a 34px (la fila del motor declara 26px, `HERO_TITLE_HEIGHT`) y el
   sidebar a 320px (el demo mide 340px porque sus secciones reales lo necesitan). El artboard es la
   especificación visual; donde el motor es dueño del layout, manda el motor.
+- L13 (usuario, verbatim): "Al final quedó pegado, ojo con eso" / "Ese link no se vé." / "Sin métricas
+  queda horrible" / "Estas secciones Horribles, si con h mayúscula." + "Para que sea mejor su
+  interacción con un navegador, revise ego(lite) que ese navegador está basado en chromium y está
+  pensado específicamente para la IA".
+- L14 (medición con ego lite, 2026-11-04): los cinco defectos, medidos en el navegador y no a ojo:
+  1. el tip del launcher quedaba a **0px** del final del documento (el wrapper `.launcher` existía en
+     el CSS pero nunca llegó al HTML, así que su `padding-bottom` no se aplicaba);
+  2. el enlace del benchmark salía con el **azul por defecto del navegador** (`rgb(0, 0, 238)`) sin
+     estilo, invisible sobre la superficie oscura;
+  3. con las métricas apagadas el layout **conservaba los 52px** de la barra (903px de layout en una
+     ventana de 955px): una franja vacía al pie;
+  4. en las vistas distintas de *core* el índice y la nota se estiraban **1910px y 1870px** en una
+     medida de 960px, con el contenido flotando en medio (dos bandas atravesando la página);
+  5. `h()` salía como **H()** por el `text-transform: uppercase` de las etiquetas.
+- L15 (correcciones, 2026-11-04): (1) el launcher recupera su wrapper y con él los 96px de aire al
+  final — el `padding-bottom` del `body` **no** servía: al propagarse el overflow al viewport no
+  extiende el área scrollable, medido 0px igual; (2) los enlaces del demo llevan el azul de marca y
+  un filete, en vez del azul del navegador; (3) el layout toma la altura que libera la barra de
+  métricas (`body.metrics-off`); (4) el índice de las vistas no-core es una barra de dos filas —las
+  cuatro pestañas y las entradas de la vista activa— y la nota del contador DOM se oculta ahí,
+  porque solo existe en la vista del canvas; (5) `h()` conserva su caja con `.api-name`.
+- L16 (hallazgo de cache, 2026-11-04): el servidor del demo servía los estáticos **sin cabeceras de
+  caché**, y el navegador se quedaba con la hoja de estilos anterior (medido: el CSSOM del navegador
+  no contenía la regla nueva mientras el servidor ya la servía). El server ahora responde
+  `Cache-Control: no-store`: es un servidor de desarrollo y una hoja editada hace un segundo tiene
+  que llegar al navegador.

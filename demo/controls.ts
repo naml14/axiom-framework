@@ -180,6 +180,9 @@ export function initControls(deps: ControlsDeps) {
     const isVisible = metricsFooter.style.display !== 'none'
     metricsFooter.style.display = isVisible ? 'none' : 'flex'
     metricsBtn.classList.toggle('active', !isVisible)
+    // The layout keeps the room of the footer; without the bar that room
+    // was an empty strip at the bottom of the page.
+    document.body.classList.toggle('metrics-off', isVisible)
   })
 
   // Initial metrics display
