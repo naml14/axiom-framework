@@ -1,0 +1,28 @@
+{
+  "title": "Axiom demo — refresh visual",
+  "brief": "Refresh the visual design of the Axiom demo so the showcase reads as a polished product.",
+  "feature": "odd/tasks/demo-visual-refresh.md",
+  "artboards": [
+    {
+      "file": "01-launcher-hero.html",
+      "title": "Launcher hero",
+      "tradeoff": "One clear promise, generous rhythm; the three paths read as a narrative",
+      "width": 1440,
+      "height": 1240
+    },
+    {
+      "file": "02-launcher-bento.html",
+      "title": "Launcher bento",
+      "tradeoff": "Denser and scannable; weaker editorial voice",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "03-dashboard-shell.html",
+      "title": "Dashboard shell",
+      "tradeoff": "Applies the same tokens to the real demo chrome; content density is inherited from the engine",
+      "width": 1440,
+      "height": 900
+    }
+  ]
+}
