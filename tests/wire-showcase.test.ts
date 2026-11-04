@@ -84,7 +84,9 @@ test('responsive inspector follows width without polling and stops on disposal',
   width.value = 1024
   expect(output.textContent).toBe('1024px → breakpoint: lg | 100% = 1024px')
   expect(bar.style.width).toBe(`${(1024 / 1400) * 100}%`)
-  expect(bar.style.background).toBe('var(--accent-sky)')
+  // The responsive bar takes the color the legend assigns to the active
+  // breakpoint; `lg` is the indigo step of the logo palette.
+  expect(bar.style.background).toBe('var(--accent-indigo)')
   expect(frames).toHaveLength(0)
   stop?.()
   width.value = 320
