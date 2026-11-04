@@ -58,7 +58,7 @@ function parseSSRParams(url: URL): SSRParams {
 
 const SSR_SHELL_CSS = (width: number, rootId: string): string => [
   '* { box-sizing:border-box; margin:0; padding:0; }',
-  'body { background:#080814; color:#e5e7eb; }',
+  'body { background:#090b13; color:#eef0f7; }',
   `#${rootId} { position:static !important; height:auto !important; padding:24px 16px 48px; }`,
   '.ssr-shell {',
   '  position:static !important;',
@@ -97,15 +97,15 @@ const SSR_SHELL_CSS = (width: number, rootId: string): string => [
   '.ssr-lead {',
   '  font-size:17px;',
   '  line-height:1.65;',
-  '  color:#cbd5e1 !important;',
+  '  color:#97a1c4 !important;',
   '}',
   '.ssr-muted {',
-  '  color:#94a3b8 !important;',
+  '  color:#95a0bf !important;',
   '  font-size:14px;',
   '  line-height:1.55;',
   '}',
   '.ssr-strong {',
-  '  color:#f8fafc !important;',
+  '  color:#eef0f7 !important;',
   '  font-weight:800;',
   '}',
   '.ssr-code {',
@@ -124,23 +124,23 @@ const SSR_SHELL_CSS = (width: number, rootId: string): string => [
   '  padding:2px 8px !important;',
   '  margin-left:8px !important;',
   '  border-radius:999px;',
-  '  border:1px solid rgba(167,139,250,.35);',
-  '  background:rgba(167,139,250,.12);',
-  '  color:#c4b5fd !important;',
+  '  border:1px solid rgba(94,163,247,.35);',
+  '  background:rgba(94,163,247,.12);',
+  '  color:#a9ccfb !important;',
   '  font-size:12px;',
   '  font-weight:700;',
   '  letter-spacing:.04em;',
   '  text-transform:uppercase;',
   '}',
   '.ssr-shell a, .ssr-shell a:visited {',
-  '  color:#7dd3fc !important;',
+  '  color:#83a0db !important;',
   '  text-decoration:none !important;',
   '}',
   '.ssr-shell a:hover {',
-  '  color:#bae6fd !important;',
+  '  color:#b9c9ea !important;',
   '}',
   '.ssr-link-inline, .ssr-link-inline:visited {',
-  '  color:#c4b5fd !important;',
+  '  color:#a9ccfb !important;',
   '  border-bottom:1px dashed rgba(196,181,253,.7);',
   '  overflow-wrap:anywhere;',
   '}',
@@ -148,7 +148,7 @@ const SSR_SHELL_CSS = (width: number, rootId: string): string => [
   '  display:inline-flex !important;',
   '  align-items:center;',
   '  gap:8px;',
-  '  color:#5eead4 !important;',
+  '  color:#26c7d9 !important;',
   '  font-weight:800;',
   '}',
 ].join('\n')
@@ -193,10 +193,10 @@ function buildSSRDemoTree(params: {
       attrs={{
         style: [
           `max-width:${width}px`,
-          'background:#12121f',
-          'border:1px solid #2a2a4a',
+          'background:#141827',
+          'border:1px solid #2a395a',
           'border-radius:14px',
-          'color:#e2e2f0',
+          'color:#eef0f7',
           'font-family:system-ui,sans-serif',
           'box-shadow:0 16px 40px rgba(0,0,0,.35)',
         ].join(';') + ';',
@@ -206,13 +206,13 @@ function buildSSRDemoTree(params: {
       padding={20}
     >
       {/* Title */}
-      <h1 class="ssr-title" attrs={{ style: 'font-size:28px;font-weight:800;color:#a78bfa;' }}>
+      <h1 class="ssr-title" attrs={{ style: 'font-size:28px;font-weight:800;color:#5ea3f7;' }}>
         SSR Demo — Axiom renderToString()
         <span class="ssr-chip">server rendered</span>
       </h1>
 
       {/* Greeting */}
-      <p class="ssr-lead" attrs={{ style: 'color:#b2b2d0;' }}>
+      <p class="ssr-lead" attrs={{ style: 'color:#97a1c4;' }}>
         Hola <strong class="ssr-strong">{name}</strong>, esta página fue renderizada en servidor con
         {' '}<strong class="ssr-strong">renderToString()</strong>.
       </p>
@@ -221,8 +221,8 @@ function buildSSRDemoTree(params: {
       <code
         class="ssr-code"
         attrs={{
-          style: 'display:block;padding:10px 12px;background:#0a0a14;'
-              + 'border:1px solid #2a2a4a;border-radius:8px;color:#5eead4;',
+          style: 'display:block;padding:10px 12px;background:#090b13;'
+              + 'border:1px solid #2a395a;border-radius:8px;color:#26c7d9;',
         }}
       >
         GET {route}{queryString}
@@ -230,18 +230,18 @@ function buildSSRDemoTree(params: {
 
       {/* Stats + tip */}
       <div class="ssr-stack" flex="column" gap={6}>
-        <p class="ssr-muted" attrs={{ style: 'color:#9ca3af;font-size:14px;' }}>
+        <p class="ssr-muted" attrs={{ style: 'color:#95a0bf;font-size:14px;' }}>
           Ancho SSR: <strong class="ssr-strong">{width}px</strong> · rootId: <strong class="ssr-strong">{rootId}</strong>
         </p>
-        <p class="ssr-muted" attrs={{ style: 'color:#9ca3af;font-size:14px;' }}>
+        <p class="ssr-muted" attrs={{ style: 'color:#95a0bf;font-size:14px;' }}>
           Tip: modifica los query params para probar distintas configuraciones SSR.
         </p>
-        <p attrs={{ style: 'color:#e2e2f0;' }}>
+        <p attrs={{ style: 'color:#eef0f7;' }}>
           <strong class="ssr-strong">Ejemplo:</strong>{' '}
           <a
             class="ssr-link-inline"
             href="/ssr?name=Dev&width=720&root=ssr-root"
-            attrs={{ style: 'color:#a78bfa;text-decoration:none;border-bottom:1px dashed #a78bfa;' }}
+            attrs={{ style: 'color:#5ea3f7;text-decoration:none;border-bottom:1px dashed #5ea3f7;' }}
           >
             /ssr?name=Dev&width=720&root=ssr-root
           </a>
@@ -249,13 +249,13 @@ function buildSSRDemoTree(params: {
       </div>
 
       {/* Divider */}
-      <hr attrs={{ style: 'border:0;border-top:1px solid #2a2a4a;' }} />
+      <hr attrs={{ style: 'border:0;border-top:1px solid #2a395a;' }} />
 
       {/* Back link */}
       <a
         class="ssr-link-back"
         href="/"
-        attrs={{ style: 'color:#5eead4;text-decoration:none;font-weight:700;' }}
+        attrs={{ style: 'color:#26c7d9;text-decoration:none;font-weight:700;' }}
       >
         ← Volver al demo interactivo
       </a>

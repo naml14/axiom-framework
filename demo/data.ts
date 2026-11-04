@@ -9,4 +9,4 @@ export const TEXTS = [
 
 export const TAGS = ['TypeScript', 'Performance', 'Web', 'Signals', 'Layout', 'DOM-free', 'Reactive', 'Fast']
 
-export const COLORS = ['violet', 'teal', 'amber', 'rose', 'sky']
+export const COLORS = ['blue', 'cyan', 'amber', 'rose', 'indigo']

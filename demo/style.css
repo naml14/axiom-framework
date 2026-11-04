@@ -15,23 +15,24 @@
    ============================================================ */
 
 :root {
-  --bg:            #080812;
-  --bg-sidebar:    #0d0d1c;
-  --surface:       #111128;
-  --surface-2:     #191930;
-  --surface-3:     #20203a;
-  --border:        #252545;
-  --border-subtle: #1e1e38;
+  --bg:            #090b13;
+  --bg-sidebar:    #0f111d;
+  --surface:       #141827;
+  --surface-2:     #1c2133;
+  --surface-3:     #262d43;
+  --border:        #2a395a;
+  --border-subtle: #1e253b;
 
-  --text:        #e4e4f4;
-  --text-muted:  #6868a0;
-  --text-dim:    #3a3a65;
+  --text:        #eef0f7;
+  --text-muted:  #97a1c4;
+  --text-dim:    #95a0bf;
 
-  --accent-violet: #7c3aed;
-  --accent-teal:   #0d9488;
-  --accent-amber:  #d97706;
-  --accent-rose:   #e11d48;
-  --accent-sky:    #0284c7;
+  --accent-blue:      #5ea3f7;
+  --accent-cyan:      #26c7d9;
+  --accent-indigo:    #83a0db;
+  --accent-amber:     #f9a806;
+  --accent-rose:      #fb768c;
+  --accent-blue-deep: #1053c6;
 
   --sidebar-width: 340px;
   --footer-height: 52px;
@@ -98,7 +99,7 @@ body {
 .sidebar-brand {
   padding: 24px 20px 20px;
   border-bottom: 1px solid var(--border-subtle);
-  background: linear-gradient(160deg, rgba(124,58,237,0.08), transparent 70%);
+  background: linear-gradient(160deg, rgba(16,83,198,0.08), transparent 70%);
 }
 
 .brand {
@@ -112,7 +113,7 @@ body {
   font-size: 20px;
   font-weight: 800;
   letter-spacing: 4px;
-  background: linear-gradient(135deg, var(--text), var(--accent-violet));
+  background: linear-gradient(135deg, var(--text), var(--accent-blue));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -179,7 +180,7 @@ body {
 
 .control-input-group input[type="range"] {
   flex: 1;
-  accent-color: var(--accent-violet);
+  accent-color: var(--accent-blue);
   height: 4px;
   cursor: pointer;
 }
@@ -188,7 +189,7 @@ body {
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent-violet);
+  color: var(--accent-blue);
   min-width: 46px;
   text-align: right;
 }
@@ -219,15 +220,15 @@ body {
 }
 
 .btn-toggle:hover {
-  border-color: var(--accent-violet);
+  border-color: var(--accent-blue);
   color: var(--text);
   background: var(--surface-3);
 }
 
 .btn-toggle.active {
-  border-color: var(--accent-violet);
-  color: var(--accent-violet);
-  background: rgba(124, 58, 237, 0.12);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: rgba(16,83,198, 0.12);
 }
 
 .btn-toggle.is-disabled,
@@ -246,7 +247,7 @@ body {
    ============================================================ */
 
 .dx-panel.sidebar-section {
-  background: linear-gradient(160deg, rgba(124,58,237,0.05), transparent 80%);
+  background: linear-gradient(160deg, rgba(16,83,198,0.05), transparent 80%);
 }
 
 .dx-actions {
@@ -274,7 +275,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
-  color: var(--accent-violet);
+  color: var(--accent-blue);
   text-transform: uppercase;
 }
 
@@ -357,11 +358,11 @@ body {
 .view-tab[aria-selected="true"] {
   background: var(--surface-3);
   color: var(--text);
-  box-shadow: inset 3px 0 var(--accent-violet);
+  box-shadow: inset 3px 0 var(--accent-blue);
 }
 
 .view-tab:focus-visible {
-  outline: 2px solid var(--accent-violet);
+  outline: 2px solid var(--accent-blue);
   outline-offset: 1px;
 }
 
@@ -466,21 +467,21 @@ body {
 }
 
 .card:hover {
-  border-color: rgba(124, 58, 237, 0.3);
+  border-color: rgba(16,83,198, 0.3);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
 .card-hero {
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(13, 148, 136, 0.12));
-  border-color: rgba(124, 58, 237, 0.35);
-  box-shadow: 0 8px 32px rgba(124, 58, 237, 0.1);
+  background: linear-gradient(135deg, rgba(16,83,198, 0.12), rgba(38,199,217, 0.12));
+  border-color: rgba(16,83,198, 0.35);
+  box-shadow: 0 8px 32px rgba(16,83,198, 0.1);
 }
 
 .hero-badge {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 2px;
-  color: var(--accent-violet);
+  color: var(--accent-blue);
   margin-bottom: 10px;
   text-transform: uppercase;
 }
@@ -512,11 +513,11 @@ body {
 }
 
 /* Accent variants — top border color */
-.accent-violet { border-top: 2px solid var(--accent-violet); }
-.accent-teal   { border-top: 2px solid var(--accent-teal); }
+.accent-blue { border-top: 2px solid var(--accent-blue); }
+.accent-cyan   { border-top: 2px solid var(--accent-cyan); }
 .accent-amber  { border-top: 2px solid var(--accent-amber); }
 .accent-rose   { border-top: 2px solid var(--accent-rose); }
-.accent-sky    { border-top: 2px solid var(--accent-sky); }
+.accent-indigo    { border-top: 2px solid var(--accent-indigo); }
 
 /* ============================================================
     Tag Bubbles
@@ -532,11 +533,11 @@ body {
   letter-spacing: 0.5px;
 }
 
-.tag-violet { border-color: var(--accent-violet); color: var(--accent-violet); }
-.tag-teal   { border-color: var(--accent-teal);   color: var(--accent-teal); }
+.tag-blue { border-color: var(--accent-blue); color: var(--accent-blue); }
+.tag-cyan   { border-color: var(--accent-cyan);   color: var(--accent-cyan); }
 .tag-amber  { border-color: var(--accent-amber);  color: var(--accent-amber); }
 .tag-rose   { border-color: var(--accent-rose);   color: var(--accent-rose); }
-.tag-sky    { border-color: var(--accent-sky);    color: var(--accent-sky); }
+.tag-indigo    { border-color: var(--accent-indigo);    color: var(--accent-indigo); }
 
 /* ============================================================
     Metrics Footer — Fixed bottom bar
@@ -578,8 +579,8 @@ body {
   color: var(--text);
 }
 
-.metric-item.highlight .metric-value { color: var(--accent-teal); }
-.metric-item.total .metric-value     { color: var(--accent-violet); font-size: 15px; }
+.metric-item.highlight .metric-value { color: var(--accent-cyan); }
+.metric-item.total .metric-value     { color: var(--accent-blue); font-size: 15px; }
 .metric-item.fps .metric-value       { color: var(--accent-amber); }
 
 .metric-badge {
@@ -587,9 +588,9 @@ body {
   padding: 3px 10px;
   border-radius: 20px;
   font-size: 10.5px;
-  background: rgba(13, 148, 136, 0.12);
-  border: 1px solid var(--accent-teal);
-  color: var(--accent-teal);
+  background: rgba(38,199,217, 0.12);
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
   white-space: nowrap;
 }
 
@@ -598,8 +599,8 @@ Portal Modal — Rendered by portal into #portal-modal-root
 ============================================================ */
 
 .portal-demo-section {
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.1), rgba(124, 58, 237, 0.1));
-  border-color: rgba(13, 148, 136, 0.35);
+  background: linear-gradient(135deg, rgba(38,199,217, 0.1), rgba(16,83,198, 0.1));
+  border-color: rgba(38,199,217, 0.35);
 }
 
 .portal-trigger-btn {
@@ -608,9 +609,9 @@ Portal Modal — Rendered by portal into #portal-modal-root
   gap: 8px;
   padding: 8px 16px;
   border-radius: 8px;
-  border: 1px solid var(--accent-teal);
-  background: rgba(13, 148, 136, 0.12);
-  color: var(--accent-teal);
+  border: 1px solid var(--accent-cyan);
+  background: rgba(38,199,217, 0.12);
+  color: var(--accent-cyan);
   cursor: pointer;
   font-size: 13px;
   font-family: 'Inter', system-ui, sans-serif;
@@ -620,8 +621,8 @@ Portal Modal — Rendered by portal into #portal-modal-root
 }
 
 .portal-trigger-btn:hover {
-  background: rgba(13, 148, 136, 0.25);
-  box-shadow: 0 0 14px rgba(13, 148, 136, 0.2);
+  background: rgba(38,199,217, 0.25);
+  box-shadow: 0 0 14px rgba(38,199,217, 0.2);
 }
 
 /* Modal overlay */
@@ -645,12 +646,12 @@ Portal Modal — Rendered by portal into #portal-modal-root
 
 .portal-modal {
   background: var(--surface-2);
-  border: 1px solid rgba(124, 58, 237, 0.45);
+  border: 1px solid rgba(16,83,198, 0.45);
   border-radius: 16px;
   padding: 28px 32px;
   max-width: 500px;
   width: 90%;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(124, 58, 237, 0.12);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(16,83,198, 0.12);
   animation: portal-slide-up 0.2s ease;
 }
 
@@ -691,7 +692,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 .portal-close-btn:hover {
   border-color: var(--accent-rose);
   color: var(--accent-rose);
-  background: rgba(225, 29, 72, 0.1);
+  background: rgba(251,118,140, 0.1);
 }
 
 .portal-modal-body {
@@ -715,7 +716,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
    ============================================================ */
 
 .ruta-b-section {
-  background: linear-gradient(160deg, rgba(13,148,136,0.04), transparent 80%);
+  background: linear-gradient(160deg, rgba(38,199,217,0.04), transparent 80%);
 }
 
 .ruta-b-desc {
@@ -728,8 +729,8 @@ Portal Modal — Rendered by portal into #portal-modal-root
 .ruta-b-desc code {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: var(--accent-teal);
-  background: rgba(13,148,136,0.08);
+  color: var(--accent-cyan);
+  background: rgba(38,199,217,0.08);
   padding: 1px 4px;
   border-radius: 3px;
 }
@@ -804,14 +805,14 @@ Portal Modal — Rendered by portal into #portal-modal-root
 }
 
 .grid-cell-span-row {
-  background: linear-gradient(160deg, rgba(124,58,237,0.18), rgba(124,58,237,0.06));
-  border-color: rgba(124,58,237,0.35);
-  color: var(--accent-violet);
+  background: linear-gradient(160deg, rgba(16,83,198,0.18), rgba(16,83,198,0.06));
+  border-color: rgba(16,83,198,0.35);
+  color: var(--accent-blue);
 }
 
 .grid-cell-span-col {
-  background: linear-gradient(160deg, rgba(225,29,72,0.15), rgba(225,29,72,0.04));
-  border-color: rgba(225,29,72,0.3);
+  background: linear-gradient(160deg, rgba(251,118,140,0.15), rgba(251,118,140,0.04));
+  border-color: rgba(251,118,140,0.3);
   color: var(--accent-rose);
 }
 
@@ -872,14 +873,14 @@ Portal Modal — Rendered by portal into #portal-modal-root
   height: 100%;
   width: 0%;
   border-radius: 99px;
-  background: linear-gradient(90deg, var(--accent-violet), var(--accent-teal));
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
   transition: width 0.016s linear;
 }
 
 /* ---- v0.2.8 error envelope section ---- */
 
 .ruta-b-error-section {
-  background: linear-gradient(160deg, rgba(225,29,72,0.04), transparent 80%);
+  background: linear-gradient(160deg, rgba(251,118,140,0.04), transparent 80%);
 }
 
 .ruta-b-error-section .sidebar-section-title {
@@ -891,11 +892,11 @@ Portal Modal — Rendered by portal into #portal-modal-root
    ============================================================ */
 
 .syntax-section {
-  background: linear-gradient(160deg, rgba(124,58,237,0.05), transparent 80%);
+  background: linear-gradient(160deg, rgba(16,83,198,0.05), transparent 80%);
 }
 
 .syntax-section .sidebar-section-title {
-  color: var(--accent-violet);
+  color: var(--accent-blue);
 }
 
 /* ---- Side-by-side comparison panel ---- */
@@ -922,7 +923,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 
 /* After panel — violet accent to signal "preferred / new" */
 .syntax-side-by-side .syntax-panel:last-child {
-  border-top: 2px solid var(--accent-violet);
+  border-top: 2px solid var(--accent-blue);
 }
 
 .syntax-panel-label {
@@ -941,7 +942,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 }
 
 .syntax-side-by-side .syntax-panel:last-child .syntax-panel-label {
-  color: var(--accent-violet);
+  color: var(--accent-blue);
 }
 
 /* Host de un árbol Axiom: sin padding CSS (el motor posiciona al hijo
@@ -957,7 +958,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 
 #syntax-h-output {
   background: var(--surface);
-  border-color: rgba(124, 58, 237, 0.25);
+  border-color: rgba(16,83,198, 0.25);
   color: var(--text-muted);
   font-size: 10.5px;
   line-height: 1.55;
@@ -993,7 +994,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
   height: 100%;
   width: 0%;
   border-radius: 99px;
-  background: linear-gradient(90deg, var(--accent-violet), var(--accent-teal));
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
   transition: width 0.3s ease, background 0.3s ease;
 }
 
@@ -1002,7 +1003,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 }
 
 .syntax-bench-section {
-  background: linear-gradient(160deg, rgba(124,58,237,0.08), rgba(13,148,136,0.04) 80%);
+  background: linear-gradient(160deg, rgba(16,83,198,0.08), rgba(38,199,217,0.04) 80%);
 }
 
 /* ---- Syntax demo card items (used inside Axiom trees) ---- */
@@ -1022,9 +1023,9 @@ Portal Modal — Rendered by portal into #portal-modal-root
 .syntax-demo-btn {
   padding: 4px 10px;
   border-radius: 6px;
-  border: 1px solid var(--accent-violet);
-  background: rgba(124,58,237,0.1);
-  color: var(--accent-violet);
+  border: 1px solid var(--accent-blue);
+  background: rgba(16,83,198,0.1);
+  color: var(--accent-blue);
   cursor: pointer;
   font-size: 11px;
   font-family: 'Inter', system-ui, sans-serif;
@@ -1033,7 +1034,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 }
 
 .syntax-demo-btn:hover {
-  background: rgba(124,58,237,0.22);
+  background: rgba(16,83,198,0.22);
 }
 
 /* ---- Flow control labels ---- */
@@ -1050,9 +1051,9 @@ Portal Modal — Rendered by portal into #portal-modal-root
 /* ---- Switch item variant ---- */
 
 .syntax-demo-item--switch {
-  border-color: rgba(2, 132, 199, 0.35);
-  color: var(--accent-sky);
-  background: rgba(2, 132, 199, 0.06);
+  border-color: rgba(131,160,219, 0.35);
+  color: var(--accent-indigo);
+  background: rgba(131,160,219, 0.06);
 }
 
 /* ============================================================
@@ -1088,7 +1089,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 11px;
   line-height: 20px;
-  color: var(--accent-sky);
+  color: var(--accent-indigo);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1113,8 +1114,8 @@ Portal Modal — Rendered by portal into #portal-modal-root
 
 .context-section .demo-input:focus,
 .forms-section .demo-input:focus {
-  border-color: var(--accent-violet);
-  outline: 2px solid rgba(124, 58, 237, 0.25);
+  border-color: var(--accent-blue);
+  outline: 2px solid rgba(16,83,198, 0.25);
   outline-offset: 1px;
 }
 
@@ -1131,7 +1132,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 .forms-section .form-status--pending { color: var(--text-muted); }
 
 .context-section .form-status--valid,
-.forms-section .form-status--valid { color: var(--accent-teal); }
+.forms-section .form-status--valid { color: var(--accent-cyan); }
 
 .context-section .form-status--invalid,
 .forms-section .form-status--invalid { color: var(--accent-rose); }

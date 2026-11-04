@@ -48,12 +48,12 @@ export function initGridDemo() {
   const MIN_CELLS = 1
 
   const CELL_LABELS = [
-    { label: 'Hero\n(rowSpan=2)', rowSpan: 2, colSpan: 1, accent: 'violet', height: '100%' as const },
-    { label: 'A', rowSpan: 1, colSpan: 1, accent: 'teal', height: 60 },
+    { label: 'Hero\n(rowSpan=2)', rowSpan: 2, colSpan: 1, accent: 'blue', height: '100%' as const },
+    { label: 'A', rowSpan: 1, colSpan: 1, accent: 'cyan', height: 60 },
     { label: 'B', rowSpan: 1, colSpan: 1, accent: 'amber', height: 60 },
     { label: 'Wide\n(colSpan=2)', rowSpan: 1, colSpan: 2, accent: 'rose', height: 60 },
-    { label: 'C', rowSpan: 1, colSpan: 1, accent: 'sky', height: 60 },
-    { label: 'D', rowSpan: 1, colSpan: 1, accent: 'teal', height: 60 },
+    { label: 'C', rowSpan: 1, colSpan: 1, accent: 'indigo', height: 60 },
+    { label: 'D', rowSpan: 1, colSpan: 1, accent: 'cyan', height: 60 },
   ]
 
   const GridDemo = defineComponent(() => {
@@ -157,9 +157,9 @@ function initResponsiveDemo(containerWidth: Signal<number>) {
   const BREAKPOINTS = [
     { label: 'xs', min: 0, max: 479, color: 'var(--accent-rose)' },
     { label: 'sm', min: 480, max: 767, color: 'var(--accent-amber)' },
-    { label: 'md', min: 768, max: 1023, color: 'var(--accent-teal)' },
-    { label: 'lg', min: 1024, max: 1279, color: 'var(--accent-sky)' },
-    { label: 'xl', min: 1280, max: 9999, color: 'var(--accent-violet)' },
+    { label: 'md', min: 768, max: 1023, color: 'var(--accent-cyan)' },
+    { label: 'lg', min: 1024, max: 1279, color: 'var(--accent-indigo)' },
+    { label: 'xl', min: 1280, max: 9999, color: 'var(--accent-blue)' },
   ] as const
 
   return wireShowcase(() => {
