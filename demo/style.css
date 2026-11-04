@@ -46,10 +46,13 @@
   --accent-blue-deep: #1053c6;
 
   /* Type scale. The demo used 13 distinct sizes (9px ... 22px) with no
-     hierarchy; these are the six steps every rule below now maps to. */
-  --text-display: 30px;
-  --text-title:   20px;
-  --text-lg:      16px;
+     hierarchy; these are the steps every rule below maps to. The launcher
+     keeps its own display sizes on purpose (--text-display, --text-title,
+     --text-lead): a landing page reads different from an app shell. */
+  --text-display: 56px;
+  --text-title:   26px;
+  --text-lead:    18px;
+  --text-lg:      22px;
   --text-body:    14px;
   --text-sm:      13px;
   --text-label:   12px;
@@ -104,7 +107,7 @@ body {
     var(--bg);
   color: var(--text);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.5;
   overflow: hidden; /* dashboard handles scrolling per-region */
 }
@@ -160,7 +163,7 @@ body {
 }
 
 .brand h1 {
-  font-size: 22px;
+  font-size: var(--text-lg);
   font-weight: 800;
   letter-spacing: 3px;
   background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
@@ -169,11 +172,11 @@ body {
   background-clip: text;
 }
 
-.brand-icon { font-size: 22px; }
+.brand-icon { font-size: var(--text-lg); }
 
 .tagline {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--text-label);
   font-style: italic;
   letter-spacing: 0.2px;
 }
@@ -187,7 +190,7 @@ body {
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   background: var(--surface);
   color: var(--text-dim);
-  font-size: 11.5px;
+  font-size: var(--text-micro);
   line-height: 1.55;
 }
 
@@ -204,7 +207,7 @@ body {
 }
 
 .sidebar-section-title {
-  font-size: 11px;
+  font-size: var(--text-micro);
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -228,7 +231,7 @@ body {
 }
 
 .control-label {
-  font-size: 11px;
+  font-size: var(--text-micro);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -288,7 +291,7 @@ body {
 
 .control-value {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: var(--text-label);
   font-weight: 600;
   color: var(--accent-blue);
   font-variant-numeric: tabular-nums;
@@ -312,7 +315,7 @@ body {
   background: var(--surface-2);
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--text-label);
   font-weight: 500;
   font-family: 'Inter', system-ui, sans-serif;
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
@@ -375,7 +378,7 @@ body {
 }
 
 .dx-card h3 {
-  font-size: 12px;
+  font-size: var(--text-label);
   font-weight: 700;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
@@ -385,13 +388,13 @@ body {
 
 .dx-card p {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   line-height: 1.5;
 }
 
 .dx-card pre {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11.5px;
+  font-size: var(--text-micro);
   line-height: 1.45;
   color: var(--text-muted);
   white-space: pre-wrap;
@@ -444,7 +447,7 @@ body {
 
 .view-tab {
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--text-label);
   font-weight: 600;
   text-align: left;
   width: 100%;
@@ -593,7 +596,7 @@ body {
 }
 
 .hero-badge {
-  font-size: 10px;
+  font-size: var(--text-tiny);
   font-weight: 700;
   letter-spacing: 2px;
   color: var(--accent-blue);
@@ -602,7 +605,7 @@ body {
 }
 
 .hero-title {
-  font-size: 22px;
+  font-size: var(--text-lg);
   font-weight: 700;
   margin-bottom: 10px;
   /* 26px is the height the engine declares for this row
@@ -614,14 +617,14 @@ body {
 
 .hero-body {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   /* The engine grid is 20px: 1.6 (20.8px) pushed one pixel per line
      out of its row. */
   line-height: 20px;
 }
 
 .card-title {
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 600;
   margin-bottom: 6px;
   line-height: 20px;
@@ -629,7 +632,7 @@ body {
 
 .card-body {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   line-height: 20px;
 }
 
@@ -652,7 +655,7 @@ body {
 .tag-bubble {
   padding: 0 10px;
   border-radius: var(--radius-pill);
-  font-size: 11px;
+  font-size: var(--text-micro);
   font-weight: 600;
   line-height: 18px;
   background: var(--surface-2);
@@ -712,14 +715,14 @@ body {
 }
 
 .metric-label {
-  font-size: 10px;
+  font-size: var(--text-tiny);
   color: var(--text-dim);
   letter-spacing: 1px;
   text-transform: uppercase;
 }
 
 .metric-value {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--text);
 }
@@ -732,7 +735,7 @@ body {
   margin-left: auto;
   padding: 3px 10px;
   border-radius: var(--radius-pill);
-  font-size: 10.5px;
+  font-size: var(--text-micro);
   background: rgba(38,199,217, 0.12);
   border: 1px solid rgba(38,199,217, 0.45);
   color: var(--accent-cyan);
@@ -758,7 +761,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
   background: rgba(38,199,217, 0.12);
   color: var(--accent-cyan);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-family: 'Inter', system-ui, sans-serif;
   font-weight: 600;
   transition: all 0.15s;
@@ -829,7 +832,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-family: 'Inter', system-ui, sans-serif;
   transition: all 0.15s;
 }
@@ -842,7 +845,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 
 .portal-modal-body {
   color: var(--text-muted);
-  font-size: 13.5px;
+  font-size: var(--text-sm);
   line-height: 1.65;
   margin-top: 12px;
 }
@@ -866,14 +869,14 @@ Portal Modal — Rendered by portal into #portal-modal-root
 
 .ruta-b-desc {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--text-label);
   line-height: 1.55;
   margin-bottom: 10px;
 }
 
 .ruta-b-desc code {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--accent-cyan);
   background: rgba(38,199,217,0.08);
   padding: 1px 4px;
@@ -882,7 +885,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 
 .ruta-b-status {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-muted);
   margin-top: 6px;
   line-height: 1.45;
@@ -897,7 +900,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 
 .ruta-b-pre {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: var(--text-micro);
   line-height: 1.45;
   color: var(--text-muted);
   white-space: pre-wrap;
@@ -937,7 +940,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--text-micro);
   font-weight: 600;
   text-align: center;
   white-space: pre-line;
@@ -996,7 +999,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
   border-radius: 6px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  font-size: 12px;
+  font-size: var(--text-label);
   font-weight: 600;
   color: var(--text-muted);
   transition: all 0.25s ease;
@@ -1072,7 +1075,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 }
 
 .syntax-panel-label {
-  font-size: 11px;
+  font-size: var(--text-micro);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -1105,7 +1108,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
   background: var(--surface);
   border-color: rgba(16,83,198, 0.25);
   color: var(--text-muted);
-  font-size: 10.5px;
+  font-size: var(--text-micro);
   line-height: 1.55;
   padding: 10px 12px;
   border-radius: var(--radius-md);
@@ -1161,7 +1164,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
   background: var(--surface-3);
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--text-label);
   color: var(--text-muted);
 }
 
@@ -1172,7 +1175,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
   background: rgba(16,83,198,0.1);
   color: var(--accent-blue);
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--text-micro);
   font-family: 'Inter', system-ui, sans-serif;
   font-weight: 600;
   transition: all 0.15s;
@@ -1185,7 +1188,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 /* ---- Flow control labels ---- */
 
 .syntax-flow-label {
-  font-size: 10px;
+  font-size: var(--text-tiny);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.2px;
@@ -1232,7 +1235,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 .context-section .demo-code,
 .forms-section .demo-code {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 11px;
+  font-size: var(--text-micro);
   line-height: 20px;
   color: var(--accent-indigo);
   overflow: hidden;
@@ -1243,7 +1246,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 .context-section .demo-input,
 .forms-section .demo-input {
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--text-label);
   line-height: 18px;
   padding: 5px 8px;
   border: 1px solid var(--border);
@@ -1266,7 +1269,7 @@ Portal Modal — Rendered by portal into #portal-modal-root
 
 .context-section .form-status,
 .forms-section .form-status {
-  font-size: 11.5px;
+  font-size: var(--text-micro);
   line-height: 20px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1333,7 +1336,7 @@ body.launcher-page {
 
 .launcher-version {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: var(--text-micro);
   color: var(--text-muted);
   background: var(--surface-2);
   border: 1px solid var(--border-subtle);
@@ -1345,7 +1348,7 @@ body.launcher-page {
   display: flex;
   align-items: center;
   gap: 24px;
-  font-size: 13.5px;
+  font-size: var(--text-sm);
   color: var(--text-muted);
 }
 
@@ -1371,7 +1374,7 @@ body.launcher-page {
 }
 
 .launcher-kicker {
-  font-size: 11px;
+  font-size: var(--text-micro);
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -1384,7 +1387,7 @@ body.launcher-page {
 
 .launcher-title {
   margin: 16px 0 20px;
-  font-size: 56px;
+  font-size: var(--text-display);
   line-height: 1.06;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -1392,7 +1395,7 @@ body.launcher-page {
 
 .launcher-lead {
   max-width: 62ch;
-  font-size: 18px;
+  font-size: var(--text-lead);
   line-height: 1.6;
   color: var(--text-muted);
 }
@@ -1411,7 +1414,7 @@ body.launcher-page {
   padding: 12px 22px;
   border-radius: var(--radius-pill);
   border: 1px solid transparent;
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 600;
   text-decoration: none;
   transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
@@ -1466,13 +1469,13 @@ body.launcher-page {
 .launcher-stat-value {
   margin: 0;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 26px;
+  font-size: var(--text-title);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .launcher-stat-label {
-  font-size: 12.5px;
+  font-size: var(--text-label);
   color: var(--text-muted);
 }
 
@@ -1487,7 +1490,7 @@ body.launcher-page {
 }
 
 .launcher-section-title {
-  font-size: 26px;
+  font-size: var(--text-title);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -1496,7 +1499,7 @@ body.launcher-page {
   margin-top: 8px;
   max-width: 60ch;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--text-body);
 }
 
 .launcher-grid {
@@ -1529,7 +1532,7 @@ body.launcher-page {
 }
 
 .launcher-card-icon {
-  font-size: 22px;
+  font-size: var(--text-lg);
   line-height: 1;
 }
 
@@ -1541,7 +1544,7 @@ body.launcher-page {
 .launcher-card p {
   flex: 1;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.55;
 }
 
@@ -1549,7 +1552,7 @@ body.launcher-page {
 .launcher-server code,
 .launcher-note code {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12.5px;
+  font-size: var(--text-label);
   color: var(--text);
   background: var(--surface-2);
   border-radius: 4px;
@@ -1584,7 +1587,7 @@ body.launcher-page {
 
 .launcher-server-body {
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.6;
 }
 
@@ -1594,7 +1597,7 @@ body.launcher-page {
   display: grid;
   gap: 9px;
   color: var(--text-muted);
-  font-size: 13.5px;
+  font-size: var(--text-sm);
   line-height: 1.5;
 }
 
@@ -1611,7 +1614,7 @@ body.launcher-page {
 .launcher-code {
   align-self: start;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12.5px;
+  font-size: var(--text-label);
   line-height: 1.7;
   color: var(--text-muted);
   background: var(--bg);
@@ -1629,7 +1632,7 @@ body.launcher-page {
 .launcher-note {
   margin-top: 32px;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 @media (max-width: 900px) {

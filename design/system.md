@@ -106,20 +106,28 @@ same names.
 
 | Token | Size | Where |
 | --- | --- | --- |
-| `--text-display` | 30px | Launcher headline |
-| `--text-title` | 20px | Modal title, section headline |
-| `--text-lg` | 16px | Launcher lead |
+| `--text-display` | 56px | Launcher headline |
+| `--text-title` | 26px | Launcher section headline, launcher stat value |
+| `--text-lead` | 18px | Launcher lead |
+| `--text-lg` | 22px | Brand wordmark, hero title |
 | `--text-body` | 14px | Body copy, card title |
 | `--text-sm` | 13px | Card body, hero body, secondary copy |
-| `--text-label` | 12px | Controls, labels, chips |
-| `--text-micro` | 11px | Section titles, code |
-| `--text-tiny` | 10px | Micro-labels, metric labels |
+| `--text-label` | 12px | Controls, labels, chips, code |
+| `--text-micro` | 11px | Section titles, code, micro copy |
+| `--text-tiny` | 10px | Badges, metric labels |
+
+Fifty-five rules in `demo/style.css` map to these tokens. The sizes that stay literal belong to
+a single element and would only add a step: the modal title (19px, on a row the engine owns),
+the brand icon (24px), the launcher brand name (19px), the launcher server title (20px), the
+launcher card title (17px), the total metric (15px) and the launcher headline at the mobile
+breakpoint (38px).
 
 ### History
 
 The demo used thirteen distinct sizes (9, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 19, 20,
 22px) with no hierarchy: the hero title and a metric label were 20px and 10px with nothing in
-between. The eight steps above replaced them.
+between. The nine steps above replaced them, and the launcher keeps its own display sizes on
+purpose: a landing page reads different from an app shell.
 
 ## Spacing
 
@@ -163,6 +171,7 @@ between. The eight steps above replaced them.
 | Hero | `.hero-badge`, `.hero-title`, `.hero-body` |
 | Card | `.card`, `.card-title`, `.card-body` |
 | Tag bubble | `.tag-bubble`, `.tag-blue` … `.tag-indigo` |
+| Tag bubble dot | `.tag-bubble::before` (the colour lives in the dot, the label stays neutral) |
 | Metric bar | `.metrics-footer`, `.metric-item`, `.metric-label`, `.metric-value` |
 | Portal modal | `.portal-modal*` |
 | Grid cell | `.grid-cell` |
@@ -198,6 +207,9 @@ visual refresh:
    geometry (`demo/ssr-page.tsx`, `demo/streaming-route.ts`).
 9. A 1px border inside a 20px engine row costs 2px of line box: the line box of a bordered
    element has to fit `height - 2 × border`.
+10. A `::before` inside an engine node eats horizontal space that the engine does not measure:
+    the declared width has to reserve it. The tag bubble reserves 14px for its colour dot
+    (`getTagWidth` in `demo/layout.ts` goes from +26 to +40px).
 
 `tests/demo-visual-contract.test.ts` pins rules 1, 9 and the token contract;
 `tests/demo-sections.test.ts` pins rules 2 and 3 for the syntax hosts.
