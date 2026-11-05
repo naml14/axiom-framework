@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+import { existsSync, readFileSync } from "node:fs";
+
 /**
  * Maintainer Review Guard
  *
@@ -16,9 +18,13 @@
  * to a commit, any later push by the harness invalidates it: the gate closes
  * until the new head is reviewed again.
  *
+ * --publish only ever reports a verdict read from the real pull request: the
+ * overrides that exist for fixtures (--repo, --head, --maintainer,
+ * --reviews-file) are refused, so a fabricated review can never open the gate.
+ *
  * Usage:
  *   bun run scripts/validate-maintainer-review.ts --pr <number> [--repo <owner/name>]
- *     [--head <sha>] [--maintainer <login>] [--reviews-file <path>] [--publish]
+ *     [--head <sha>] [--maintainer <login>] [--reviews-file <path>] [--publish] [--dry-run]
  *
  * Defaults:
  *   --repo       $GITHUB_REPOSITORY, else the repository of the current checkout
@@ -37,6 +43,7 @@ interface Review {
 	state: string;
 	body: string;
 	commit_id: string | null;
+	id?: number;
 }
 
 interface Verdict {
@@ -47,6 +54,8 @@ interface Verdict {
 const STATUS_CONTEXT = "Maintainer review";
 const SATISFYING_STATES = ["COMMENTED", "APPROVED"];
 const IGNORED_STATES = ["PENDING", "DISMISSED"];
+/** Options that exist for fixtures; none of them may shape a published verdict. */
+const PUBLISH_FORBIDDEN_OPTIONS = ["--repo", "--head", "--maintainer", "--reviews-file"];
 
 // ============================================================
 // CLI arguments
@@ -69,7 +78,7 @@ for (let index = 0; index < argv.length; index++) {
 	if (argument === "--pr" || argument === "--repo" || argument === "--head" || argument === "--maintainer" || argument === "--reviews-file") {
 		readOption(argument);
 		index++;
-	} else if (argument !== "--publish" && argument !== "--help" && argument !== "-h") {
+	} else if (argument !== "--publish" && argument !== "--dry-run" && argument !== "--help" && argument !== "-h") {
 		fail(`unknown argument: ${argument}`);
 	}
 }
@@ -90,6 +99,10 @@ if (argv.includes("--help") || argv.includes("-h")) {
 			"  --maintainer <login>     reviewer whose written review is required (default: the repository owner)",
 			"  --reviews-file <path>    read reviews from a JSON file instead of the API (for fixtures)",
 			"  --publish                publish the verdict as the commit status",
+			"  --dry-run                report the status that would be published, without publishing it",
+			"",
+			`--publish refuses ${PUBLISH_FORBIDDEN_OPTIONS.join(", ")}: a published verdict is always`,
+			"read from the real pull request, so no fixture or override can open the gate.",
 			"",
 			"Exit codes: 0 = written maintainer review present, 1 = absent or invalid input.",
 		].join("\n"),
@@ -115,13 +128,18 @@ function gh(args: string[]): { exitCode: number; stdout: string; stderr: string 
 	};
 }
 
-function ghOrFail(args: string[]): string {
-	const result = gh(args);
-	if (result.exitCode !== 0) {
-		fail(`\`gh api ${args.join(" ")}\` failed: ${result.stderr.trim() || result.stdout.trim()}`);
+const publishRequested = argv.includes("--publish");
+const dryRun = argv.includes("--dry-run");
+
+if (publishRequested) {
+	const forbidden = PUBLISH_FORBIDDEN_OPTIONS.filter((flag) => argv.includes(flag));
+	if (forbidden.length > 0) {
+		fail(`--publish forbids ${forbidden.join(", ")}: the published verdict must be read from the real pull request`);
 	}
-	return result.stdout;
 }
+
+let repo: string | undefined;
+let headSha: string | undefined;
 
 function resolveRepo(): string {
 	const explicit = readOption("--repo");
@@ -135,6 +153,64 @@ function resolveRepo(): string {
 	return result.stdout.toString().trim();
 }
 
+function resolveHeadSha(): string {
+	const explicit = readOption("--head");
+	if (explicit !== undefined) return explicit;
+	const result = gh([`repos/${repo}/pulls/${pullRequestNumber}`, "--jq", ".head.sha"]);
+	if (result.exitCode !== 0) {
+		fail(`could not read the pull request head: ${result.stderr.trim() || result.stdout.trim()}`);
+	}
+	return result.stdout.toString().trim();
+}
+
+/**
+ * Reports the verdict as the commit status the ruleset requires. Without
+ * --publish nothing is written; with --dry-run the payload is printed instead.
+ */
+function publishStatus(state: string, description: string): boolean {
+	if (repo === undefined || headSha === undefined) {
+		console.error(`maintainer-review-guard: cannot report '${STATUS_CONTEXT}': the pull request head is unknown`);
+		return false;
+	}
+	if (dryRun) {
+		console.log(
+			`maintainer-review-guard: dry run — would publish state=${state} context=${STATUS_CONTEXT} description=${description} sha=${headSha}`,
+		);
+		return true;
+	}
+	const result = gh([
+		"--method",
+		"POST",
+		`repos/${repo}/statuses/${headSha}`,
+		"-f",
+		`state=${state}`,
+		"-f",
+		`context=${STATUS_CONTEXT}`,
+		"-f",
+		`description=${description}`,
+	]);
+	if (result.exitCode !== 0) {
+		console.error(
+			`maintainer-review-guard: could not publish the '${STATUS_CONTEXT}' status: ${result.stderr.trim() || result.stdout.trim()}`,
+		);
+		return false;
+	}
+	console.log(`maintainer-review-guard: published '${STATUS_CONTEXT}' (${state}) for ${headSha.slice(0, 7)}.`);
+	return true;
+}
+
+/**
+ * Reports the failure and replaces any earlier status on the head commit with
+ * a failure, so a stale success cannot keep the gate open.
+ */
+function abort(message: string): never {
+	console.error(`maintainer-review-guard: ${message}`);
+	if (publishRequested || dryRun) {
+		publishStatus("failure", `Maintainer review: ${message}`.slice(0, 140));
+	}
+	process.exit(1);
+}
+
 // ============================================================
 // Inputs
 // ============================================================
@@ -144,45 +220,46 @@ if (pullRequestNumber === undefined) fail("--pr requires a pull request number")
 if (!/^[0-9]+$/.test(pullRequestNumber)) fail(`--pr must be a number, got "${pullRequestNumber}"`);
 
 const reviewsFile = readOption("--reviews-file");
-const repo = resolveRepo();
+
+repo = resolveRepo();
 const repoOwner = repo.split("/")[0];
 if (repoOwner === undefined || repoOwner.length === 0) fail(`could not derive the maintainer from "${repo}"`);
 const maintainer = readOption("--maintainer") ?? repoOwner;
 
-function resolveHeadSha(): string {
-	const explicit = readOption("--head");
-	if (explicit !== undefined) return explicit;
-	const output = ghOrFail([`repos/${repo}/pulls/${pullRequestNumber}`, "--jq", ".head.sha"]);
-	return output.trim();
-}
+headSha = resolveHeadSha();
 
-const headSha = resolveHeadSha();
-
-async function resolveReviews(): Promise<Review[]> {
+function readReviews(): { ok: true; reviews: Review[] } | { ok: false; message: string } {
 	if (reviewsFile !== undefined) {
-		const file = Bun.file(reviewsFile);
-		if (!(await file.exists())) fail(`reviews file not found: ${reviewsFile}`);
+		if (!existsSync(reviewsFile)) return { ok: false, message: `reviews file not found: ${reviewsFile}` };
 		let parsed: unknown;
 		try {
-			parsed = JSON.parse(await file.text());
+			parsed = JSON.parse(readFileSync(reviewsFile, "utf8"));
 		} catch (error) {
-			fail(`reviews file is not valid JSON: ${(error as Error).message}`);
+			return { ok: false, message: `reviews file is not valid JSON: ${(error as Error).message}` };
 		}
-		if (!Array.isArray(parsed)) fail("reviews file must contain a JSON array of reviews");
-		return parsed as Review[];
+		if (!Array.isArray(parsed)) return { ok: false, message: "reviews file must contain a JSON array of reviews" };
+		return { ok: true, reviews: parsed as Review[] };
 	}
-	const output = ghOrFail([`repos/${repo}/pulls/${pullRequestNumber}/reviews`, "--paginate"]);
+	const result = gh([`repos/${repo}/pulls/${pullRequestNumber}/reviews`, "--paginate"]);
+	if (result.exitCode !== 0) {
+		return {
+			ok: false,
+			message: `could not read the pull request reviews: ${result.stderr.trim() || result.stdout.trim()}`,
+		};
+	}
 	let parsed: unknown;
 	try {
-		parsed = JSON.parse(output);
+		parsed = JSON.parse(result.stdout);
 	} catch (error) {
-		fail(`could not parse the pull request reviews: ${(error as Error).message}`);
+		return { ok: false, message: `could not parse the pull request reviews: ${(error as Error).message}` };
 	}
-	if (!Array.isArray(parsed)) fail("the pull request reviews response was not an array");
-	return parsed as Review[];
+	if (!Array.isArray(parsed)) return { ok: false, message: "the pull request reviews response was not an array" };
+	return { ok: true, reviews: parsed as Review[] };
 }
 
-const reviews = await resolveReviews();
+const read = readReviews();
+if (!read.ok) abort(read.message);
+const reviews = read.reviews;
 
 // ============================================================
 // Verdict
@@ -206,7 +283,10 @@ function evaluateMaintainerReview(allReviews: Review[], head: string, reviewer: 
 
 	const blocking = live.find((review) => review.state === "CHANGES_REQUESTED");
 	if (blocking !== undefined) {
-		return { ok: false, reason: `${reviewer} requested changes on ${(blocking.commit_id ?? "").slice(0, 7) || "an earlier commit"}` };
+		return {
+			ok: false,
+			reason: `${reviewer} requested changes on ${(blocking.commit_id ?? "").slice(0, 7) || "an earlier commit"}`,
+		};
 	}
 
 	const written = live.filter((review) => (review.body ?? "").trim().length > 0);
@@ -214,10 +294,15 @@ function evaluateMaintainerReview(allReviews: Review[], head: string, reviewer: 
 		return { ok: false, reason: `the reviews by ${reviewer} carry no written body` };
 	}
 
-	const onHead = written.filter((review) => review.commit_id === head && SATISFYING_STATES.includes(review.state));
+	const onHead = written.filter(
+		(review) => review.commit_id === head && SATISFYING_STATES.includes(review.state),
+	);
 	if (onHead.length === 0) {
 		const targets = live.map((review) => `${review.state}@${(review.commit_id ?? "unknown").slice(0, 7)}`).join(", ");
-		return { ok: false, reason: `no written review by ${reviewer} targets the head commit ${head.slice(0, 7)} (found: ${targets || "none"})` };
+		return {
+			ok: false,
+			reason: `no written review by ${reviewer} targets the head commit ${head.slice(0, 7)} (found: ${targets || "none"})`,
+		};
 	}
 
 	return { ok: true, reason: `written review by ${reviewer} on ${head.slice(0, 7)}` };
@@ -235,24 +320,12 @@ if (verdict.ok) {
 	console.error(`maintainer-review-guard: FAIL — ${verdict.reason}.`);
 }
 
-if (argv.includes("--publish")) {
+if (publishRequested || dryRun) {
 	const state = verdict.ok ? "success" : "failure";
-	const description = `Maintainer review: ${verdict.ok ? "written review present" : "written review absent"} (${maintainer})`;
-	const result = gh([
-		"--method",
-		"POST",
-		`repos/${repo}/statuses/${headSha}`,
-		"-f",
-		`state=${state}`,
-		"-f",
-		`context=${STATUS_CONTEXT}`,
-		"-f",
-		`description=${description}`,
-	]);
-	if (result.exitCode !== 0) {
-		fail(`could not publish the '${STATUS_CONTEXT}' status: ${result.stderr.trim() || result.stdout.trim()}`);
-	}
-	console.log(`maintainer-review-guard: published '${STATUS_CONTEXT}' (${state}) for ${headSha.slice(0, 7)}.`);
+	const description = verdict.ok
+		? `Maintainer review: written review by ${maintainer} on ${headSha.slice(0, 7)}`
+		: `Maintainer review: no written review by ${maintainer} on ${headSha.slice(0, 7)}`;
+	publishStatus(state, description);
 }
 
 process.exit(verdict.ok ? 0 : 1);
