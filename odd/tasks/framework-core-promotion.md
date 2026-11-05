@@ -52,6 +52,8 @@ Branch: `feat/framework-core-promotion` (from `docs/plan-demo`) · Delivery stra
 
 - **S11** — Servidor: política de caché configurable para las respuestas estáticas en `AxiomServerOptions`. Por defecto no cambia nada (comportamiento actual); el demo deja de fijar `no-store` a mano y usa la opción.
 
+- **S12** — Hallazgos de la revisión de la cadena: los 81 comentarios de sourcery-ai en los PRs publicados se verifican contra el código actual; se corrige solo lo que sea un defecto real, en un PR único al final de la cadena, sin re-empaquetar los cortes ya publicados. Criterio: cada hallazgo queda con veredicto (real / falso positivo / por diseño / obsoleto) y respuesta en el PR afectado; los reales, con su test de regresión.
+
 ## Tasks
 
 Ruta por defecto: inline para las unidades pequeñas; delegado (`gentle-ai-worker`) para las pesadas. Cada autor tiene superficie explícita y disjoint. Ningún autor toca `src/index.ts` salvo T9 (la superficie pública es del orquestador).
@@ -68,6 +70,7 @@ Ruta por defecto: inline para las unidades pequeñas; delegado (`gentle-ai-worke
 | T8 | Retirar del `demo/` lo que el core asume (incluye duplicados ya soportados) | S5 | `demo/**`, `tests/demo-*.test.ts`, `tests/wire-showcase*.test.ts` | inline | `bun test tests/` | 3, 6 | hecho: `24c498c`, `03c2b1f`, `39a8360` |
 | T9 | Superficie pública y documentación | S6 | `src/index.ts`, `README.md`, `docs/` | inline | `bun run typecheck`, `bun run validate:api` | 3 | hecho: `4bdb869` |
 | T10 | Verificación final | S6 | — | inline | typecheck + suite completa + `tests/architecture/` + `bun run demo:build` + navegador (CDP) + `validate:api` + `validate:release-notes` | 5 | hecho (evidencia en L16) |
+| T11 | Corregir los hallazgos reales de la revisión de la cadena (A1, A2, B1, B5, C1, C2, C3, C5, D4-D7, D8-D11) | S12 | `.github/workflows/ci.yml`, `scripts/validate-release-scope.ts`, `demo/sidebar-navigation.ts`, `demo/ruta-b-showcase.ts`, `demo/dom-read-counter.ts`, `src/app.ts`, `src/scheduler.ts`, `tests/**` | delegado + inline | `bun test` + typecheck + suite completa | 2, 3, 4 | en curso |
 
 ### Orden
 
