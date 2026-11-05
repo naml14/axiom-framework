@@ -55,11 +55,14 @@ ningún override puede abrir la puerta. Los overrides existen para los tests
 (`--reviews-file`), y `--dry-run` muestra el estado que se publicaría sin
 publicarlo.
 
-Si el verificador falla al leer las revisiones, publica estado `failure` en
-lugar de salirse en silencio, de modo que un `success` anterior en ese mismo
-commit no sobrevive al error. Si el error ocurre antes de conocer el SHA
-(repositorio o pull request ilegibles) no hay estado que publicar, y el
-`success` anterior sigue en pie hasta que se vuelva a ejecutar el verificador.
+Si el verificador falla al leer las revisiones, intenta publicar estado
+`failure` en lugar de salirse en silencio, de modo que un `success` anterior en
+ese mismo commit no sobrevive al error, **siempre que GitHub acepte esa
+escritura**. Si el error ocurre antes de conocer el SHA (repositorio o pull
+request ilegibles) no hay estado que publicar, y el `success` anterior sigue en
+pie hasta que se vuelva a ejecutar el verificador. Si la escritura del estado
+falla, el verificador sale con error y el estado anterior permanece: una puerta
+no puede garantizar nada cuando la escritura no llega.
 
 El arnés redacta el texto de la revisión a partir de la evidencia de la
 sesión, el mantenedor lo aprueba y el arnés lo publica. **El arnés nunca

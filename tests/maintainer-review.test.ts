@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { exitCodeFor } from '../scripts/validate-maintainer-review.ts'
 
 const script = fileURLToPath(new URL('../scripts/validate-maintainer-review.ts', import.meta.url))
 const dirs: string[] = []
@@ -217,4 +218,24 @@ test('reports usage on --help', () => {
   const result = Bun.spawnSync([process.execPath, script, '--help'])
   expect(result.exitCode).toBe(0)
   expect(result.stdout.toString()).toContain('Maintainer review')
+})
+
+test('a verdict that could not be published is not a success', () => {
+  expect(exitCodeFor(true, true)).toBe(0)
+  expect(exitCodeFor(true, false)).toBe(1)
+  expect(exitCodeFor(false, true)).toBe(1)
+  expect(exitCodeFor(false, false)).toBe(1)
+})
+
+test('rejects each publishing override independently', () => {
+  for (const [flag, value] of [
+    ['--repo', 'naml14/axiom-framework'],
+    ['--head', HEAD],
+    ['--maintainer', 'someone'],
+    ['--reviews-file', reviewsFile([])],
+  ] as const) {
+    const result = runArgs(['--pr', '1', flag, value, '--publish'])
+    expect(result.code).toBe(1)
+    expect(result.err).toContain(`--publish forbids ${flag}:`)
+  }
 })
