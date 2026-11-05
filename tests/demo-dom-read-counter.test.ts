@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from 'bun:test'
+import { afterEach, expect, spyOn, test } from 'bun:test'
 import { Window as HappyWindow } from 'happy-dom'
 import { createApp, defineComponent, signal } from '../src/index.js'
 import type { App } from '../src/index.js'
@@ -58,27 +58,48 @@ test('controls publish measured reads and cycles/s during slider input, preservi
   const counter = installDomReadCounter(root, globalThis.window)
   const containerWidth = signal(800)
   const itemCount = signal(20)
+  let now = 0
+  const clock = spyOn(performance, 'now').mockImplementation(() => now)
   try {
     initControls({ containerWidth, itemCount, appEl: root, domReads: counter,
       app: { getMetrics: () => ({ prepareMs: 1, reflowMs: 2, commitMs: 3 }) } as unknown as App })
     const slider = doc.getElementById('width-slider') as InstanceType<typeof win.HTMLInputElement>
+    // Initial metrics count as one cycle at t=0; input is cycle two at t=500.
+    now = 500
     slider.value = '640'
     slider.dispatchEvent(new win.Event('input', { bubbles: true }))
     expect(containerWidth.value).toBe(640)
     expect(root.style.width).toBe('640px')
     expect(doc.getElementById('width-display')!.textContent).toBe('640px')
-    expect(Number(doc.getElementById('m-fps')!.textContent)).toBeGreaterThan(0)
+    expect(doc.getElementById('m-fps')!.textContent).toBe('4')
     expect(doc.getElementById('m-dom-reads')!.textContent).toBe('DOM reads: 0 en el último ciclo')
     const items = doc.getElementById('items-slider') as InstanceType<typeof win.HTMLInputElement>
+    now = 1500
     items.value = '30'
     items.dispatchEvent(new win.Event('input', { bubbles: true }))
     expect(itemCount.value).toBe(30)
     expect(doc.getElementById('items-display')!.textContent).toBe('30')
+    expect(doc.getElementById('m-fps')!.textContent).toBe('2')
     void root.clientWidth
+    expect(counter.total()).toBe(1)
+    expect(doc.getElementById('m-dom-reads')!.textContent).toBe('DOM reads: 1 en el último ciclo')
+    void win.innerWidth
+    expect(counter.total()).toBe(2)
+    expect(doc.getElementById('m-dom-reads')!.textContent).toBe('DOM reads: 2 en el último ciclo')
+    now = 1750
+    slider.dispatchEvent(new win.Event('input', { bubbles: true }))
+    expect(doc.getElementById('m-fps')!.textContent).toBe('4')
+    expect(doc.getElementById('m-dom-reads')!.textContent).toBe('DOM reads: 0 en el último ciclo')
+    void root.clientWidth
+    expect(doc.getElementById('m-dom-reads')!.textContent).toBe('DOM reads: 1 en el último ciclo')
     win.dispatchEvent(new win.Event('resize'))
+    expect(doc.getElementById('m-dom-reads')!.textContent).toBe('DOM reads: 0 en el último ciclo')
+    void root.clientHeight
+    expect(doc.getElementById('m-dom-reads')!.textContent).toBe('DOM reads: 1 en el último ciclo')
     doc.getElementById('other-showcase')!.dispatchEvent(new win.MouseEvent('click', { bubbles: true }))
     expect(doc.getElementById('m-dom-reads')!.textContent).toBe('DOM reads: 0 en el último ciclo')
   } finally {
+    clock.mockRestore()
     counter.dispose()
     Object.assign(globalThis, saved)
   }

@@ -5,7 +5,7 @@ export interface DomReadCounter {
   dispose(): void
 }
 
-/** Instrument only the engine's root/viewport inputs, never Element.prototype. */
+// Instrument only the engine's root/viewport inputs, never Element.prototype.
 export function installDomReadCounter(root: HTMLElement, win: Window): DomReadCounter {
   let reads = 0
   const restore: (() => void)[] = []

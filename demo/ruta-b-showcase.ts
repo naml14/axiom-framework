@@ -18,8 +18,8 @@ import {
   clearPlugins,
   matchesBreakpoint,
   resolveLayoutDimension,
-} from '../src/index.ts'
-import type { Signal } from '../src/index.ts'
+} from '../src/index.js'
+import type { Signal } from '../src/index.js'
 
 // ============================================================
 // Ruta B Showcase — 6 fases: responsive, grid, style,
@@ -36,13 +36,13 @@ interface RutaBShowcaseDeps {
 //    Incluye el fix principal de ruta-b: gridRowSpan + height:'100%'
 // ============================================================
 
+const gridInstances = new WeakMap<HTMLElement, { dispose(): void }>()
+
 /** Mount the grid independently and expose its state and teardown to demo consumers. */
 export function initGridDemo() {
   const container = document.getElementById('ruta-b-grid-root')
   if (container === null) return
-
-  // Estado: cuántas celdas mostrar
-  const cellCount = signal(6)
+  gridInstances.get(container)?.dispose()
 
   // La celda Hero tiene rowSpan=2, así que el grid conserva siempre una
   // celda como mínimo.
@@ -57,8 +57,16 @@ export function initGridDemo() {
     { label: 'D', rowSpan: 1, colSpan: 1, accent: 'cyan', height: 60 },
   ]
 
+  const countState = signal(CELL_LABELS.length)
+  const cellCount: Signal<number> = {
+    get value() { return countState.value },
+    set value(next: number) {
+      countState.value = Math.max(MIN_CELLS, Math.min(CELL_LABELS.length, Math.trunc(next) || MIN_CELLS))
+    },
+  }
+
   const GridDemo = defineComponent(() => {
-    const count = Math.min(cellCount.value, CELL_LABELS.length)
+    const count = cellCount.value
     const cells = CELL_LABELS.slice(0, count)
 
     return {
@@ -135,15 +143,21 @@ export function initGridDemo() {
   addBtn?.addEventListener('click', addCell)
   removeBtn?.addEventListener('click', removeCell)
 
-  return {
+  let disposed = false
+  const instance = {
     cellCount,
     dispose(): void {
+      if (disposed) return
+      disposed = true
       stopStatus()
       addBtn?.removeEventListener('click', addCell)
       removeBtn?.removeEventListener('click', removeCell)
       gridApp.unmount()
+      gridInstances.delete(container)
     },
   }
+  gridInstances.set(container, instance)
+  return instance
 }
 
 // ============================================================

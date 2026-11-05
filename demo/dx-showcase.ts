@@ -1,5 +1,5 @@
-import { createApp, defineComponent, effect, signal } from '../src/index.ts'
-import type { App, AppErrorContext, ProfileEvent } from '../src/index.ts'
+import { createApp, defineComponent, effect, signal } from '../src/index.js'
+import type { App, AppErrorContext, ProfileEvent } from '../src/index.js'
 
 interface DxShowcaseDeps {
   app: App

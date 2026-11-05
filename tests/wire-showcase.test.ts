@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test'
+import { afterEach, beforeEach, expect, spyOn, test } from 'bun:test'
 import { Window } from 'happy-dom'
 import { readFile } from 'node:fs/promises'
-import { clearPlugins, createStore, effect, injectStore, provideStore, signal } from '../src/index.ts'
-import { initRouterDemo } from '../demo/router-demo.ts'
-import { initRutaBShowcase } from '../demo/ruta-b-showcase.ts'
-import { initSyntaxShowcase } from '../demo/syntax-showcase.ts'
+import { clearPlugins, createStore, effect, injectStore, provideStore, signal } from '../src/index.js'
+import { initRouterDemo } from '../demo/router-demo.js'
+import { initRutaBShowcase } from '../demo/ruta-b-showcase.js'
+import { initSyntaxShowcase } from '../demo/syntax-showcase.js'
 
 const demoSource = (file: string) => readFile(new URL(`../demo/${file}`, import.meta.url), 'utf8')
 
@@ -286,17 +286,32 @@ test('benchmark bridges its measured result, bar and budget class and cancels pe
   const bar = document.getElementById('syntax-bench-bar')!
   expect(text('syntax-bench-output')).toBe('Sin ejecutar')
   expect(bar.style.width).toBe('20%')
-  click('syntax-bench-run-btn')
-  expect(text('syntax-bench-output')).toBe('⏳ Ejecutando…')
-  expect(bar.style.width).toBe('0%')
-  expect(bar.classList.contains('over-budget')).toBe(false)
-  await new Promise(resolve => setTimeout(resolve, 40))
-  const output = text('syntax-bench-output')!
-  expect(output).toMatch(/^prepare\(\)  \d+\.\d{3}ms  \(500 nodos con h\(\) \+ stack \+ For\)\nGolden escalado \(500\/5000\): 0\.223ms   Delta: [+-]?\d+\.\d%\n/)
-  const overBudget = output.endsWith('⚠️  Por encima del presupuesto — revisar regresión')
-  expect(bar.classList.contains('over-budget')).toBe(overBudget)
-  expect(parseFloat(bar.style.width)).toBeGreaterThanOrEqual(0)
-  expect(parseFloat(bar.style.width)).toBeLessThanOrEqual(100)
+  const clock = spyOn(performance, 'now')
+  try {
+    for (const { ratio, delta, warning, width } of [
+      { ratio: 1.04, delta: '+4.0', warning: false, width: 62.4 },
+      { ratio: 1.05, delta: '+5.0', warning: false, width: 63 },
+      { ratio: 1.06, delta: '+6.0', warning: true, width: 63.6 },
+    ]) {
+      const duration = 2.228 * (500 / 5000) * ratio
+      let calls = 0
+      clock.mockImplementation(() => calls++ * duration)
+      click('syntax-bench-run-btn')
+      expect(text('syntax-bench-output')).toBe('⏳ Ejecutando…')
+      expect(bar.style.width).toBe('0%')
+      expect(bar.classList.contains('over-budget')).toBe(false)
+      await new Promise(resolve => setTimeout(resolve, 40))
+      expect(text('syntax-bench-output')).toBe(
+        `prepare()  ${duration.toFixed(3)}ms  (500 nodos con h() + stack + For)\n` +
+        `Golden escalado (500/5000): 0.223ms   Delta: ${delta}%\n` +
+        (warning ? '⚠️  Por encima del presupuesto — revisar regresión' : '✅ Dentro del presupuesto (≤ +5% golden)'),
+      )
+      expect(bar.classList.contains('over-budget')).toBe(warning)
+      expect(parseFloat(bar.style.width)).toBeCloseTo(width, 10)
+    }
+  } finally {
+    clock.mockRestore()
+  }
   click('syntax-bench-run-btn')
   click('syntax-bench-run-btn')
   stop()
