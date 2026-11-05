@@ -1,0 +1,40 @@
+# Feature: ci-hardening
+
+Endurecer el pipeline de CI/CD del repositorio: builds reproducibles, publicación atada a un tag validado, entorno protegido para npm, empaquetado correcto del CLI, auditoría de dependencias limpia sin silenciarla, y un ruleset que exija de verdad lo que el pipeline ejecuta.
+
+Branch: `chore/ci-hardening` (desde `origin/main`) · Delivery strategy: ask-on-risk, un único PR por unidad de entrega coherente · Test runner: `bun test` + `bun run typecheck` + `bun audit`.
+
+## Specs
+
+- **S1** — Autorización del mantenedor (textual): "hagalo, me parece correcto todo." Los seis puntos aceptados son: (1) exigir `Test` y `Dependency Audit` en el ruleset y una revisión; (2) versionar el lockfile, instalar con `--frozen-lockfile` y pinear Bun y Node; (3) publicar desde un tag validado, con `environment:` con revisores y `concurrency`; (4) empaquetar el CLI como entrada ejecutable y añadir un smoke test del tarball; (5) subir `happy-dom` y la cadena transitiva para que la auditoría pase **sin silenciarla**; (6) pinear CodeQL por SHA y añadir `concurrency` y `timeout` a los jobs.
+- **S2** — Reproducibilidad: el lockfile de Bun se versiona y todos los workflows instalan con `bun install --frozen-lockfile`; `bun-version` y `node-version` quedan fijados a versiones probadas, nunca `latest`.
+- **S3** — Publicación atada a un tag: el job de publicación hace checkout del tag, verifica que el tag existe, y valida que la versión de `package.json`, la del manifest de release-please y el encabezado del CHANGELOG coinciden. El workflow manual exige un tag como entrada y no publica código sin release. Ambos publican con `environment: npm` y `concurrency`.
+- **S4** — Empaquetado del CLI: el `bin` declarado apunta a una entrada ejecutable incluida en el paquete; un test verifica el manifiesto empaquetado (el bin existe, está incluido en `files` y es ejecutable con su shebang).
+- **S5** — Auditoría de dependencias: `bun audit` termina sin vulnerabilidades high ni critical. No se silencia la auditoría ni se añade ninguna excepción: la remediación es actualizar `happy-dom` y fijar por `overrides` las transitivas afectadas (`brace-expansion`, `minimatch`, `ws`).
+- **S6** — Supply chain yOperaciones: las acciones de CodeQL se fijan por SHA reviewed (como el resto), cada job tiene `timeout-minutes` y cada workflow tiene un grupo de `concurrency` que cancela runs obsoletos.
+- **S7** — Reglas de merge: el ruleset activo de `main` exige `Test`, `Demo build`, `Release scope guard`, `Release notes integrity` y `Dependency Audit`, más una revisión aprobatoria. Se aplica **después** de que S5 esté verde, porque exigir un check rojo bloquearía las fusiones.
+- **S8** — Criterios transversales: `bun test` en verde, `bun run typecheck` en verde, `bun audit` sin vulnerabilidades high/critical, y el tarball empaquetado contiene el `bin` válido.
+
+## Tasks
+
+| ID | Tarea | Specs | Superficie autorizada | Ruta | Checks | Riesgo | Estado |
+|---|---|---|---|---|---|---|---|
+| T1 | Lockfile versionado, instalaciones congeladas y toolchain pineado | S2 | `.gitignore`, `bun.lock`, los 4 workflows | inline | `bun install --frozen-lockfile` + suite | 5 | pendiente |
+| T2 | Publicación desde tag validado, entorno protegido, `concurrency`, `timeout` y CodeQL por SHA | S3, S6 | los 4 workflows | inline | validación de workflows + suite | 5, 2 | pendiente |
+| T3 | CLI empaquetado como entrada ejecutable + smoke test del tarball | S4 | `package.json`, `scripts/create-axiom.js`, `tests/publish-package.test.ts` | delegado | `bun test tests/publish-package.test.ts` | 3, 5 | pendiente |
+| T4 | Auditoría limpia sin silenciarla (`happy-dom` 21.0.4 + `overrides` transitivas) | S5 | `package.json`, `bun.lock` | delegado | `bun audit` + suite completa | 5 | pendiente |
+| T5 | Reglas de merge: exigir checks y revisión | S7 | ruleset del repositorio | inline | lectura del ruleset tras aplicarlo | 5 | pendiente (requiere T4 verde) |
+| T6 | Documentación del endurecimiento | S6 | `docs/`, `README.md` | inline | `bun run typecheck` | 3 | pendiente |
+
+### Orden
+
+```text
+Wave 1 (paralelo):  T1 · T2 (inline)      T3 · T4 (delegado)
+Wave 2:             T5 (requiere T4 verde)  →  T6
+```
+
+## Log
+
+- **L1** (2026-11-05, petición original): "hagalo, me parece correcto todo." — aceptación de los seis puntos de endurecimiento del informe de auditoría de CI/CD.
+- **L2** (2026-11-05, evidencia de partida): el ruleset 14692155 ("Main Protection", activo sobre `main`) solo exige `Release notes integrity`; `origin/main` no tiene job de release-scope; `bun.lock` está en `.gitignore` y los workflows instalan sin `--frozen-lockfile`; `bun-version: latest` en los cuatro workflows; CodeQL usa tags `@v4` mutables; `Security` falla en `main` desde 2026-10-26; la publicación 1.0.1 registró `npm warn publish "bin[create-axiom]" script name scripts/create-axiom.ts was invalid and removed`; el paquete publicado no tiene dependencias de runtime (`dependencies: null`), luego la auditoría afecta al entorno de build y no al runtime de quien instala.
+- **L3** (2026-11-05, contratos decididos): el CLI usa `Bun.spawnSync`, así que necesita bun en runtime → se publica una entrada `.js` con shebang de bun que carga el `.ts`; `happy-dom@21.0.4` corrige las tres vulnerabilidades del paquete y ya trae `ws ^8.21.0`; `brace-expansion` necesita `>=2.1.7` y `minimatch >=11.0.1` como `overrides`; las tres acciones de CodeQL comparten el SHA `33d7b85da1a04171e211befe2c739303b9a4c066` de la etiqueta `v4`.
