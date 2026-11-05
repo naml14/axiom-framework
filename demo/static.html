@@ -6,6 +6,7 @@
   <title>Axiom — Demo Estático</title>
   <meta name="description" content="Demostración estática de Axiom: renderizado en dos fases, sin dependencias de rutas SSR.">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="sidebar-navigation.css">
 </head>
 <body>
 
@@ -25,9 +26,11 @@
         <p class="tagline">"El DOM es solo la pantalla de salida"</p>
       </div>
 
+      <!-- Populated by initSidebarNavigation; section hashes preserve the app route. -->
+      <nav class="sidebar-index" aria-label="Índice de secciones"></nav>
 
       <!-- Controles del canvas -->
-      <section class="sidebar-section" aria-label="Controles del canvas">
+      <section id="section-canvas" class="sidebar-section" aria-label="Controles del canvas">
         <h2 class="sidebar-section-title">Canvas Controls</h2>
         <div class="controls-stack">
           <label class="control-row">
@@ -55,7 +58,7 @@
       <p class="sidebar-note">DOM reads mide lecturas reales de dimensiones: los cambios de tamaño del canvas y los observadores pueden producir lecturas al usar controles. El hot path de reflow calcula en memoria; este contador no mide reflows del navegador.</p>
 
       <!-- DX Showcase — Sprint 6 -->
-      <section class="sidebar-section dx-panel" aria-label="DX Showcase">
+      <section id="section-dx" class="sidebar-section dx-panel" aria-label="DX Showcase">
         <h2 class="sidebar-section-title">🧪 Sprint 6 DX Showcase</h2>
         <div class="dx-actions">
           <button id="dx-profiling-btn" class="btn-toggle active">📈 Profiling: ON</button>
@@ -80,7 +83,7 @@
       </section>
 
       <!-- Portal Demo — montado por portal-demo.ts -->
-      <section class="sidebar-section" aria-label="Portal Demo">
+      <section id="section-portal" class="sidebar-section" aria-label="Portal Demo">
         <h2 class="sidebar-section-title">🌀 Portal Demo</h2>
         <div id="portal-demo-root"></div>
       </section>
@@ -88,7 +91,7 @@
       <!-- ============================================================
             RUTA B — Grid MVP (feat/ruta-b-sdd)
           ============================================================ -->
-      <section class="sidebar-section ruta-b-section" aria-label="Grid MVP">
+      <section id="section-grid" class="sidebar-section ruta-b-section" aria-label="Grid MVP">
         <h2 class="sidebar-section-title">📐 Ruta B — Grid MVP</h2>
         <p class="ruta-b-desc">
           <code>display:'grid'</code> + <code>gridRowSpan</code> + <code>height:'100%'</code>
@@ -105,7 +108,7 @@
       <!-- ============================================================
             RUTA B — Responsive / Breakpoints
           ============================================================ -->
-      <section class="sidebar-section ruta-b-section" aria-label="Responsive Breakpoints">
+      <section id="section-responsive" class="sidebar-section ruta-b-section" aria-label="Responsive Breakpoints">
         <h2 class="sidebar-section-title">📱 Responsive — Breakpoints</h2>
         <p class="ruta-b-desc">
           <code>matchesBreakpoint</code> + <code>resolveLayoutDimension</code>
@@ -120,7 +123,7 @@
       <!-- ============================================================
             RUTA B — Style API (Ruta B, Fase 3)
           ============================================================ -->
-      <section class="sidebar-section ruta-b-section" aria-label="Style API">
+      <section id="section-style" class="sidebar-section ruta-b-section" aria-label="Style API">
         <h2 class="sidebar-section-title">🎨 Style API — Tokens</h2>
         <p class="ruta-b-desc">
           <code>createTheme</code> · <code>resolveStyleTokens</code> · <code>applyStyleToElement</code>
@@ -136,7 +139,7 @@
       <!-- ============================================================
             RUTA B — Animation / Motion (Ruta B, Fase 4)
           ============================================================ -->
-      <section class="sidebar-section ruta-b-section" aria-label="Animation">
+      <section id="section-motion" class="sidebar-section ruta-b-section" aria-label="Animation">
         <h2 class="sidebar-section-title">✨ Motion — Transitions</h2>
         <p class="ruta-b-desc">
           <code>createTransition</code> · <code>scheduleTransition</code> · sin rAF propio
@@ -154,7 +157,7 @@
       <!-- ============================================================
             RUTA B — Plugin System (Ruta B, Fase 5)
           ============================================================ -->
-      <section class="sidebar-section ruta-b-section" aria-label="Plugin System">
+      <section id="section-plugin" class="sidebar-section ruta-b-section" aria-label="Plugin System">
         <h2 class="sidebar-section-title">🔌 Plugin — Lifecycle Hooks</h2>
         <p class="ruta-b-desc">
           <code>createPlugin</code> · <code>registerPlugin</code> · <code>applyPluginHook</code>
@@ -171,7 +174,7 @@
       <!-- ============================================================
             v0.2.8 — Error Envelope (P0-B)
           ============================================================ -->
-      <section class="sidebar-section ruta-b-section ruta-b-error-section" aria-label="Error Envelope v0.2.8">
+      <section id="section-error" class="sidebar-section ruta-b-section ruta-b-error-section" aria-label="Error Envelope v0.2.8">
         <h2 class="sidebar-section-title">💥 v0.2.8 — Error Envelope</h2>
         <p class="ruta-b-desc">
           <code>AppErrorContext</code>: phase · displayName · route · cycle · nodeKey
@@ -183,7 +186,7 @@
       <!-- ============================================================
             Syntax v2 — Feature 1: h() vs API Literal
           ============================================================ -->
-      <section class="sidebar-section syntax-section" aria-label="Syntax v2 — h()">
+      <section id="section-syntax-h" class="sidebar-section syntax-section" aria-label="Syntax v2 — h()">
         <h2 class="sidebar-section-title">✨ Syntax v2 — h() vs Literal</h2>
         <p class="ruta-b-desc">
           Comparativa en vivo: <code>h()</code> produce el mismo árbol que la API literal, con menos ruido.
@@ -204,7 +207,7 @@
       <!-- ============================================================
             Syntax v2 — Feature 2: Layout DSL
           ============================================================ -->
-      <section class="sidebar-section syntax-section" aria-label="Syntax v2 — Layout DSL">
+      <section id="section-syntax-layout" class="sidebar-section syntax-section" aria-label="Syntax v2 — Layout DSL">
         <h2 class="sidebar-section-title">📐 Syntax v2 — Layout DSL</h2>
         <p class="ruta-b-desc">
           <code>stack()</code> · <code>row()</code> · <code>grid()</code> — shortcuts declarativos de layout.
@@ -221,7 +224,7 @@
       <!-- ============================================================
             Syntax v2 — Feature 3: Control de flujo
           ============================================================ -->
-      <section class="sidebar-section syntax-section" aria-label="Syntax v2 — Flow">
+      <section id="section-syntax-flow" class="sidebar-section syntax-section" aria-label="Syntax v2 — Flow">
         <h2 class="sidebar-section-title">🔀 Syntax v2 — Control de Flujo</h2>
         <p class="ruta-b-desc">
           <code>Show</code> · <code>For</code> · <code>Switch</code> — control de flujo declarativo.
@@ -238,7 +241,7 @@
       <!-- ============================================================
             Syntax v2 — Feature 4: Eventos + Attrs inspector
           ============================================================ -->
-      <section class="sidebar-section syntax-section" aria-label="Syntax v2 — Events">
+      <section id="section-syntax-events" class="sidebar-section syntax-section" aria-label="Syntax v2 — Events">
         <h2 class="sidebar-section-title">🎯 Syntax v2 — Eventos + Attrs</h2>
         <p class="ruta-b-desc">
           <code>onClick</code> · <code>onMouseEnter</code> para handlers · <code>aria:</code> · <code>data:</code> para HTML attributes — sin mezclar con layout.
@@ -250,7 +253,7 @@
       <!-- ============================================================
             Syntax v2 — Feature 5: Benchmark live vs Golden
           ============================================================ -->
-      <section class="sidebar-section syntax-section syntax-bench-section" aria-label="Syntax v2 — Benchmark">
+      <section id="section-benchmark" class="sidebar-section syntax-section syntax-bench-section" aria-label="Syntax v2 — Benchmark">
         <h2 class="sidebar-section-title">⚡ Syntax v2 — Benchmark</h2>
         <p class="ruta-b-desc">
           Mide <code>prepare()</code> con la nueva sintaxis. El golden de <code>benchmarks/.golden.json</code> registra 2.228ms para 5000 nodos. Aquí se usan 500: la referencia se escala linealmente como <code>2.228 × 500 / 5000 = 0.2228ms</code>; el presupuesto es ≤ +5 % (≈ 0.23394ms). Es una referencia orientativa: la carga y el entorno del navegador no equivalen al benchmark original.
@@ -267,7 +270,7 @@
       <!-- ============================================================
             Syntax v2 — Feature 6: JSX
           ============================================================ -->
-      <section class="sidebar-section syntax-section" aria-label="Syntax v2 — JSX">
+      <section id="section-syntax-jsx" class="sidebar-section syntax-section" aria-label="Syntax v2 — JSX">
         <h2 class="sidebar-section-title">⚛️ Syntax v2 — JSX</h2>
         <p class="ruta-b-desc">
           JSX compila a las mismas llamadas <code>h()</code> — mismo árbol, distinta escritura.
@@ -284,7 +287,7 @@
       <!-- ============================================================
             Router Demo — createRouter + defineAsyncComponent
           ============================================================ -->
-      <section class="sidebar-section router-section" aria-label="Router Demo">
+      <section id="section-router" class="sidebar-section router-section" aria-label="Router Demo">
         <h2 class="sidebar-section-title">🧭 Router — createRouter + defineAsyncComponent</h2>
         <p class="ruta-b-desc">
           <code>createRouter</code> con rutas estáticas, dinámicas y wildcard.
@@ -316,7 +319,7 @@
       <!-- ============================================================
             Context API Demo — createContext + createStore
           ============================================================ -->
-      <section class="sidebar-section context-section" aria-label="Context Demo">
+      <section id="section-context" class="sidebar-section context-section" aria-label="Context Demo">
         <h2 class="sidebar-section-title">🔗 Context API — createContext + Stores</h2>
         <p class="ruta-b-desc">
           <code>withContext</code> + <code>useContext</code> para inyección de dependencias.
@@ -328,7 +331,7 @@
       <!-- ============================================================
             Forms Demo — bind() + validate()
           ============================================================ -->
-      <section class="sidebar-section forms-section" aria-label="Forms Demo">
+      <section id="section-forms" class="sidebar-section forms-section" aria-label="Forms Demo">
         <h2 class="sidebar-section-title">📝 Forms — bind() + validate()</h2>
         <p class="ruta-b-desc">
           <code>bind(input, signal)</code> para two-way binding.
