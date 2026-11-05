@@ -10,6 +10,7 @@ import {
 
 import { measureFlex } from './flex.js'
 import { measureGrid } from './grid.js'
+import { measureMasonry } from './masonry.js'
 import { measureTextChild } from './text-measure.js'
 
 // ============================================================
@@ -87,13 +88,15 @@ function layoutChild(
     const metrics = getMetrics(prepared)
     const childLayout = getLayoutProps(prepared)
     const isGrid = childLayout?.display === 'grid'
+    const isMasonry = childLayout?.display === 'masonry'
     const hasFlexProps = childLayout?.flexDirection !== undefined
       || childLayout?.gap !== undefined
       || childLayout?.justifyContent !== undefined
       || childLayout?.alignItems !== undefined
 
-    if (isGrid) {
-      measureGrid(prepared, availableWidth, 0, result, lineHeight, childLayout)
+    if (isGrid || isMasonry) {
+      const measure = isMasonry ? measureMasonry : measureGrid
+      measure(prepared, availableWidth, 0, result, lineHeight, childLayout)
     } else if (hasFlexProps) {
       measureFlex(prepared, availableWidth, 0, result, lineHeight, childLayout)
     } else if (metrics.simpleLayout) {

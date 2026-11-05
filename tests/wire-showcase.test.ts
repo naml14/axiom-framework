@@ -1,9 +1,47 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test'
+import { afterEach, beforeEach, expect, spyOn, test } from 'bun:test'
 import { Window } from 'happy-dom'
-import { clearPlugins, signal } from '../src/index.ts'
-import { wireShowcase } from '../demo/wire-showcase.ts'
-import { initRutaBShowcase } from '../demo/ruta-b-showcase.ts'
-import { initSyntaxShowcase } from '../demo/syntax-showcase.ts'
+import { readFile } from 'node:fs/promises'
+import { clearPlugins, createStore, effect, injectStore, provideStore, signal } from '../src/index.js'
+import { initRouterDemo } from '../demo/router-demo.js'
+import { initRutaBShowcase } from '../demo/ruta-b-showcase.js'
+import { initSyntaxShowcase } from '../demo/syntax-showcase.js'
+
+const demoSource = (file: string) => readFile(new URL(`../demo/${file}`, import.meta.url), 'utf8')
+
+test('S5: readouts use the core effect without a duplicate demo helper', async () => {
+  for (const file of ['dx-showcase.ts', 'router-demo.ts', 'ruta-b-showcase.ts', 'syntax-jsx-feature.tsx', 'syntax-showcase.ts']) {
+    const source = await demoSource(file)
+    expect(source).not.toContain('wireShowcase')
+    expect(source).not.toContain('wire-showcase.ts')
+    expect(source).toContain('effect(')
+  }
+  const helper = await demoSource('wire-showcase.ts').catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return ''
+    throw error
+  })
+  expect(helper.trim()).toBe('')
+})
+
+test('S5: context provider returns the core provider result without capture state', async () => {
+  const source = await demoSource('context-demo.ts')
+  expect(source).toContain('return provideStore(counterStore, () => props.children() as ComponentNode)')
+  expect(source).not.toContain('let node!')
+  expect(source).not.toContain('retorna void')
+})
+
+test('S5: router delegates outlet selection and maps user props in the route table', async () => {
+  const source = await demoSource('router-demo.ts')
+  expect(source).toContain('createRouteOutlet(router.$route, routes, NotFound)')
+  expect(source).toContain("props: route => ({ userId: route.params['id'] ?? '' })")
+  expect(source).not.toContain('._fn(')
+})
+
+test('S5: animation delegates cancellation of both transitions to core', async () => {
+  const source = await demoSource('ruta-b-showcase.ts')
+  expect(source).toContain('cancelTransition(animState)')
+  expect(source).toContain('cancelTransition(bgAnimState)')
+  expect(source).not.toContain('activeTransition = null')
+})
 
 let win: Window
 let frames: FrameRequestCallback[]
@@ -36,6 +74,59 @@ afterEach(() => {
   }
 })
 
+test('store provider returns children while sharing the provided store and restoring scope', () => {
+  const store = createStore({ count: 0 })
+  const output = provideStore(store, () => {
+    const first = injectStore(store)
+    const second = injectStore(store)
+    first.setState({ count: 1 })
+    expect(second.state.value.count).toBe(1)
+    return 'counter subtree'
+  })
+  expect(output).toBe('counter subtree')
+  expect(store.state.value.count).toBe(1)
+})
+
+test('router demo preserves user props, static pages, wildcard fallback and inspector disposal', () => {
+  document.body.innerHTML = `<div id="router-demo-root"></div><output id="router-output"></output>${
+    ['home', 'about', 'users', 'user-1', 'user-2', 'user-3', 'async', '404', 'back', 'forward', 'replace']
+      .map(name => `<button id="router-nav-${name}"></button>`).join('')}`
+  initRouterDemo()
+  const cleanup = (window as { __ROUTER_DEMO_CLEANUP__?: () => void }).__ROUTER_DEMO_CLEANUP__!
+  cleanups.push(cleanup)
+  const root = document.getElementById('router-demo-root')!
+  const inspector = document.getElementById('router-output')!
+  const flush = () => { for (const frame of frames.splice(0)) frame(0) }
+  click('router-nav-home')
+  flush()
+  expect(root.textContent).toContain('Bienvenido al Router Demo')
+  for (const [id, name] of [['1', 'Ada Lovelace'], ['2', 'Alan Turing'], ['3', 'Grace Hopper']]) {
+    click(`router-nav-user-${id}`)
+    flush()
+    expect(root.textContent).toContain(name!)
+    expect(root.textContent).toContain(`ID param: "${id}"`)
+    expect(JSON.parse(inspector.textContent!)).toEqual({
+      path: `/users/${id}`, params: { id }, query: {}, hash: '',
+      matched: { name: 'user-detail', path: '/users/:id' },
+    })
+  }
+  click('router-nav-users')
+  flush()
+  expect(root.textContent).toContain('Lista de usuarios')
+  click('router-nav-replace')
+  flush()
+  expect(root.textContent).toContain('Acerca de Axiom Router')
+  click('router-nav-404')
+  flush()
+  expect(root.textContent).toContain('Página no encontrada')
+  expect(root.textContent).toContain('La ruta solicitada no coincide con ninguna ruta registrada.')
+  const before = inspector.textContent
+  cleanup()
+  click('router-nav-home')
+  expect(inspector.textContent).toBe(before)
+  expect(root.childNodes).toHaveLength(0)
+})
+
 test('computed readouts track real signals immediately, including dependency changes and disposal', () => {
   const first = signal(2)
   const second = signal(10)
@@ -43,7 +134,7 @@ test('computed readouts track real signals immediately, including dependency cha
   const output = document.createElement('output')
   const button = document.createElement('button')
   let runs = 0
-  const stop = wireShowcase(() => {
+  const stop = effect(() => {
     runs++
     const count = chooseFirst.value ? first.value : second.value
     output.textContent = `${count} items`
@@ -84,7 +175,9 @@ test('responsive inspector follows width without polling and stops on disposal',
   width.value = 1024
   expect(output.textContent).toBe('1024px → breakpoint: lg | 100% = 1024px')
   expect(bar.style.width).toBe(`${(1024 / 1400) * 100}%`)
-  expect(bar.style.background).toBe('var(--accent-sky)')
+  // The responsive bar takes the color the legend assigns to the active
+  // breakpoint; `lg` is the indigo step of the logo palette.
+  expect(bar.style.background).toBe('var(--accent-indigo)')
   expect(frames).toHaveLength(0)
   stop?.()
   width.value = 320
@@ -193,17 +286,32 @@ test('benchmark bridges its measured result, bar and budget class and cancels pe
   const bar = document.getElementById('syntax-bench-bar')!
   expect(text('syntax-bench-output')).toBe('Sin ejecutar')
   expect(bar.style.width).toBe('20%')
-  click('syntax-bench-run-btn')
-  expect(text('syntax-bench-output')).toBe('⏳ Ejecutando…')
-  expect(bar.style.width).toBe('0%')
-  expect(bar.classList.contains('over-budget')).toBe(false)
-  await new Promise(resolve => setTimeout(resolve, 40))
-  const output = text('syntax-bench-output')!
-  expect(output).toMatch(/^prepare\(\)  \d+\.\d{3}ms  \(500 nodos con h\(\) \+ stack \+ For\)\nGolden escalado \(500\/5000\): 0\.223ms   Delta: [+-]?\d+\.\d%\n/)
-  const overBudget = output.endsWith('⚠️  Por encima del presupuesto — revisar regresión')
-  expect(bar.classList.contains('over-budget')).toBe(overBudget)
-  expect(parseFloat(bar.style.width)).toBeGreaterThanOrEqual(0)
-  expect(parseFloat(bar.style.width)).toBeLessThanOrEqual(100)
+  const clock = spyOn(performance, 'now')
+  try {
+    for (const { ratio, delta, warning, width } of [
+      { ratio: 1.04, delta: '+4.0', warning: false, width: 62.4 },
+      { ratio: 1.05, delta: '+5.0', warning: false, width: 63 },
+      { ratio: 1.06, delta: '+6.0', warning: true, width: 63.6 },
+    ]) {
+      const duration = 2.228 * (500 / 5000) * ratio
+      let calls = 0
+      clock.mockImplementation(() => calls++ * duration)
+      click('syntax-bench-run-btn')
+      expect(text('syntax-bench-output')).toBe('⏳ Ejecutando…')
+      expect(bar.style.width).toBe('0%')
+      expect(bar.classList.contains('over-budget')).toBe(false)
+      await new Promise(resolve => setTimeout(resolve, 40))
+      expect(text('syntax-bench-output')).toBe(
+        `prepare()  ${duration.toFixed(3)}ms  (500 nodos con h() + stack + For)\n` +
+        `Golden escalado (500/5000): 0.223ms   Delta: ${delta}%\n` +
+        (warning ? '⚠️  Por encima del presupuesto — revisar regresión' : '✅ Dentro del presupuesto (≤ +5% golden)'),
+      )
+      expect(bar.classList.contains('over-budget')).toBe(warning)
+      expect(parseFloat(bar.style.width)).toBeCloseTo(width, 10)
+    }
+  } finally {
+    clock.mockRestore()
+  }
   click('syntax-bench-run-btn')
   click('syntax-bench-run-btn')
   stop()

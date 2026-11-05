@@ -1,5 +1,6 @@
 import {
   signal,
+  effect,
   defineComponent,
   createApp,
   prepare,
@@ -13,7 +14,6 @@ import {
   Switch,
   Match,
 } from '../src/index.ts'
-import { wireShowcase } from './wire-showcase.ts'
 // ============================================================
 // ============================================================
 // Syntax v2 Showcase — 5 features interactivas
@@ -134,7 +134,7 @@ function initLayoutDSL() {
   const app = createApp(LayoutDemo, container)
   app.mount()
 
-  const stop = wireShowcase(() => {
+  const stop = effect(() => {
     const current = mode.value
     for (const [button, value] of [[stackButton, 'stack'], [rowButton, 'row'], [gridButton, 'grid']] as const) {
       button.classList.toggle('active', current === value)
@@ -213,7 +213,7 @@ function initFlowControl() {
     switchStep.value = switchStep.value + 1
   })
 
-  const stop = wireShowcase(() => {
+  const stop = effect(() => {
     toggleBtn.textContent = `Show: ${visible.value ? 'visible' : 'oculto'}`
     toggleBtn.classList.toggle('active', visible.value)
     outputEl.textContent = `Show.when=${visible.value}  For.length=${items.value.length}  Switch=${SWITCH_LABELS[switchStep.value % SWITCH_LABELS.length]}`
@@ -254,7 +254,7 @@ function initEventsAttrs() {
 
   const output = outputEl as HTMLElement
 
-  const stop = wireShowcase(() => {
+  const stop = effect(() => {
     output.textContent = `onClick disparado: ${clickCount.value}x  |  onMouseEnter: ${hoverCount.value}x\naria: { label: "Botón de click" }  data: { testid: "click-btn" }`
   })
   return () => { stop(); app.unmount() }
@@ -274,7 +274,7 @@ function initBenchmark() {
   if (!runBtn || !barEl || !outputEl) return
 
   const resultView = signal({ text: outputEl.textContent, width: barEl.style.width, overBudget: barEl.classList.contains('over-budget') })
-  const stop = wireShowcase(() => {
+  const stop = effect(() => {
     const view = resultView.value
     outputEl.textContent = view.text
     barEl.style.width = view.width

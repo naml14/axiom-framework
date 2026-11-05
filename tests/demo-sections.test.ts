@@ -116,11 +116,13 @@ describe("D3 — hero-title rows fit the rendered text (26px)", () => {
 	test("demo/router-demo.ts pins the shared HERO_TITLE_HEIGHT on every hero-title row", async () => {
 		const source = await readFile(routerDemoPath, "utf8");
 
-		// `.hero-title` renders 20px font × 1.3 line-height = 26px of text;
+		// `.hero-title` renders on an explicit 26px line box (22px font);
 		// the engine default row is lineHeight 20, so the h2 overflowed
 		// (diagnostic.json: clientH 20 / scrollH 26, delta 6 — "Página no
-		// encontrada" in the 404 view). The explicit `height` prop is honored
-		// because the parent is a flex stack (demo-ui-polish.md rule 3).
+		// encontrada" en la vista 404). The explicit `height` prop is honored
+		// because the parent is a flex stack (demo-ui-polish.md rule 3). The
+		// CSS line box has to agree with it — demo-visual-contract.test.ts
+		// pins that cross-file invariant.
 		expect(source).toMatch(/import\s*\{\s*HERO_TITLE_HEIGHT\s*\}\s*from\s*'\.\/components\.ts'/);
 		expect(source).not.toMatch(/const HERO_TITLE_HEIGHT\s*=/);
 		// Every hero-title node in the file must carry the height.

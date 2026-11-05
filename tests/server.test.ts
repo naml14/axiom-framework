@@ -308,6 +308,53 @@ describe('createServer()', () => {
     server.stop()
   })
 
+  test('applies the configured static cache policy', async () => {
+    const staticDir = await mkdtemp(join(tmpdir(), 'axiom-server-static-cache-'))
+    await writeFile(join(staticDir, 'asset.txt'), 'asset', 'utf8')
+
+    const component = defineComponent(() => h('div', null, 'Home'))
+    const server = createServer({
+      routes: [{ path: '/', component }],
+      staticDir,
+      port: 0,
+      staticCacheControl: 'no-store',
+    })
+
+    try {
+      server.serve()
+
+      const res = await fetch(`http://localhost:${server.port}/asset.txt`)
+      expect(res.status).toBe(200)
+      expect(res.headers.get('cache-control')).toBe('no-store')
+    } finally {
+      server.stop()
+      await rm(staticDir, { recursive: true, force: true })
+    }
+  })
+
+  test('serves static files without a cache policy by default', async () => {
+    const staticDir = await mkdtemp(join(tmpdir(), 'axiom-server-static-nocache-'))
+    await writeFile(join(staticDir, 'asset.txt'), 'asset', 'utf8')
+
+    const component = defineComponent(() => h('div', null, 'Home'))
+    const server = createServer({
+      routes: [{ path: '/', component }],
+      staticDir,
+      port: 0,
+    })
+
+    try {
+      server.serve()
+
+      const res = await fetch(`http://localhost:${server.port}/asset.txt`)
+      expect(res.status).toBe(200)
+      expect(res.headers.get('cache-control')).toBeNull()
+    } finally {
+      server.stop()
+      await rm(staticDir, { recursive: true, force: true })
+    }
+  })
+
   test('blocks static file path traversal outside staticDir', async () => {
     const staticDir = await mkdtemp(join(tmpdir(), 'axiom-server-static-'))
     const insideFile = join(staticDir, 'hello.txt')

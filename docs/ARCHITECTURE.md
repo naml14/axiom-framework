@@ -9,7 +9,7 @@ src/
 ├── core/           — Pure foundations (types, contracts). Zero internal runtime dependencies.
 ├── reactivity/     — Reactive runtime (signals). Depends only on core/.
 ├── render/         — Two-phase rendering pipeline: prepare → reflow → diff → commit.
-│   ├── engines/    — Layout engines (flexbox, grid, fast-path).
+│   ├── engines/    — Layout engines (flexbox, grid, masonry, fast-path, text measurement).
 │   └── strategy/   — Layout strategies (responsive).
 ├── features/       — Optional features (animation, context, forms, plugin, portal, style).
 ├── app.ts          — App orchestration (root file).
@@ -41,6 +41,7 @@ To guarantee consistent 60fps rendering during continuous updates, Axiom enforce
 - `LayoutResult` buffers may be larger than the active tree size when reused; `nodeCount` is the authoritative valid range.
 - The `reflow` function requests buffers using `acquireLayoutResult(count)`.
 - The `app.ts` scheduler releases previous/current buffers via `releaseLayoutResult(result)` across success and error paths.
+- Streaming SSR uses the shared escaped serializer in `src/ssr.ts`, advancing it on reader pulls in `src/ssr-stream.ts` rather than buffering a complete HTML document. Preparation/layout are synchronous; async boundaries are not supported. Completion, cancellation, and serialization errors release the active layout buffers.
 - The pool is bounded (entry count and max retained capacity) to avoid unbounded steady-state memory growth in long-lived server processes.
 - **Engine scratch buffers** (`rowHeights`, `placements`, `deferredQueue`, occupied-cells Set, percent Maps, and flex lines) are recycled via `src/render/engines/scratch.ts`. Each engine acquires scratch at the start of its call and releases it in a `finally` block — so the hot path stays allocation-free across recursive calls (e.g. grid-in-grid, flex-in-grid) and across renders.
 - **Diff scratch Maps/Sets** (prev/new index maps, prev/new key maps, portal map, prev/new index sets, layout-changed and all-changed sets) are recycled via `src/render/diff-scratch.ts`. `fullDiff()` calls `resetDiffScratch()` at the start of each pass and then works on the module-scoped containers with `.clear()` instead of re-allocating them. The module exposes one `acquire*` accessor per container plus `__clearDiffScratchForTests()` for teardown between tests.
@@ -75,6 +76,13 @@ If a legitimate use case requires adding to the allowlist, document it with an i
 `src/index.ts` is the **only** surface consumers should import from. Internal modules are implementation details and may change between minor versions without semver guarantees.
 
 Exception: `commitHydrate` is exported as an advanced hydration API.
+
+Promoted capabilities are documented in the public README:
+
+- [Custom text layout](../README.md#custom-text-layout): `textEngine` delegates measurement to a consumer engine; its hot-path callback must stay DOM-free. Engines own cache invalidation via `clearCache()`; the heuristic remains the fallback.
+- [Masonry](../README.md#layout-helpers): `masonry()` produces ordinary nodes with `display: 'masonry'`; see the [distribution contracts](./LAYOUT_CONTRACT.md#contratos-de-distribución) for columns and gaps.
+- [Route outlet](../README.md#route-outlet): `createRouteOutlet` composes the matched component from `$route` and the supplied table, maps props, and invokes a fallback without DOM observation.
+- [Streaming SSR and server](../README.md#streaming-ssr-experimental): pull-driven progressive serialization, plus `AxiomServerOptions.staticCacheControl` for opt-in static-file cache headers.
 
 ---
 

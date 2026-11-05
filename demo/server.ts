@@ -156,7 +156,16 @@ serve({
 
     const ext = filePath.split('.').pop()?.toLowerCase() ?? ''
     return new Response(file, {
-      headers: { 'Content-Type': MIME[ext] ?? 'application/octet-stream', ...SECURITY_HEADERS, ...corsHeaders(req) },
+      headers: {
+        'Content-Type': MIME[ext] ?? 'application/octet-stream',
+        // The demo is a development server: a stylesheet edited a second ago
+        // has to reach the browser. Without this the browser heuristically
+        // caches it and the page keeps the previous look (measured: the
+        // stylesheet served with no cache headers at all).
+        'Cache-Control': 'no-store',
+        ...SECURITY_HEADERS,
+        ...corsHeaders(req),
+      },
     })
   },
 })

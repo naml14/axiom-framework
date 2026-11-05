@@ -107,6 +107,16 @@ describe('createStore', () => {
     expect(injected!.state.value).toEqual({ user: 'alice' })
   })
 
+  test('provideStore returns the children result', () => {
+    const store = createStore({ user: 'alice' })
+    const result = provideStore(store, () => {
+      expect(injectStore(store)).toBe(store)
+      return 'child-result'
+    })
+
+    expect(result).toBe('child-result')
+  })
+
   test('injectStore without provideStore returns the original store', () => {
     const store = createStore({ count: 0 })
     const result = injectStore(store)

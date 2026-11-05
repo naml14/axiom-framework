@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { Window } from 'happy-dom'
-import { createApp, defineComponent, signal } from '../src/index.ts'
-import { initControls } from '../demo/controls.ts'
-import { initGridDemo } from '../demo/ruta-b-showcase.ts'
+import { createApp, defineComponent, signal } from '../src/index.js'
+import { initControls } from '../demo/controls.js'
+import { initGridDemo } from '../demo/ruta-b-showcase.js'
 
 let win: Window
 let frames: FrameRequestCallback[]
@@ -75,6 +75,35 @@ function mountGrid() {
 }
 
 describe('S8: actual demo grid behavior', () => {
+  test('reinitialization preserves one grid', () => {
+    const first = mountGrid()
+    flushFrames()
+    const second = initGridDemo()!
+    disposers.push(() => second.dispose())
+    expect(document.querySelectorAll('.grid-cell')).toHaveLength(6)
+    // A stale cleanup must not unmount the replacement or remove its controls.
+    first.dispose()
+    first.cellCount.value = 1
+    first.remove.click()
+    flushFrames()
+    expect(second.cellCount.value).toBe(5)
+    expect(document.querySelectorAll('.grid-cell')).toHaveLength(5)
+    second.dispose()
+    second.dispose()
+    expect(document.querySelectorAll('.grid-cell')).toHaveLength(0)
+  })
+
+  test('external count stays bounded', () => {
+    const grid = mountGrid()
+    grid.cellCount.value = 7
+    flushFrames()
+    expect(grid.cellCount.value).toBe(6)
+    grid.expectState(6)
+    grid.cellCount.value = 0
+    expect(grid.cellCount.value).toBe(1)
+    grid.expectState(1)
+  })
+
   test('clicks preserve exact count, span status and both bounds', () => {
     const grid = mountGrid()
     grid.expectState(6)

@@ -16,14 +16,15 @@ import {
   defineComponent,
   createApp,
   createRouter,
+  createRouteOutlet,
+  effect,
   defineAsyncComponent,
   h,
   stack,
 } from '../src/index.ts'
-import type { Route, Router, RouteState } from '../src/index.ts'
+import type { Route, Router } from '../src/index.ts'
 
 import { HERO_TITLE_HEIGHT } from './components.ts'
-import { wireShowcase } from './wire-showcase.ts'
 
 // ============================================================
 // Rutas
@@ -177,7 +178,7 @@ export function initRouterDemo(): void {
     { path: '/', component: Home, name: 'home' },
     { path: '/about', component: About, name: 'about' },
     { path: '/users', component: UsersIndex, name: 'users' },
-    { path: '/users/:id', component: UserDetail, name: 'user-detail' },
+    { path: '/users/:id', component: UserDetail, name: 'user-detail', props: route => ({ userId: route.params['id'] ?? '' }) },
     { path: '/async', component: AsyncDashboard, name: 'async' },
     { path: '*', component: NotFound, name: 'not-found' },
   ]
@@ -188,22 +189,12 @@ export function initRouterDemo(): void {
   // RouteView — re-monta el componente de la ruta activa
   // ============================================================
 
-  const RouteView = defineComponent(() => {
-    const route: RouteState = router.$route.value
-    const match = route.matched
-    if (match === null) return NotFound()
-
-    if (match.name === 'user-detail') {
-      return UserDetail({ userId: route.params['id'] ?? '' })
-    }
-
-    return match.component._fn(undefined as never)
-  })
+  const RouteView = createRouteOutlet(router.$route, routes, NotFound)
 
   const app = createApp(RouteView, container)
   app.mount()
 
-  const stopInspector = wireShowcase(() => {
+  const stopInspector = effect(() => {
     const route = router.$route.value
     const matched = route.matched
     outputEl.textContent = JSON.stringify(

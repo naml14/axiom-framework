@@ -1,5 +1,5 @@
-import { DEFAULT_VIEW, VIEWS, VIEW_HIDDEN_CLASS, activeView, applyView, viewOfSection } from './demo-views.ts'
-import type { ViewId } from './demo-views.ts'
+import { DEFAULT_VIEW, VIEWS, VIEW_HIDDEN_CLASS, activeView, applyView, viewOfSection } from './demo-views.js'
+import type { ViewId } from './demo-views.js'
 
 /** Wire the static sidebar; the returned disposer supports remounts and tests. */
 export function initSidebarNavigation(doc: Document = document): () => void {
@@ -61,10 +61,19 @@ export function initSidebarNavigation(doc: Document = document): () => void {
   }
 
   function highlight(id: string): void {
+    const active = links.get(id)
+    if (!active || active.hasAttribute('aria-current')) return
+    // Read before writing, and move only the independently scrolling index.
+    // scrollIntoView would also move the sidebar and the page's ancestors.
+    const bounds = nav!.getBoundingClientRect()
+    const entry = active.getBoundingClientRect()
+    const delta = entry.top < bounds.top ? entry.top - bounds.top
+      : entry.bottom > bounds.bottom ? entry.bottom - bounds.bottom : 0
     for (const [key, link] of links) {
       if (key === id) link.setAttribute('aria-current', 'location')
       else link.removeAttribute('aria-current')
     }
+    if (delta) nav!.scrollTop += delta
   }
 
   function navigate(id: string): void {
@@ -115,6 +124,33 @@ export function initSidebarNavigation(doc: Document = document): () => void {
   // minus the sticky index). The entry that occupies most of that area is the
   // one the reader is looking at.
   const visible = new Map<Element, number>()
+  let indexHeight = 0
+  function highlightVisible(): void {
+    let current: Element | undefined
+    let best = 0
+    for (const section of sections) {
+      const shown = visible.get(section)
+      if (shown !== undefined && shown > best) {
+        best = shown
+        current = section
+      }
+    }
+    if (current) highlight(current.id)
+  }
+  function onScroll(): void {
+    // Threshold-zero entries do not refresh while sections remain intersecting.
+    // This is demo observation, separate from the engine's arithmetic hot path.
+    const root = sidebar!.getBoundingClientRect()
+    const top = root.top + indexHeight
+    visible.clear()
+    for (const section of sections) {
+      if (viewOfSection(section.id) !== activeView.value) continue
+      const rect = section.getBoundingClientRect()
+      const height = Math.max(0, Math.min(rect.bottom, root.bottom) - Math.max(rect.top, top))
+      if (height > 0) visible.set(section, height)
+    }
+    highlightVisible()
+  }
   function intersectionHeight(entry: IntersectionObserverEntry): number {
     const rect = entry.intersectionRect
     if (rect) return rect.height
@@ -123,6 +159,7 @@ export function initSidebarNavigation(doc: Document = document): () => void {
   }
   function resizeIndex(): void {
     const height = Math.ceil(nav!.getBoundingClientRect().height)
+    indexHeight = height
     sidebar!.style.setProperty('--sidebar-index-height', `${height}px`)
     observer?.disconnect()
     visible.clear()
@@ -135,16 +172,7 @@ export function initSidebarNavigation(doc: Document = document): () => void {
       // The first intersecting section in DOM order is not the visible one: a
       // previous section can still overlap the top edge while the section the
       // reader jumped to occupies most of the area.
-      let current: Element | undefined
-      let best = 0
-      for (const section of sections) {
-        const shown = visible.get(section)
-        if (shown !== undefined && shown > best) {
-          best = shown
-          current = section
-        }
-      }
-      if (current) highlight(current.id)
+      highlightVisible()
     }, { root: sidebar, rootMargin: `-${height}px 0px 0px 0px`, threshold: 0 })
     for (const section of sections) observer.observe(section)
   }
@@ -155,6 +183,7 @@ export function initSidebarNavigation(doc: Document = document): () => void {
   const resizeObserver = typeof win.ResizeObserver === 'function'
     ? new win.ResizeObserver(resizeIndex) : undefined
   resizeObserver?.observe(nav)
+  sidebar.addEventListener('scroll', onScroll)
   nav.addEventListener('click', onClick)
   win.addEventListener('hashchange', followHash)
   win.addEventListener('popstate', followHash)
@@ -163,6 +192,7 @@ export function initSidebarNavigation(doc: Document = document): () => void {
   return () => {
     observer?.disconnect()
     resizeObserver?.disconnect()
+    sidebar.removeEventListener('scroll', onScroll)
     nav.removeEventListener('click', onClick)
     win.removeEventListener('hashchange', followHash)
     win.removeEventListener('popstate', followHash)

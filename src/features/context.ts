@@ -128,9 +128,9 @@ export function createStore<T>(initialState: T): StoreInstance<T> {
   return store
 }
 
-export function provideStore<T>(store: StoreInstance<T>, children: () => void): void {
+export function provideStore<T, R = void>(store: StoreInstance<T>, children: () => R): R {
   const ctx = getStoreContext(store)
-  withContext(ctx, store, children)
+  return withContext(ctx, store, children)
 }
 
 export function injectStore<T>(store: StoreInstance<T>): StoreInstance<T> {

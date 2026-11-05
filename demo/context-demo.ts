@@ -58,16 +58,7 @@ const themeSignal = signal<Theme>('light')
 
 const Provider = defineComponent((props: { children: () => unknown }) => {
   return withContext(ThemeContext, themeSignal, () => {
-    // provideStore retorna void y empuja el frame del store solo DENTRO de su
-    // callback. Capturamos el nodo ahí para que los consumers se rendericen
-    // dentro del frame y `injectStore` resuelva desde el provider real
-    // (si se llamara después de `children()`, el subtree ya estaría
-    // evaluado fuera del frame y caería al fallback por defecto).
-    let node!: ComponentNode
-    provideStore(counterStore, () => {
-      node = props.children() as ComponentNode
-    })
-    return node
+    return provideStore(counterStore, () => props.children() as ComponentNode)
   })
 })
 

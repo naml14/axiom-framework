@@ -5,9 +5,10 @@
 > `e607b06`, versión publicada `1.0.1`. Alcance: `demo/`, `.github/workflows/`, `scripts/`,
 > `tests/`, `docs/`. `src/` solo se toca en T12 (D1a), aislado en su propio commit.
 
-Estado: implementación autorizada en curso. Rama: `docs/plan-demo`. Runner: Bun.
+Estado: implementación completada en la rama `docs/plan-demo`. Runner: Bun.
 Entrega: `auto-chain`, `chain_strategy=feature-branch-chain`; commits locales por unidad, sin push ni PR.
-Previsión: 1800–3000 líneas autoradas; cortes por tarea/grupo (~400 líneas), CI aislado.
+Cortes: 8 commits nuevos desde `a569326` (plan, T1, T3, T5, T8 en dos grupos, T15 y T14).
+Pendiente: T12/T13 (aplazados por D-f) y T16 (espera el script externo).
 
 ---
 
@@ -88,22 +89,22 @@ Task Size del orquestador. Commit: pendiente hasta implementar.
 
 | ID | Ítem | Specs | Sprint | Depende de | Riesgo | Commit previsto | Estado |
 |---|---|---|---|---|---|---|---|
-| T1 | D2 contador DOM reads + ciclos/s | S1, S2 | A | — | none | `chore(demo): measure dom reads live and label cycles per second` | en curso (S1 real autorizado) |
-| T2 | D3 build del demo en CI | S3 | A | — | item 5 (CI) | `a569326` | implementado; verificación independiente final pendiente |
-| T3 | D12 explicar el golden | S4 | A | — | none | `docs(demo): explain the golden benchmark next to its number` | pendiente |
+| T1 | D2 contador DOM reads + ciclos/s | S1, S2 | A | — | none | `chore(demo): measure dom reads live and label cycles per second` | hecho: `a653db1` |
+| T2 | D3 build del demo en CI | S3 | A | — | item 5 (CI) | `a569326` | implementado; el job remoto no se ejecutó (sin push) |
+| T3 | D12 explicar el golden | S4 | A | — | none | `docs(demo): explain the golden benchmark next to its number` | hecho: `ea9270e` |
 | T4 | D10 test de foco y nodo | S5 | B | — | none | `23fea6a` | hecho: botón real, 3 clics/foco/identidad/texto |
-| T5 | D5a índice + scrollspy | S6 | B | — | none | `chore(demo): add a grouped index and scrollspy to the sidebar` | delegado (context backstop) |
-| T6 | D3b guard de alcance de versión | S7 | B | D-a | item 5 (CI) | `a569326` | 12 tests/38 assertions verdes; verificador final pendiente |
+| T5 | D5a índice + scrollspy | S6 | B | — | none | `chore(demo): add a grouped index and scrollspy to the sidebar` | hecho: `94f82e4`, con el resaltado corregido por medición real |
+| T6 | D3b guard de alcance de versión | S7 | B | D-a | item 5 (CI) | `a569326` | 12 tests/38 assertions verdes; el guard remoto no se ejecutó |
 | T7 | D11 oráculos de comportamiento | S8 | C | — | none | `46359e4` | hecho: 4 tests/183 assertions + typecheck |
-| T8 | D6 dogfooding + `wireShowcase` | S9 | C | T7 | item 6 parcial (mitigado por T7) | `chore(demo): bind showcase outputs through a shared wiring helper` (por grupos) | delegado (context backstop) |
+| T8 | D6 dogfooding + `wireShowcase` | S9 | C | T7 | item 6 parcial (mitigado por T7) | `chore(demo): bind showcase outputs through a shared wiring helper` | hecho: `20cdf79` (ruta-b y sintaxis) y `1bd3aad` (dx, router, jsx) |
 | T9 | D9 honestidad de `/ssr-stream` | S10 | C | — | none | `9dbe1e5` | hecho: disclosure existente + README corregido |
 | T10 | D13 regla de revisión | S11 | C | — | none | `9dbe1e5` | hecho: readback + diff --check |
 | T11 | D8 contrato de layout | S12 | D | D-d | none | `9dbe1e5` | hecho: contrato contrastado con cliente/SSR |
-| T12 | D1a dev hook en `src/` | S13 | D | D-f | item 3 (superficie pública) | `feat(devhook): expose the computed layout in development` (commit propio) | bloqueado (D-f) |
-| T13 | D1b panel inspector | S14 | D | T12 | none | aplazado | bloqueado: siguiente cambio del core (D-f/T12) |
-| T14 | D5b vistas modulares | S15 | E | T5, D-e | item 6 parcial (mitigado por T7) | `chore(demo): split the sidebar into four domain views` (por vista) | bloqueado (D-e) |
-| T15 | D7 comparativo | S16 | E | D-b, D-c | none | `chore(benchmarks): compare against naive dom re-render` | delegado mvkaj79k-3-337y |
-| T16 | D14 barrido versionado | S17 | — | script externo | none | `chore(demo): version the 18-section sweep` | bloqueado (script fuera del repo) |
+| T12 | D1a dev hook en `src/` | S13 | D | D-f | item 3 (superficie pública) | `feat(devhook): expose the computed layout in development` | aplazado por D-f: no se toca `src/` |
+| T13 | D1b panel inspector | S14 | D | T12 | none | — | aplazado con T12 |
+| T14 | D5b vistas modulares | S15 | E | T5, D-e | item 6 parcial (mitigado por T7) | `chore(demo): split the sidebar into four domain views` | hecho: `f572ec7` |
+| T15 | D7 comparativo | S16 | E | D-b, D-c | none | `chore(benchmarks): compare against naive dom re-render` | hecho: `747609b` |
+| T16 | D14 barrido versionado | S17 | — | script externo | none | `chore(demo): version the 18-section sweep` | bloqueado: el script sigue fuera del repo |
 
 ### Secuencia
 
@@ -193,9 +194,10 @@ Cada sprint deja el repo coherente; se puede parar tras cualquiera. Solo T12 ava
 - D-f: T12/T13 aplazadas al siguiente cambio del core; no se modifica `src/` ahora.
 - D-g: sin cambios; fijar Bun no es necesario para S3.
 - T16 espera la importación autorizada del script externo; no se inventa un sustituto.
-- Rutas: T1–T6/T9/T10/T11 inline; el intento de escritor CI fue rechazado por el formato de referencia y no se reintenta. T7 (oráculos) y T15 (comparativo) son unidades independientes (>100 líneas cada una), delegadas juntas con superficies disjuntas. T5/T14 secuencial tras T8; T8 por grupos.
+- Rutas: T1–T6/T9/T10/T11 inline; el intento de escritor CI fue rechazado por el formato de referencia y no se reintenta. T7 (oráculos) y T15 (comparativo) son unidades independientes (>100 líneas cada una), delegadas juntas con superficies disjuntas. T8 y T14 se hicieron inline: T8 por grupos (ruta-b/sintaxis y luego dx/router/jsx) y T14 después de T8, como decide D-e. T14 entró como un corte único porque el mecanismo de vistas es compartido por las cuatro; el plan de origen lo mitigaba «por vistas», y aquí la separación por grupos se conserva en el código (una tabla de vistas, una entrada de índice por vista).
 - Estado inicial ajeno preservado: cambios `.atl/`, eliminación `odd/tasks/plan-demo-by-minimax.md`; este documento ya era untracked.
 - RDD no disponible: `gentle-ai review mode status` rechaza el propietario de `.git/gentle-ai`. No se cambia propiedad ni autoridad; verificaciones funcionales siguen siendo necesarias.
+- T12/T13 quedan aplazados por D-f y T16 bloqueado; ninguno se sustituye por un invento propio.
 
 ## Log
 
@@ -251,3 +253,21 @@ Cada sprint deja el repo coherente; se puede parar tras cualquiera. Solo T12 ava
   versionarse; `odd/tasks/plan-demo-by-minimax.md` sí estaba versionado y su eliminación se
   incluye en el corte del documento de plan, de modo que el repositorio queda coherente con la
   decisión D-1.
+- **L19** (corte T1/T3/T5/T8/T15, cinco unidades): `a653db1` (233 líneas), `ea9270e` (3),
+  `94f82e4` (387), `20cdf79` (348), `1bd3aad` (158) y `747609b` (573). Cada corte lleva su test al
+  lado. El test de T8 se partió en dos ficheros para no superar el corte de ~400 líneas: el núcleo y
+  los showcases de ruta-b/sintaxis en `tests/wire-showcase.test.ts`, y jsx/dx/router en
+  `tests/wire-showcase-runtime.test.ts`. Ese corte duplicaba dos helpers del test y no compilaba:
+  se corrigió dentro del mismo commit y la cadena se reescribió para que ningún enlace quede roto.
+- **L20** (corte T14, D5b): `f572ec7` (345 líneas). Cuatro vistas por signal (`demo/demo-views.ts`).
+  El índice agrupa las 18 secciones y cada título de grupo es a la vez la pestaña de su vista; solo
+  la vista activa lista sus entradas. La vista 1 es la inicial, el enlace profundo por hash abre la
+  vista de la sección, la URL no cambia de página y el demo sigue abriéndose como `file://`. Las
+  secciones de las otras vistas no se borran: siguen en el DOM y responden. El canvas del motor
+  pertenece a la vista Core; en las demás el sidebar ocupa el ancho completo. En navegador real el
+  canvas vuelve con su layout al regresar a la vista Core (ancho 800 px, 61 tarjetas, primera
+  tarjeta 768×136) y no hay errores de consola.
+- **L21** (cadena y pendientes): la rama `docs/plan-demo` encadena 8 commits nuevos y cada uno
+  compila y pasa la suite completa (877 tests, 0 fallos); la verificación por commit se ejecutó
+  sobre la rama local. El CI remoto (T2, T6) sigue sin ejecutarse porque no hay push autorizado.
+  Quedan T12/T13 (aplazados por D-f) y T16 (espera el script de barrido externo).

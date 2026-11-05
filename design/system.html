@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Axiom demo — design system</title>
+<style>
+  /* Tokens mirrored from demo/style.css (:root). Source of truth: design/system.md */
+  :root {
+    --bg:#090b13; --bg-sidebar:#0f111d;
+    --surface:#141827; --surface-2:#1c2133; --surface-3:#262d43;
+    --border:#2a395a; --border-subtle:#1e253b;
+    --text:#eef0f7; --text-muted:#97a1c4; --text-dim:#95a0bf;
+    --accent-blue:#5ea3f7; --accent-cyan:#26c7d9; --accent-amber:#f9a806;
+    --accent-rose:#fb768c; --accent-indigo:#83a0db; --accent-blue-deep:#1053c6;
+    --radius-sm:6px; --radius-md:10px; --radius-lg:14px; --radius-pill:999px;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+    --shadow-md:0 8px 24px rgba(0,0,0,.32);
+    --shadow-lg:0 24px 64px rgba(0,0,0,.55);
+    --shadow-glow:0 8px 32px rgba(16,83,198,.18);
+    --mono: ui-monospace, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{
+    width:1440px; background:var(--bg); color:var(--text); font-family:var(--sans);
+    font-size:14px; line-height:1.5; padding:40px 48px 64px;
+  }
+  h1,h2,h3{font-weight:700}
+  .board-head{margin-bottom:36px}
+  .kicker{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-blue)}
+  .board-title{font-size:30px;letter-spacing:-.02em;margin:8px 0 6px}
+  .board-sub{color:var(--text-muted);font-size:13px;max-width:78ch;line-height:1.6}
+  .section{margin-top:40px}
+  .section-title{
+    font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--text-muted);padding-bottom:8px;border-bottom:1px solid var(--border-subtle);margin-bottom:18px;
+  }
+  .grid{display:grid;gap:12px}
+  .swatches{grid-template-columns:repeat(6,1fr)}
+  .swatch{border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;background:var(--surface)}
+  .swatch-chip{height:52px}
+  .swatch-meta{padding:8px 10px}
+  .swatch-name{font-family:var(--mono);font-size:11px;color:var(--text)}
+  .swatch-val{font-family:var(--mono);font-size:10px;color:var(--text-muted)}
+  .contrast{font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:2px}
+  .type-row{display:grid;grid-template-columns:180px 1fr;align-items:baseline;gap:16px;padding:7px 0;border-bottom:1px solid var(--border-subtle)}
+  .type-meta{font-family:var(--mono);font-size:11px;color:var(--text-muted)}
+  .type-sample{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ramp{display:flex;gap:10px;align-items:flex-end}
+  .ramp-item{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--text-muted);padding-bottom:6px}
+  .radii{display:flex;gap:12px}
+  .radius-item{width:92px;height:72px;background:var(--surface-2);border:1px solid var(--border);display:grid;place-items:center;font-family:var(--mono);font-size:10px;color:var(--text-muted)}
+  .shadows{display:flex;gap:16px}
+  .shadow-item{width:190px;height:88px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);display:grid;place-items:center;font-family:var(--mono);font-size:10px;color:var(--text-muted)}
+  .showcase{display:grid;grid-template-columns:320px 1fr;gap:20px}
+  .panel{background:var(--bg-sidebar);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:16px}
+  .panel-title{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px}
+  .hero{background:linear-gradient(135deg,rgba(16,83,198,.18),rgba(38,199,217,.14));border:1px solid rgba(94,163,247,.4);
+        border-top:2px solid rgba(94,163,247,.75);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow-glow)}
+  .hero-badge{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--accent-blue);text-transform:uppercase}
+  .hero-title{font-size:22px;font-weight:700;margin:8px 0 6px;line-height:26px;letter-spacing:-.02em}
+  .hero-body{font-size:13px;color:var(--text-muted);line-height:20px}
+  .card{background:var(--surface-2);border:1px solid var(--border);border-top:2px solid rgba(94,163,247,.55);
+        border-radius:var(--radius-lg);padding:12px;margin-top:12px;box-shadow:var(--shadow-md)}
+  .card-title{font-size:14px;font-weight:600;line-height:20px}
+  .card-body{font-size:13px;color:var(--text-muted);line-height:20px;margin-top:4px}
+  .tag-bubble{display:inline-block;font-size:11px;font-weight:600;line-height:18px;padding:0 10px;border-radius:var(--radius-pill);
+              background:var(--surface-2);border:1px solid var(--border-subtle);margin:6px 6px 0 0}
+  .btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--text-muted);
+       background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:6px 13px}
+  .btn.active{color:var(--accent-blue);border-color:rgba(94,163,247,.6);background:rgba(94,163,247,.14)}
+  .metric-row{display:flex;gap:0;align-items:baseline;padding:12px 16px;background:var(--surface);border:1px solid var(--border);
+              border-radius:var(--radius-md);margin-top:12px;font-family:var(--mono)}
+  .metric-item{display:flex;gap:7px;align-items:baseline}
+  .metric-item + .metric-item{padding-left:24px;border-left:1px solid var(--border-subtle)}
+  .metric-label{font-size:10px;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase}
+  .metric-value{font-size:13px;font-weight:700;color:var(--text)}
+  .metric-item.total .metric-value{color:var(--accent-blue);font-size:15px}
+  .code{font-family:var(--mono);font-size:11px;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border-subtle);
+        border-radius:var(--radius-sm);padding:8px 10px;margin-top:10px}
+  .source-note{margin-top:28px;font-family:var(--mono);font-size:10px;color:var(--text-dim);line-height:1.7}
+</style>
+</head>
+<body>
+  <header class="board-head">
+    <div class="kicker">Design system</div>
+    <h1 class="board-title">Axiom demo — tokens &amp; components</h1>
+    <p class="board-sub">Documented from <code>demo/style.css</code> and <code>scripts/templates/src/styles.css</code>. Every value below exists in the source; see <code>design/system.md</code> for the rules and the history.</p>
+  </header>
+
+  <section class="section">
+    <h2 class="section-title">Color</h2>
+    <div class="grid swatches">
+      <div class="swatch"><div class="swatch-chip" style="background:#090b13"></div><div class="swatch-meta"><div class="swatch-name">--bg</div><div class="swatch-val">#090b13</div><div class="contrast">16.6:1 vs --text</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#0f111d"></div><div class="swatch-meta"><div class="swatch-name">--bg-sidebar</div><div class="swatch-val">#0f111d</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#141827"></div><div class="swatch-meta"><div class="swatch-name">--surface</div><div class="swatch-val">#141827</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#1c2133"></div><div class="swatch-meta"><div class="swatch-name">--surface-2</div><div class="swatch-val">#1c2133</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#262d43"></div><div class="swatch-meta"><div class="swatch-name">--surface-3</div><div class="swatch-val">#262d43</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#2a395a"></div><div class="swatch-meta"><div class="swatch-name">--border</div><div class="swatch-val">#2a395a</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#1e253b"></div><div class="swatch-meta"><div class="swatch-name">--border-subtle</div><div class="swatch-val">#1e253b</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#eef0f7"></div><div class="swatch-meta"><div class="swatch-name">--text</div><div class="swatch-val">#eef0f7</div><div class="contrast">16.6:1 on --bg</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#97a1c4"></div><div class="swatch-meta"><div class="swatch-name">--text-muted</div><div class="swatch-val">#97a1c4</div><div class="contrast">5.3:1 on --bg</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#95a0bf"></div><div class="swatch-meta"><div class="swatch-name">--text-dim</div><div class="swatch-val">#95a0bf</div><div class="contrast">5.2:1 on --bg</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#5ea3f7"></div><div class="swatch-meta"><div class="swatch-name">--accent-blue</div><div class="swatch-val">#5ea3f7</div><div class="contrast">5.2:1 on --bg</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#26c7d9"></div><div class="swatch-meta"><div class="swatch-name">--accent-cyan</div><div class="swatch-val">#26c7d9</div><div class="contrast">6.6:1 on --bg</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#f9a806"></div><div class="swatch-meta"><div class="swatch-name">--accent-amber</div><div class="swatch-val">#f9a806</div><div class="contrast">6.9:1 on --bg</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#fb768c"></div><div class="swatch-meta"><div class="swatch-name">--accent-rose</div><div class="swatch-val">#fb768c</div><div class="contrast">5.2:1 on --bg</div></div></div>
+      <div class="swatch"><div class="swatch-chip" style="background:#83a0db"></div><div class="swatch-meta"><div class="swatch-name">--accent-indigo</div><div class="swatch-val">#83a0db</div><div class="contrast">5.2:1 on --bg</div></div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">Typography</h2>
+    <div class="type-row"><span class="type-meta">--text-display 56px</span><span class="type-sample" style="font-size:38px;font-weight:800;letter-spacing:-.03em">El DOM solo es la pantalla</span></div>
+    <div class="type-row"><span class="type-meta">--text-title 26px</span><span class="type-sample" style="font-size:26px;font-weight:700;letter-spacing:-.02em">Tres formas de verlo</span></div>
+    <div class="type-row"><span class="type-meta">--text-lead 18px</span><span class="type-sample" style="font-size:18px;color:#97a1c4">Axiom calcula todo el layout en memoria</span></div>
+    <div class="type-row"><span class="type-meta">--text-lg 22px</span><span class="type-sample" style="font-size:22px;font-weight:800;letter-spacing:.24em">AXIOM</span></div>
+    <div class="type-row"><span class="type-meta">--text-body 14px / 600</span><span class="type-sample" style="font-size:14px;font-weight:600">Card title</span></div>
+    <div class="type-row"><span class="type-meta">--text-sm 13px</span><span class="type-sample" style="font-size:13px;color:#97a1c4">Card body and secondary copy</span></div>
+    <div class="type-row"><span class="type-meta">--text-label 12px</span><span class="type-sample" style="font-size:12px;color:#97a1c4">Control labels and chips</span></div>
+    <div class="type-row"><span class="type-meta">--text-micro 11px / +1.5px</span><span class="type-sample" style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#97a1c4">Canvas controls</span></div>
+    <div class="type-row"><span class="type-meta">--text-tiny 10px / +2px</span><span class="type-sample" style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#5ea3f7">Axiom framework</span></div>
+    <div class="type-row"><span class="type-meta">mono 11px</span><span class="type-sample" style="font-family:var(--mono);font-size:11px">const node = h('div', { text: 'hot path' })</span></div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">Spacing, radius &amp; elevation</h2>
+    <div class="ramp">
+      <div class="ramp-item" style="width:30px;height:24px">4</div>
+      <div class="ramp-item" style="width:42px;height:36px">8</div>
+      <div class="ramp-item" style="width:54px;height:48px">12</div>
+      <div class="ramp-item" style="width:66px;height:60px">16</div>
+      <div class="ramp-item" style="width:78px;height:72px">20</div>
+      <div class="ramp-item" style="width:90px;height:84px">24</div>
+      <div class="ramp-item" style="width:102px;height:96px">32</div>
+    </div>
+    <div class="radii" style="margin-top:14px">
+      <div class="radius-item" style="border-radius:6px">6</div>
+      <div class="radius-item" style="border-radius:10px">10</div>
+      <div class="radius-item" style="border-radius:14px">14</div>
+      <div class="radius-item" style="border-radius:999px">pill</div>
+    </div>
+    <div class="shadows" style="margin-top:14px">
+      <div class="shadow-item" style="box-shadow:var(--shadow-sm)">--shadow-sm</div>
+      <div class="shadow-item" style="box-shadow:var(--shadow-md)">--shadow-md</div>
+      <div class="shadow-item" style="box-shadow:var(--shadow-glow)">--shadow-glow</div>
+      <div class="shadow-item" style="box-shadow:var(--shadow-lg)">--shadow-lg</div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">Components</h2>
+    <div class="showcase">
+      <div class="panel">
+        <div class="panel-title">Sidebar</div>
+        <span class="btn" style="margin:0 8px 10px 0">▶ Animación</span>
+        <span class="btn active" style="margin:0 8px 10px 0">📊 Métricas</span>
+        <span class="btn" style="opacity:.45">🧱 Estático puro</span>
+        <div style="margin-top:16px">
+          <span class="tag-bubble" style="color:#5ea3f7">TypeScript</span>
+          <span class="tag-bubble" style="color:#26c7d9">DOM-free</span>
+          <span class="tag-bubble" style="color:#83a0db">Layout</span>
+        </div>
+      </div>
+      <div>
+        <div class="hero">
+          <div class="hero-badge">⚡ Axiom framework</div>
+          <div class="hero-title">Renderizado en dos fases</div>
+          <div class="hero-body">Todos los cálculos ocurren en memoria. El hot path es aritmética pura. Cero lecturas DOM.</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Article 1</div>
+          <div class="card-body">Short editorial piece. Layout computed in memory, committed once.</div>
+        </div>
+        <div class="metric-row">
+          <span class="metric-item"><span class="metric-label">Prepare</span><span class="metric-value">0.00ms</span></span>
+          <span class="metric-item total"><span class="metric-label">Total</span><span class="metric-value">0.00ms</span></span>
+        </div>
+        <div class="code">h('div', { text: 'two-phase' })</div>
+      </div>
+    </div>
+  </section>
+
+  <p class="source-note">
+    Sources: demo/style.css (:root tokens, base, components) · scripts/templates/src/styles.css (light starter theme, separate system)<br>
+    Contrast ratios: WCAG 2.1, computed from the token values — every text token clears 4.5:1 on --bg, --surface, --surface-2 and --bg-sidebar.
+  </p>
+</body>
+</html>

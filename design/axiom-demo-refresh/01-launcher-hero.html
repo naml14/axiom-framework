@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Axiom demo — dirección visual</title>
+<style>
+  :root {
+    --bg:#090b13; --bg-soft:#0b0e1a; --bg-sidebar:#0f111d;
+    --surface:#141827; --surface-2:#1c2133; --surface-3:#262d43;
+    --border:#2a395a; --border-subtle:#1e253b;
+    --text:#eef0f7; --text-muted:#97a1c4; --text-dim:#95a0bf;
+    --blue:#5ea3f7; --blue-deep:#1053c6;
+    --cyan:#26c7d9; --amber:#f9a806; --rose:#fb768c; --indigo:#83a0db;
+    --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --r-sm:8px; --r-md:12px; --r-lg:18px; --r-pill:999px;
+    --sh-sm:0 1px 2px rgba(0,0,0,.4);
+    --sh-md:0 8px 24px rgba(0,0,0,.35);
+    --sh-lg:0 24px 60px rgba(0,0,0,.55);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{
+    width:1440px; background:var(--bg); color:var(--text); font-family:var(--sans);
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none}
+  :focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:4px}
+  .mono{font-family:var(--mono)}
+  .kicker{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--blue)}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;
+    padding:11px 20px;border-radius:var(--r-pill);border:1px solid transparent;cursor:pointer;
+    transition:transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn-primary{background:linear-gradient(135deg,var(--blue-deep),#2f7ae5);color:#fff;box-shadow:0 8px 24px rgba(16,83,198,.35)}
+  .btn-primary:hover{transform:translateY(-1px)}
+  .btn-ghost{background:rgba(255,255,255,.03);border-color:var(--border);color:var(--text)}
+  .btn-ghost:hover{border-color:rgba(94,163,247,.5);background:rgba(94,163,247,.08)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-md)}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-muted);
+    background:var(--surface-2);border:1px solid var(--border-subtle);border-radius:var(--r-pill);padding:6px 13px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--blue);flex:none}
+  .stat-num{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+  .stat-label{font-size:12px;color:var(--text-muted)}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media (prefers-reduced-motion:reduce){.btn,.btn-primary{transition:none;transform:none}}
+</style>
+</head>
+<body>
+<!-- Direction 01 — hero-first landing. Editorial, one clear promise, three paths. -->
+<div style="position:relative;overflow:hidden;padding:0 0 72px;
+     background:
+       radial-gradient(900px 480px at 12% -8%, rgba(16,83,198,.28), transparent 62%),
+       radial-gradient(760px 420px at 88% 6%, rgba(38,199,217,.18), transparent 60%),
+       linear-gradient(180deg,#0b0e1a 0%, var(--bg) 46%);">
+
+  <header style="display:flex;align-items:center;justify-content:space-between;padding:26px 64px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:24px;line-height:1">⚡</span>
+      <span style="font-size:19px;font-weight:800;letter-spacing:.32em">AXIOM</span>
+      <span class="chip mono" style="font-size:11px;padding:4px 10px">v1.0.1</span>
+    </div>
+    <nav style="display:flex;gap:26px;font-size:13.5px;color:var(--text-muted)">
+      <span>Demo</span><span>Docs</span><span>Benchmarks</span><span>Changelog</span>
+    </nav>
+  </header>
+
+  <main style="padding:0 64px">
+    <section style="max-width:860px;padding:56px 0 40px">
+      <p class="kicker">Framework web · renderizado en dos fases</p>
+      <h1 style="font-size:56px;line-height:1.06;font-weight:800;letter-spacing:-.03em;margin:18px 0 22px">
+        El DOM solo es<br>la pantalla de salida.
+      </h1>
+      <p style="font-size:18px;line-height:1.6;color:var(--text-muted);max-width:62ch">
+        Axiom calcula todo el layout en memoria: aritmética pura, cero lecturas del DOM.
+        El commit ocurre una sola vez, con el resultado ya resuelto.
+      </p>
+      <div style="display:flex;gap:14px;margin-top:34px">
+        <a class="btn btn-primary" href="./static.html">Abrir el demo estático</a>
+        <a class="btn btn-ghost" href="/ssr?name=Dev&amp;width=960&amp;root=ssr-root">Ver el render en servidor</a>
+      </div>
+    </section>
+
+    <section style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px;margin-top:36px;max-width:1080px">
+      <div class="stat"><div class="stat-num">0</div><div class="stat-label">lecturas del DOM en el hot path</div></div>
+      <div class="stat"><div class="stat-num">1</div><div class="stat-label">commit por cambio de estado</div></div>
+      <div class="stat"><div class="stat-num">20ms</div><div class="stat-label">línea base del motor de layout</div></div>
+    </section>
+  </main>
+</div>
+
+<main style="padding:56px 64px 0">
+  <h2 style="font-size:26px;font-weight:700;letter-spacing:-.02em">Tres formas de verlo</h2>
+  <p style="color:var(--text-muted);margin-top:8px;max-width:60ch">Elige el flujo que quieras recorrer: archivo local, render en servidor o streaming progresivo.</p>
+
+  <div class="grid-3" style="margin-top:28px">
+    <article class="card" style="padding:26px;display:flex;flex-direction:column;gap:14px">
+      <span style="font-size:22px">🧱</span>
+      <h3 style="font-size:18px;font-weight:700">Demo estático puro</h3>
+      <p style="color:var(--text-muted);font-size:14px;flex:1">Sin servidor y sin rutas: el bundle se monta en el navegador y el motor resuelve el layout en memoria.</p>
+      <a class="btn btn-ghost" style="align-self:flex-start" href="./static.html">Abrir static.html</a>
+    </article>
+    <article class="card" style="padding:26px;display:flex;flex-direction:column;gap:14px;border-color:rgba(94,163,247,.35)">
+      <span style="font-size:22px">🧪</span>
+      <h3 style="font-size:18px;font-weight:700">Demo SSR</h3>
+      <p style="color:var(--text-muted);font-size:14px;flex:1">Render en servidor con <span class="mono">renderToString()</span> y marcadores de hidratación. Requiere el servidor del demo.</p>
+      <a class="btn btn-ghost" style="align-self:flex-start" href="/ssr?name=Dev&amp;width=960&amp;root=ssr-root">Abrir /ssr</a>
+    </article>
+    <article class="card" style="padding:26px;display:flex;flex-direction:column;gap:14px">
+      <span style="font-size:22px">🌀</span>
+      <h3 style="font-size:18px;font-weight:700">Streaming SSR</h3>
+      <p style="color:var(--text-muted);font-size:14px;flex:1">El HTML sale por chunks con <span class="mono">renderToReadableStream()</span>. Progresivo y experimental.</p>
+      <a class="btn btn-ghost" style="align-self:flex-start" href="/ssr-stream">Abrir /ssr-stream</a>
+    </article>
+  </div>
+
+  <section class="card" style="margin-top:44px;padding:28px;display:grid;grid-template-columns:1.1fr .9fr;gap:36px">
+    <div>
+      <p class="kicker" style="color:var(--cyan)">createServer</p>
+      <h3 style="font-size:21px;font-weight:700;margin:12px 0 10px">Un wrapper para SSR + archivos estáticos</h3>
+      <p style="color:var(--text-muted);font-size:14px">
+        Enruta, sirve estáticos y expone metadata por ruta con una sola llamada, con CORS normalizado
+        y límite de peticiones por IP.
+      </p>
+      <ul style="list-style:none;margin-top:18px;display:grid;gap:10px;font-size:13.5px;color:var(--text-muted)">
+        <li>· Routing SSR con <span class="mono">matchRoute()</span> — estático y dinámico</li>
+        <li>· Archivos estáticos con <span class="mono">resolveStaticFilePath()</span> y <span class="mono">isPathInside()</span></li>
+        <li>· Metadata por ruta: title, description, og, stylesheets</li>
+        <li>· CORS normalizado y rate limiting por IP</li>
+      </ul>
+    </div>
+    <pre class="mono" style="font-size:12.5px;line-height:1.7;color:var(--text-muted);background:var(--bg-soft);
+         border:1px solid var(--border-subtle);border-radius:var(--r-md);padding:20px;overflow:hidden">
+<span style="color:var(--blue)">const</span> server = <span style="color:var(--blue)">createServer</span>({
+  routes: [
+    { path: <span style="color:var(--cyan)">'/'</span>,      render: home },
+    { path: <span style="color:var(--cyan)">'/ssr'</span>,   render: ssrPage },
+  ],
+  staticDir: <span style="color:var(--cyan)">'./public'</span>,
+  cors: { origins: [<span style="color:var(--cyan)">'http://localhost:5173'</span>] },
+  rateLimit: { max: <span style="color:var(--amber)">100</span>, windowMs: <span style="color:var(--amber)">60_000</span> },
+})</pre>
+  </section>
+
+  <p style="margin-top:36px;font-size:13px;color:var(--text-dim)">
+    Tip: para las rutas SSR ejecuta <span class="mono">bun run demo</span> y abre <span class="mono">http://localhost:3000</span>.
+  </p>
+</main>
+</body>
+</html>

@@ -127,6 +127,20 @@ stack({ gap: 12, padding: 16 },
 
 These helpers are semantic sugar over `h()`. They produce normal `ElementNode` values and add no extra lifecycle.
 
+For shortest-column placement, use `masonry()` with the same column and gap options as `grid()`:
+
+```typescript
+import { masonry, box } from 'axiom-framework'
+
+const cards = masonry(2, { columnGap: 12, rowGap: 8 },
+  box({ height: 80 }, 'A'),
+  box({ height: 120 }, 'B'),
+  box({ height: 60 }, 'C'),
+)
+```
+
+It sets `layout.display: 'masonry'`; each child goes into the shortest column (leftmost on ties). See the [layout contracts](./docs/LAYOUT_CONTRACT.md#contratos-de-distribución) for sizing and spacing.
+
 ### Flow helpers
 
 ```typescript
@@ -339,17 +353,17 @@ interface PortalNode {
 
 ```typescript
 interface LayoutProps {
-  display?: 'flex' | 'grid'             // layout mode: flex (default) or grid
+  display?: 'flex' | 'grid' | 'masonry' // layout mode: flex (default), grid or masonry
   flexDirection?: 'row' | 'column'      // for flex: default is 'column'
   gap?: number                           // gap between children (px)
-  columnGap?: number                     // gap between columns (grid)
-  rowGap?: number                        // gap between rows (grid)
+  columnGap?: number                     // gap between columns (grid/masonry)
+  rowGap?: number                        // gap between rows/items (grid/masonry)
   justifyContent?: 'start' | 'center' | 'end' | 'space-between'
   alignItems?: 'start' | 'center' | 'end' | 'stretch'
   width?: number | `${number}px` | `${number}%` | `${number}vw` | `${number}vh`
   height?: number | `${number}px` | `${number}%` | `${number}vw` | `${number}vh`
   padding?: number                       // uniform padding (px)
-  gridTemplateColumns?: number | `repeat(${number}, 1fr)` // grid columns (MVP)
+  gridTemplateColumns?: number | `repeat(${number}, 1fr)` // grid/masonry columns
   gridRowSpan?: number                  // vertical span in grid
   gridColumnSpan?: number               // horizontal span in grid
   breakpoints?: Array<{
@@ -361,6 +375,27 @@ interface LayoutProps {
   }>
 }
 ```
+
+### Route outlet
+
+`createRouteOutlet($route, routes, fallback)` returns a component definition for `createApp` or component composition:
+
+```typescript
+import { createRouter, createRouteOutlet, defineComponent, h } from 'axiom-framework'
+import type { Route } from 'axiom-framework'
+
+const routes: Route[] = [{
+  path: '/users/:id',
+  component: defineComponent((props: unknown) =>
+    h('p', null, (props as { userId: string }).userId)),
+  props: route => ({ userId: route.params.id }),
+}]
+const router = createRouter(routes)
+const NotFound = defineComponent(() => h('p', null, 'Not found'))
+const RouteView = createRouteOutlet(router.$route, routes, NotFound)
+```
+
+The outlet reads `$route.value`, looks up its matched route in the captured table, and invokes that component with `route.props(state)` (or `undefined` without a mapper). An unmatched route, or a match absent from the table, invokes `fallback`. Matching stays with the router; the outlet only reads signals, with no DOM observation.
 
 ### App
 
@@ -398,6 +433,28 @@ Axiom automatically routes nodes to the most efficient layout algorithm:
 | No `layout` props + simple children | **Fast path** | Top-to-bottom block layout. No allocations. |
 | Has `layout` props (flex/gap/etc.) | **Flex path** | Full flex engine with justify/align/padding. |
 | Has `display: 'grid'` | **Grid path** | CSS Grid layout with fixed columns, spans, auto-placement (MVP). |
+| Has `display: 'masonry'` | **Masonry path** | Fixed-width columns; places each child in the shortest column. |
+
+### Custom text layout
+
+Pass a consumer-supplied `TextLayoutEngine` through `createApp`'s `textEngine` option, SSR options, or advanced `prepare()` options:
+
+```typescript
+import { renderToString } from 'axiom-framework'
+import type { AppOptions } from 'axiom-framework'
+
+// Example: fixed metrics for labels known to fit on one line.
+const textEngine: NonNullable<AppOptions['textEngine']> = {
+  prepare(text, font) { return { text, font } },
+  layout(_prepared, _maxWidth, lineHeight) {
+    return { lineCount: 1, height: lineHeight }
+  },
+  clearCache() {},
+}
+const html = renderToString(MyComponent, { textEngine, lineHeight: 20 })
+```
+
+`prepare(text, font)` returns an opaque handle. During measurement, Axiom calls `layout(prepared, maxWidth, lineHeight)` with that handle, uses the returned `height`, and records `lineCount`. The callback runs in the layout hot path: keep it DOM-free, with no canvas `measureText` calls. Engines may cache prepared metrics/results and expose `clearCache()` for consumer-controlled invalidation; Axiom does not call it automatically. Without an engine, the existing character-width/word-wrap heuristic remains the fallback.
 
 ### Position model
 
@@ -530,11 +587,9 @@ bun run build:static
 
 ## Streaming SSR (experimental)
 
-Axiom supports streaming server-side rendering via Web Streams API.
-The current implementation renders the complete HTML synchronously, emits a **single
-chunk**, then closes the stream; it does not progressively render async boundaries.
-The demo's `/ssr-stream` route uses artificial chunking (head/body with a delay),
-as [disclosed on the page](./demo/streaming-page.tsx).
+Axiom serializes HTML progressively through the Web Streams API, emitting successive chunks on reader pulls and respecting backpressure without buffering the complete document. Preparation and layout remain synchronous. Concatenating all chunks yields the same complete document as `renderToString()` for the same tree and options.
+
+Cancellation stops serialization; pooled layout buffers are released on completion, cancellation, and serialization errors. This is progressive serialization, **not async-boundary streaming** (`await` inside the tree is not supported).
 
 ```typescript
 import { renderToReadableStream } from 'axiom-framework'
@@ -553,11 +608,14 @@ import { createServer, defineComponent, h } from 'axiom-framework'
 const server = createServer({
   routes: [{ path: '/', component: MyPage, metadata: { title: 'Home' } }],
   staticDir: './public',
+  staticCacheControl: 'public, max-age=3600', // optional; static file responses only
   port: 3000,
 })
 server.serve()
 // → http://localhost:3000 serves SSR pages + static files
 ```
+
+`AxiomServerOptions.staticCacheControl` sets the `Cache-Control` header on static file responses only, not SSR routes or errors. Omit it to preserve the default behavior: no `Cache-Control` header is added.
 
 > **Note**: Both `renderToReadableStream` and `createServer` are marked `@experimental`. The API may evolve in minor versions before stabilizing in v1.1. Async boundary support (Suspense-like) is planned for a follow-up release.
 

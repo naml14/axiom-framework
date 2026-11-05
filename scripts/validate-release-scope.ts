@@ -42,7 +42,7 @@ for (const sha of commits) {
   const message = output(['show', '-s', '--format=%B', sha])
   const subject = message.split('\n')[0]!
   if (/^chore\(main\): release\b/.test(subject)) continue
-  const header = /^([a-z]+)(?:\([^\r\n)]+\))?(!)?: /.exec(subject)
+  const header = /^([a-z0-9-]+)(?:\([^\r\n)]+\))?(!)?: /.exec(subject)
   const bumps = header?.[1] === 'feat' || header?.[1] === 'fix' || Boolean(header?.[2])
     || /^BREAKING[ -]CHANGE: /m.test(message)
   if (!bumps) continue

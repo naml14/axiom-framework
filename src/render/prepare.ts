@@ -41,6 +41,8 @@ interface PreparedInternal {
   style?: import('../features/style.js').SafeStyleProps
   textContent?: string
   textHandle?: unknown
+  textEngine?: TextLayoutEngine
+  textLineCount?: number
   portalTarget?: HTMLElement
   portalCssManaged?: boolean
   debugDisplayName?: string
@@ -133,6 +135,8 @@ function prepareTextNode(
     nodeType: 'text',
     textContent: node.content,
     textHandle,
+    textEngine,
+    textLineCount: undefined,
     debugDisplayName: debug?.displayName,
     debugRoute: debug?.route,
     children: [],
@@ -331,6 +335,25 @@ export function getLayoutProps(prepared: PreparedComponent): import('../core/typ
 
 export function getTextHandle(prepared: PreparedComponent): unknown {
   return unbrandPrepared(prepared).textHandle
+}
+
+/** Delegate opaque handles without inspecting them or allocating framework scratch. */
+export function layoutPreparedText(
+  prepared: PreparedComponent,
+  maxWidth: number,
+  lineHeight: number
+): ReturnType<TextLayoutEngine['layout']> | undefined {
+  const internal = unbrandPrepared(prepared)
+  const engine = internal.textEngine
+  if (engine === undefined) return undefined
+  const layout = engine.layout(internal.textHandle, maxWidth, lineHeight)
+  internal.textLineCount = layout.lineCount
+  return layout
+}
+
+/** Last consumer-engine line count; no heuristic line count is exposed. */
+export function getTextLineCount(prepared: PreparedComponent): number | undefined {
+  return unbrandPrepared(prepared).textLineCount
 }
 
 /**

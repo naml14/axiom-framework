@@ -151,6 +151,18 @@ A component with a single button and some text will produce:
 </html>
 ```
 
+### Serialization order
+
+The document is serialized in this order: the `<head>` (including the
+`metadata` values and the stylesheet links) first, then the tree content, then
+the closing tags. `renderToString()` and `renderToReadableStream()` share the
+same serializer, so both produce the same bytes for the same tree and options.
+
+Consequence: the metadata is read **before** the tree is serialized. A node
+whose attribute accessor mutates the metadata object is therefore not reflected
+in the head. Consumers that need the head to depend on the tree must compute
+that value before rendering.
+
 ### Marker contract
 
 - Every non-text element receives a `data-axiom-id` attribute.

@@ -116,6 +116,39 @@ describe('createApp', () => {
     expect(root.childNodes.length).toBe(0)
   })
 
+  test('unmount() does not cancel the pending update of another app', () => {
+    // Two apps sharing one scheduler queue: unmounting the first must not drop
+    // the second's scheduled render.
+    const scheduled: Array<() => void> = []
+    const mockScheduler = (cb: () => void) => { scheduled.push(cb) }
+
+    const count = signal(0)
+    const rootB = document.createElement('div')
+    const appB = createApp(defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: `B: ${count.value}` }]
+    })), rootB, { textEngine: fakeTextEngine, scheduler: mockScheduler })
+    appB.mount()
+
+    const rootA = document.createElement('div')
+    const appA = createApp(defineComponent(() => ({
+      type: 'element' as const,
+      tag: 'div',
+      children: [{ type: 'text' as const, content: 'A' }]
+    })), rootA, { textEngine: fakeTextEngine, scheduler: mockScheduler })
+    appA.mount()
+
+    count.value = 1
+    expect(scheduled.length).toBeGreaterThan(0)
+
+    appA.unmount()
+    scheduleAndFlush(scheduled)
+
+    expect(rootB.textContent).toContain('B: 1')
+    appB.unmount()
+  })
+
   test('getMetrics() returns timing data', () => {
     const comp = defineComponent(() => ({
       type: 'element' as const,

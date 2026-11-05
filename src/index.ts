@@ -32,7 +32,7 @@ export type { SSRMetadata, SSRRenderOptions } from './ssr.js'
 export type { HydrationOptions, HydrationResult } from './core/types.js'
 
 // --- Router ---
-export { createRouter, defineAsyncComponent } from './router.js'
+export { createRouter, createRouteOutlet, defineAsyncComponent } from './router.js'
 export type { Route, RouteState, Router, AsyncComponentOptions } from './router.js'
 
 // --- Layout (advanced — for custom rendering pipelines) ---
@@ -98,7 +98,7 @@ export type {
 // Nivel 1: h(), t(), fragment()
 // Nivel 2: stack(), vstack, row(), grid(), box(), For, Show, Switch, Match, Each
 export { h, t, fragment }             from './syntax/h.js'
-export { stack, vstack, row, grid, box } from './syntax/layout.js'
+export { stack, vstack, row, grid, masonry, box } from './syntax/layout.js'
 export { For, Show, Switch, Match, Each } from './syntax/flow.js'
 export type { SwitchCase }            from './syntax/flow.js'
 export type {

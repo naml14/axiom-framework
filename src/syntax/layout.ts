@@ -1,5 +1,5 @@
 // ============================================================
-// src/syntax/layout.ts — Layout DSL: stack, vstack, row, grid, box
+// src/syntax/layout.ts — Layout DSL: stack, vstack, row, grid, masonry, box
 // Axiom Framework — Nueva Capa de Sintaxis v2.0.0
 // ============================================================
 //
@@ -80,6 +80,19 @@ export function grid(
   const finalProps: HProps = { ...(rest as HProps), layout: mergedLayout }
 
   return h(tag, finalProps, ...children)
+}
+
+/** Shortest-column layout, with the same columns, gaps and overrides as grid(). */
+export function masonry(
+  columns: number | `repeat(${number}, 1fr)`,
+  props?: GridProps | null,
+  ...children: HChild[]
+): ElementNode {
+  // Reuse grid's prop normalization and layout-override precedence.
+  return grid(columns, {
+    ...props,
+    layout: { display: 'masonry', ...props?.layout },
+  }, ...children)
 }
 
 // ─── box() — azúcar semántica opcional sobre h() (C18) ───────────────────────

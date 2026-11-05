@@ -19,6 +19,7 @@ import {
 import { measureSimple } from './fast-path.js'
 import { resolveResponsiveLayout } from '../strategy/responsive.js'
 import { measureGrid } from './grid.js'
+import { measureMasonry } from './masonry.js'
 import { measureTextChild } from './text-measure.js'
 import { acquireFlexScratch, releaseFlexScratch, takeFlexItem, type FlexLineScratch } from './scratch.js'
 
@@ -152,11 +153,13 @@ export function measureFlex(
       const childMetrics = getMetrics(child)
       const childHasFlex = childLayout?.flexDirection !== undefined
       const childIsGrid = childLayout?.display === 'grid'
-      if (!childHasFlex && !childIsGrid && childMetrics.simpleLayout && (childLayout?.padding ?? 0) === 0 && childLayout?.gap === undefined) {
+      const childIsMasonry = childLayout?.display === 'masonry'
+      if (!childHasFlex && !childIsGrid && !childIsMasonry && childMetrics.simpleLayout && (childLayout?.padding ?? 0) === 0 && childLayout?.gap === undefined) {
         layoutChildFast(child, childWidth, result, lineHeight)
       } else {
-        if (childIsGrid) {
-          measureGrid(
+        if (childIsGrid || childIsMasonry) {
+          const measure = childIsMasonry ? measureMasonry : measureGrid
+          measure(
             child,
             childWidth,
             childHeight > 0 ? childHeight : availableHeight,

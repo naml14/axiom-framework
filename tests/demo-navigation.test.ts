@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { Window } from 'happy-dom'
 import { readFileSync } from 'node:fs'
-import { initSidebarNavigation } from '../demo/sidebar-navigation.ts'
+import { initSidebarNavigation } from '../demo/sidebar-navigation.js'
 
 const html = readFileSync(new URL('../demo/static.html', import.meta.url), 'utf8')
 const windows: Window[] = []
@@ -131,6 +131,51 @@ describe('sidebar navigation (S6)', () => {
     ])
     expect(link?.getAttribute('aria-current')).toBe('location')
     expect(env.links().filter(item => item.hasAttribute('aria-current'))).toHaveLength(1)
+  })
+
+  test('S6: refresh continuously intersecting sections', async () => {
+    const e = setup(), [a, b] = e.observed
+    const root = (e.win.document as unknown as Document).querySelector('.dashboard-sidebar')!
+    const rect = (top: number, bottom: number) =>
+      ({ top, bottom, left: 0, right: 100, width: 100, height: bottom - top }) as DOMRect
+    root.getBoundingClientRect = () => rect(0, 400)
+    a!.getBoundingClientRect = () => rect(-200, 100)
+    b!.getBoundingClientRect = () => rect(100, 500)
+    e.emit([
+      { target: a, isIntersecting: true, top: 0, height: 300 },
+      { target: b, isIntersecting: true, top: 300, height: 100 },
+    ])
+    root.dispatchEvent(new e.win.Event('scroll') as unknown as Event)
+    await new Promise(resolve => setTimeout(resolve, 50))
+    expect(e.links().find(link => link.hasAttribute('aria-current'))?.hash).toBe(`#${b!.id}`)
+    expect(e.win.location.href).toBe('https://demo.test/about?demo=1')
+    expect(e.scrolled).toEqual([])
+    e.cleanup()
+    a!.getBoundingClientRect = () => rect(0, 400)
+    b!.getBoundingClientRect = () => rect(400, 500)
+    root.dispatchEvent(new e.win.Event('scroll') as unknown as Event)
+    expect(e.links().find(link => link.hasAttribute('aria-current'))?.hash).toBe(`#${b!.id}`)
+  })
+
+  test('S6: reveal clipped active entry', () => {
+    const e = setup(), target = e.observed[1]!
+    const nav = (e.win.document as unknown as Document).querySelector<HTMLElement>('.sidebar-index')!
+    Object.defineProperties(nav, {
+      clientHeight: { value: 100 }, scrollHeight: { value: 500 },
+    })
+    const link = e.links().find(link => link.hash === `#${target.id}`)!
+    Object.defineProperties(link, {
+      offsetTop: { value: 300 }, offsetHeight: { value: 20 },
+    })
+    link.getBoundingClientRect = () =>
+      ({ top: 300, bottom: 320, height: 20 }) as DOMRect
+    nav.getBoundingClientRect = () =>
+      ({ top: 0, bottom: 100, height: 100 }) as DOMRect
+    link.scrollIntoView = () => { nav.scrollTop = 220 }
+    e.emit([{ target, isIntersecting: true, top: 0, height: 300 }])
+    expect(nav.scrollTop).toBeGreaterThan(0)
+    expect(e.scrolled).toEqual([])
+    expect(e.win.location.href).toBe('https://demo.test/about?demo=1')
   })
 
   test('leaves unrelated pages unchanged', () => {

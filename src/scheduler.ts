@@ -23,6 +23,15 @@ function getQueue(scheduler: SchedulerFn): SchedulerQueue {
   return queue
 }
 
+// Creates a queue key that owns its pending callbacks while still driving the
+// given scheduler. Two apps never share a queue, so unmounting one cannot drop
+// the other's pending render, and a queue left behind by a dropped frame cannot
+// strand a later app.
+export function createIsolatedScheduler(scheduler?: SchedulerFn): SchedulerFn {
+  const drive = scheduler ?? _globalScheduler
+  return (cb: RenderCallback) => { drive(cb) }
+}
+
 export function scheduleRender(callback: RenderCallback, scheduler?: SchedulerFn): void {
   const sched = scheduler ?? _globalScheduler
   const queue = getQueue(sched)
@@ -48,6 +57,7 @@ export function cancelScheduled(scheduler?: SchedulerFn): void {
     if (queue) {
       queue.callbacks.clear()
       queue.scheduled = false
+      queues.delete(scheduler)
     }
   } else {
     for (const queue of queues.values()) {

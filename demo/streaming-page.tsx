@@ -4,14 +4,9 @@
 // Esta página se sirve desde /ssr-stream usando renderToReadableStream().
 // Demuestra el uso de la API experimental para emitir HTML progresivamente.
 //
-// Nota: la implementación actual de renderToReadableStream emite en un solo
-// chunk (ver src/ssr-stream.ts). El endpoint /ssr-stream en demo/server.ts
-// hace chunking artificial con delays para visualizar la diferencia entre
-// respuesta clásica y streaming.
-//
-// En una versión futura, renderToReadableStream() podrá emitir múltiples
-// chunks (e.g. head primero, body después, o async boundaries) para que
-// el navegador pueda empezar a parsear antes de que termine el render.
+// El core serializa el documento progresivamente según la demanda del lector.
+// El endpoint sirve ese stream directamente; la recepción en red puede agrupar
+// los chunks. No hay soporte de fronteras asíncronas dentro del árbol.
 // ============================================================
 
 /// <reference types="../src/jsx.d.ts" />
@@ -63,11 +58,7 @@ export const StreamingDemoPage: ComponentDefinition<void> = (() => {
           classes: ['ssr-stream-muted'],
           children: [
             { type: 'element', tag: 'strong', children: [{ type: 'text', content: 'Estado actual' }] },
-            { type: 'text', content: ': la implementación emite en un solo chunk (ver ' },
-            { type: 'element', tag: 'code', children: [{ type: 'text', content: 'src/ssr-stream.ts' }] },
-            { type: 'text', content: '). El demo usa un ' },
-            { type: 'element', tag: 'em', children: [{ type: 'text', content: 'chunking artificial' }] },
-            { type: 'text', content: ' para que puedas ver en DevTools cómo el navegador recibe los chunks progresivamente.' },
+            { type: 'text', content: ': el core serializa el documento progresivamente según la demanda del lector. El endpoint sirve ese stream directamente, sin buffering ni delays añadidos. La red puede agrupar los chunks; un documento pequeño puede recibirse en uno solo.' },
           ],
         },
         {
@@ -76,7 +67,7 @@ export const StreamingDemoPage: ComponentDefinition<void> = (() => {
           classes: ['ssr-stream-muted'],
           children: [
             { type: 'element', tag: 'strong', children: [{ type: 'text', content: 'Futuro' }] },
-            { type: 'text', content: ': async boundaries tipo Suspense permitirán que cada subtree async se emita en su propio chunk cuando termine de cargar.' },
+            { type: 'text', content: ': las fronteras asíncronas dentro del árbol no están soportadas por esta API.' },
           ],
         },
         { type: 'element', tag: 'hr', children: [] },

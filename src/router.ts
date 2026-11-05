@@ -9,6 +9,8 @@ export interface Route {
   path: string
   component: ComponentDefinition<unknown>
   name?: string
+  /** Map the current route state to outlet component props; defaults to undefined. */
+  props?: (route: RouteState) => unknown
 }
 
 export interface RouteState {
@@ -305,6 +307,43 @@ export function createRouter(routes: Route[]): Router {
   }
 
   return router
+}
+
+/**
+ * Create a signal-only route view suitable for createApp or component composition.
+ * The table is captured at creation; matching/specificity remain owned by the router.
+ * Only a match present in this table is rendered, otherwise fallback is invoked.
+ *
+ * @example
+ * const routes: Route[] = [{
+ *   path: '/users/:id', component: UserPage,
+ *   props: route => ({ userId: route.params.id }),
+ * }]
+ * const router = createRouter(routes)
+ * const RouteView = createRouteOutlet(router.$route, routes, NotFound)
+ */
+export function createRouteOutlet(
+  $route: Signal<RouteState>,
+  routes: readonly Route[],
+  fallback: ComponentDefinition<void>
+): ComponentDefinition<void> {
+  // Normalize once, not during rendering. Keep the first entry for duplicate
+  // patterns, matching createRouter's stable specificity ordering.
+  const table = new Map<string, Route>()
+  for (const route of routes) {
+    const path = route.path === '*' ? '*' : normalizePath(route.path)
+    if (!table.has(path)) table.set(path, route)
+  }
+
+  return {
+    _id: Symbol('RouteOutlet'),
+    _fn() {
+      const state = $route.value
+      const route = state.matched === null ? undefined : table.get(state.matched.path)
+      if (route === undefined) return fallback._fn(undefined)
+      return route.component._fn(route.props?.(state))
+    },
+  }
 }
 
 export interface AsyncComponentOptions<P = void> {

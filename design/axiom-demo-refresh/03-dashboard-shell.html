@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Axiom demo — dirección visual</title>
+<style>
+  :root {
+    --bg:#090b13; --bg-soft:#0b0e1a; --bg-sidebar:#0f111d;
+    --surface:#141827; --surface-2:#1c2133; --surface-3:#262d43;
+    --border:#2a395a; --border-subtle:#1e253b;
+    --text:#eef0f7; --text-muted:#97a1c4; --text-dim:#95a0bf;
+    --blue:#5ea3f7; --blue-deep:#1053c6;
+    --cyan:#26c7d9; --amber:#f9a806; --rose:#fb768c; --indigo:#83a0db;
+    --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --r-sm:8px; --r-md:12px; --r-lg:18px; --r-pill:999px;
+    --sh-sm:0 1px 2px rgba(0,0,0,.4);
+    --sh-md:0 8px 24px rgba(0,0,0,.35);
+    --sh-lg:0 24px 60px rgba(0,0,0,.55);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{
+    width:1440px; background:var(--bg); color:var(--text); font-family:var(--sans);
+    font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none}
+  :focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:4px}
+  .mono{font-family:var(--mono)}
+  .kicker{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--blue)}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;
+    padding:11px 20px;border-radius:var(--r-pill);border:1px solid transparent;cursor:pointer;
+    transition:transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn-primary{background:linear-gradient(135deg,var(--blue-deep),#2f7ae5);color:#fff;box-shadow:0 8px 24px rgba(16,83,198,.35)}
+  .btn-primary:hover{transform:translateY(-1px)}
+  .btn-ghost{background:rgba(255,255,255,.03);border-color:var(--border);color:var(--text)}
+  .btn-ghost:hover{border-color:rgba(94,163,247,.5);background:rgba(94,163,247,.08)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-md)}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-muted);
+    background:var(--surface-2);border:1px solid var(--border-subtle);border-radius:var(--r-pill);padding:6px 13px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--blue);flex:none}
+  .stat-num{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+  .stat-label{font-size:12px;color:var(--text-muted)}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media (prefers-reduced-motion:reduce){.btn,.btn-primary{transition:none;transform:none}}
+</style>
+</head>
+<body>
+<!-- Direction 03 — dashboard shell. Same tokens applied to the real demo chrome. -->
+<div style="display:flex;height:900px;background:var(--bg)">
+  <aside style="width:320px;flex:none;background:var(--bg-sidebar);border-right:1px solid var(--border-subtle);
+       padding:24px 20px;display:flex;flex-direction:column;gap:22px;overflow:hidden">
+    <div>
+      <div style="display:flex;align-items:center;gap:11px">
+        <span style="font-size:22px">⚡</span>
+        <span style="font-size:18px;font-weight:800;letter-spacing:.3em">AXIOM</span>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:7px">"El DOM es solo la pantalla de salida"</p>
+    </div>
+
+    <nav style="display:flex;flex-direction:column;gap:4px">
+      <p style="font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px">Índice</p>
+      <span style="font-size:13.5px;font-weight:600;padding:7px 11px;border-radius:var(--r-sm);background:rgba(94,163,247,.12);
+            color:var(--blue);box-shadow:inset 2px 0 0 var(--blue)">Core &amp; Layout Engine</span>
+      <span style="font-size:13.5px;color:var(--text-muted);padding:7px 11px">Syntax &amp; Reactivity</span>
+      <span style="font-size:13.5px;color:var(--text-muted);padding:7px 11px">Application Layer</span>
+      <span style="font-size:13.5px;color:var(--text-muted);padding:7px 11px">DX &amp; Runtime</span>
+    </nav>
+
+    <section style="border-top:1px solid var(--border-subtle);padding-top:18px;display:flex;flex-direction:column;gap:14px">
+      <p style="font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim)">Controles del canvas</p>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-muted)"><span>Ancho</span><span class="mono" style="color:var(--blue);font-weight:600">800px</span></div>
+        <div style="height:4px;border-radius:var(--r-pill);background:var(--surface-3);margin-top:8px;position:relative">
+          <div style="width:50%;height:100%;border-radius:var(--r-pill);background:linear-gradient(90deg,var(--blue-deep),var(--blue))"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:13px;height:13px;border-radius:50%;
+               background:var(--blue);box-shadow:0 0 0 4px rgba(94,163,247,.18)"></div>
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-muted)"><span>Items</span><span class="mono" style="color:var(--blue);font-weight:600">20</span></div>
+        <div style="height:4px;border-radius:var(--r-pill);background:var(--surface-3);margin-top:8px;position:relative">
+          <div style="width:28%;height:100%;border-radius:var(--r-pill);background:linear-gradient(90deg,var(--blue-deep),var(--blue))"></div>
+          <div style="position:absolute;left:28%;top:50%;transform:translate(-50%,-50%);width:13px;height:13px;border-radius:50%;
+               background:var(--blue);box-shadow:0 0 0 4px rgba(94,163,247,.18)"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span class="chip" style="font-size:12px;padding:6px 12px"><i class="dot"></i>Animación</span>
+        <span class="chip" style="font-size:12px;padding:6px 12px"><i class="dot" style="background:var(--cyan)"></i>Métricas</span>
+      </div>
+    </section>
+
+    <p style="font-size:12px;line-height:1.6;color:var(--text-dim);margin-top:auto">
+      DOM reads mide lecturas reales de dimensiones. El hot path de reflow calcula en memoria.
+    </p>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <div style="flex:1;padding:30px 34px;overflow:hidden">
+      <div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:24px">
+        <span class="chip"><i class="dot" style="background:var(--blue)"></i>TypeScript</span>
+        <span class="chip"><i class="dot" style="background:var(--cyan)"></i>Performance</span>
+        <span class="chip"><i class="dot" style="background:var(--indigo)"></i>Web</span>
+        <span class="chip"><i class="dot" style="background:var(--rose)"></i>Signals</span>
+        <span class="chip"><i class="dot" style="background:var(--blue)"></i>Layout</span>
+        <span class="chip"><i class="dot" style="background:var(--cyan)"></i>DOM-free</span>
+        <span class="chip"><i class="dot" style="background:var(--blue)"></i>Reactive</span>
+        <span class="chip"><i class="dot" style="background:var(--amber)"></i>Fast</span>
+      </div>
+
+      <section class="card" style="padding:28px 30px;background:linear-gradient(140deg,rgba(16,83,198,.16),rgba(38,199,217,.10) 60%,var(--surface));
+               border-color:rgba(94,163,247,.32);display:flex;flex-direction:column;gap:10px">
+        <p class="kicker">Axiom framework</p>
+        <h1 style="font-size:34px;font-weight:800;letter-spacing:-.025em;line-height:1.12">Renderizado en dos fases</h1>
+        <p style="font-size:15px;color:var(--text-muted);max-width:64ch">
+          Todos los cálculos ocurren en memoria. El hot path es aritmética pura. Cero lecturas DOM:
+          cuando cambia el ancho, el framework recalcula el layout sin tocar el DOM hasta el commit final.
+        </p>
+      </section>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:20px">
+        <article class="card" style="padding:18px;border-top:2px solid var(--blue)">
+          <h3 style="font-size:15px;font-weight:700">Article 1</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:6px">Short.</p>
+        </article>
+        <article class="card" style="padding:18px;border-top:2px solid var(--cyan)">
+          <h3 style="font-size:15px;font-weight:700">Article 2</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:6px">Medium length that wraps nicely on most screens.</p>
+        </article>
+        <article class="card" style="padding:18px;border-top:2px solid var(--amber)">
+          <h3 style="font-size:15px;font-weight:700">Article 3</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:6px">The quick brown fox jumps over the lazy dog.</p>
+        </article>
+        <article class="card" style="padding:18px;border-top:2px solid var(--indigo)">
+          <h3 style="font-size:15px;font-weight:700">Article 4</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:6px">A longer editorial piece that demonstrates multi-line text handling.</p>
+        </article>
+      </div>
+    </div>
+
+    <footer style="height:54px;flex:none;display:flex;align-items:center;gap:26px;padding:0 24px;
+            background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,.3)">
+      <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim)">Prepare</span>
+      <span class="mono" style="font-size:12.5px;color:var(--text-muted)">0.00ms</span>
+      <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim)">Reflow</span>
+      <span class="mono" style="font-size:12.5px;color:var(--text-muted)">0.00ms</span>
+      <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim)">Commit</span>
+      <span class="mono" style="font-size:12.5px;color:var(--text-muted)">0.00ms</span>
+      <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim)">Total</span>
+      <span class="mono" style="font-size:14px;font-weight:700;color:var(--blue)">0.00ms</span>
+      <span class="chip mono" style="margin-left:auto;font-size:11px;padding:5px 11px"><i class="dot" style="background:var(--cyan)"></i>DOM reads: 26</span>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

@@ -63,6 +63,21 @@ export function renderToString(
   component: ComponentDefinition<void>,
   options?: SSRRenderOptions
 ): string {
+  let html = ''
+  for (const chunk of serializeDocument(component, options)) html += chunk
+  return html
+}
+
+/**
+ * Shared, escaped SSR serialization. Preparation/layout run on first demand;
+ * callers must exhaust or return the iterator to release its pooled layout.
+ * Serialization is outside the arithmetic-only layout hot path.
+ * @internal
+ */
+export function* serializeDocument(
+  component: ComponentDefinition<void>,
+  options?: SSRRenderOptions
+): Generator<string, void, unknown> {
   const prepared = prepare(component, undefined, {
     font: options?.font ?? '16px sans-serif',
     textEngine: options?.textEngine,
@@ -79,48 +94,50 @@ export function renderToString(
     }
   )
 
-  const rootId = escapeHtml(options?.rootId ?? 'app')
-  let bodyHtml = ''
-  let headHtml = ''
   try {
-    bodyHtml = renderNode(prepared, layout)
-    headHtml = renderHead(options?.metadata)
+    const rootId = escapeHtml(options?.rootId ?? 'app')
+    // Preserve the bare <body> contract unless a style is explicitly provided.
+    const bodyAttr = options?.metadata?.bodyStyle !== undefined && options.metadata.bodyStyle.length > 0
+      ? ` style="${escapeHtml(escapeStyleText(options.metadata.bodyStyle))}"`
+      : ''
+
+    yield '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+    yield* renderHead(options?.metadata)
+    yield `</head><body${bodyAttr}><div id="${rootId}">`
+    yield* renderNode(prepared, layout)
+    yield '</div></body></html>'
   } finally {
     releaseLayoutResult(layout)
   }
-
-  // bodyStyle is opt-in — only emit style attribute when the caller provides it
-  // so that the bare <body> contract expected by tests is preserved by default.
-  const bodyAttr = options?.metadata?.bodyStyle !== undefined && options.metadata.bodyStyle.length > 0
-    ? ` style="${escapeHtml(escapeStyleText(options.metadata.bodyStyle))}"`
-    : ''
-
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${headHtml}</head><body${bodyAttr}><div id="${rootId}">${bodyHtml}</div></body></html>`
 }
 
-function renderNode(
+function* renderNode(
   node: PreparedComponent,
   layout: LayoutResult,
   isPortalChild = false
-): string {
+): Generator<string, void, unknown> {
   const nodeType = getNodeType(node)
 
   if (nodeType === 'text') {
-    return escapeHtml(getTextContent(node) ?? '')
+    yield escapeHtml(getTextContent(node) ?? '')
+    return
   }
 
   const children = getPreparedChildren(node)
   const idx = getNodeIndex(node)
 
   if (nodeType === 'fragment') {
-    return children.map(child => renderNode(child, layout, isPortalChild)).join('')
+    for (const child of children) yield* renderNode(child, layout, isPortalChild)
+    return
   }
 
   if (nodeType === 'portal') {
     // Portals are transparent but need a boundary marker for hydration
     const portalId = `portal-${idx}`
-    const markerContent = children.map(child => renderNode(child, layout, true)).join('')
-    return `<div data-axiom-id="${idx}" data-axiom-portal="${portalId}">${markerContent}</div>`
+    yield `<div data-axiom-id="${idx}" data-axiom-portal="${portalId}">`
+    for (const child of children) yield* renderNode(child, layout, true)
+    yield '</div>'
+    return
   }
 
   const tag = sanitizeTagName(getTag(node) ?? 'div')
@@ -168,32 +185,29 @@ function renderNode(
     ? `<${tag} ${serializedAttrs}>`
     : `<${tag}>`
 
+  yield openTag
   // Los elementos void no tienen closing tag ni pueden tener hijos (HTML5).
-  if (VOID_ELEMENTS.has(tag)) {
-    return openTag
-  }
+  if (VOID_ELEMENTS.has(tag)) return
 
-  const inner = children.map(child => renderNode(child, layout, isPortalChild)).join('')
-  return `${openTag}${inner}</${tag}>`
+  for (const child of children) yield* renderNode(child, layout, isPortalChild)
+  yield `</${tag}>`
 }
 
-function renderHead(metadata?: SSRMetadata): string {
-  let html = ''
-
-  if (metadata === undefined) return html
+function* renderHead(metadata?: SSRMetadata): Generator<string, void, unknown> {
+  if (metadata === undefined) return
 
   if (metadata.title !== undefined) {
-    html += `<title>${escapeHtml(metadata.title)}</title>`
+    yield `<title>${escapeHtml(metadata.title)}</title>`
   }
 
   if (metadata.description !== undefined) {
-    html += `<meta name="description" content="${escapeHtml(metadata.description)}">`
+    yield `<meta name="description" content="${escapeHtml(metadata.description)}">`
   }
 
   if (metadata.og !== undefined) {
     const keys = Object.keys(metadata.og).sort()
     for (const key of keys) {
-      html += `<meta property="og:${escapeHtml(key)}" content="${escapeHtml(metadata.og[key]!)}">`
+      yield `<meta property="og:${escapeHtml(key)}" content="${escapeHtml(metadata.og[key]!)}">`
     }
   }
 
@@ -208,16 +222,14 @@ function renderHead(metadata?: SSRMetadata): string {
       // entirely rather than emit a live tag pointing at a hostile origin.
       const sanitizedHref = sanitizeUrlValue(trimmed)
       if (sanitizedHref === '#blocked') continue
-      html += `<link rel="stylesheet" href="${escapeHtml(sanitizedHref)}">`
+      yield `<link rel="stylesheet" href="${escapeHtml(sanitizedHref)}">`
     }
   }
 
   if (metadata.inlineStyles !== undefined && metadata.inlineStyles.length > 0) {
     // Preserve CSS content while preventing `</style>` from terminating the raw-text element.
-    html += `<style>${escapeStyleText(metadata.inlineStyles)}</style>`
+    yield `<style>${escapeStyleText(metadata.inlineStyles)}</style>`
   }
-
-  return html
 }
 
 /**

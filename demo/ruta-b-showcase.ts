@@ -1,5 +1,7 @@
 import {
   signal,
+  effect,
+  cancelTransition,
   defineComponent,
   createApp,
   createTransition,
@@ -16,9 +18,8 @@ import {
   clearPlugins,
   matchesBreakpoint,
   resolveLayoutDimension,
-} from '../src/index.ts'
-import type { Signal } from '../src/index.ts'
-import { wireShowcase } from './wire-showcase.ts'
+} from '../src/index.js'
+import type { Signal } from '../src/index.js'
 
 // ============================================================
 // Ruta B Showcase — 6 fases: responsive, grid, style,
@@ -35,29 +36,37 @@ interface RutaBShowcaseDeps {
 //    Incluye el fix principal de ruta-b: gridRowSpan + height:'100%'
 // ============================================================
 
+const gridInstances = new WeakMap<HTMLElement, { dispose(): void }>()
+
 /** Mount the grid independently and expose its state and teardown to demo consumers. */
 export function initGridDemo() {
   const container = document.getElementById('ruta-b-grid-root')
   if (container === null) return
-
-  // Estado: cuántas celdas mostrar
-  const cellCount = signal(6)
+  gridInstances.get(container)?.dispose()
 
   // La celda Hero tiene rowSpan=2, así que el grid conserva siempre una
   // celda como mínimo.
   const MIN_CELLS = 1
 
   const CELL_LABELS = [
-    { label: 'Hero\n(rowSpan=2)', rowSpan: 2, colSpan: 1, accent: 'violet', height: '100%' as const },
-    { label: 'A', rowSpan: 1, colSpan: 1, accent: 'teal', height: 60 },
+    { label: 'Hero\n(rowSpan=2)', rowSpan: 2, colSpan: 1, accent: 'blue', height: '100%' as const },
+    { label: 'A', rowSpan: 1, colSpan: 1, accent: 'cyan', height: 60 },
     { label: 'B', rowSpan: 1, colSpan: 1, accent: 'amber', height: 60 },
     { label: 'Wide\n(colSpan=2)', rowSpan: 1, colSpan: 2, accent: 'rose', height: 60 },
-    { label: 'C', rowSpan: 1, colSpan: 1, accent: 'sky', height: 60 },
-    { label: 'D', rowSpan: 1, colSpan: 1, accent: 'teal', height: 60 },
+    { label: 'C', rowSpan: 1, colSpan: 1, accent: 'indigo', height: 60 },
+    { label: 'D', rowSpan: 1, colSpan: 1, accent: 'cyan', height: 60 },
   ]
 
+  const countState = signal(CELL_LABELS.length)
+  const cellCount: Signal<number> = {
+    get value() { return countState.value },
+    set value(next: number) {
+      countState.value = Math.max(MIN_CELLS, Math.min(CELL_LABELS.length, Math.trunc(next) || MIN_CELLS))
+    },
+  }
+
   const GridDemo = defineComponent(() => {
-    const count = Math.min(cellCount.value, CELL_LABELS.length)
+    const count = cellCount.value
     const cells = CELL_LABELS.slice(0, count)
 
     return {
@@ -110,7 +119,7 @@ export function initGridDemo() {
   const removeBtn = document.getElementById('ruta-b-grid-remove') as HTMLButtonElement | null
   const statusEl = document.getElementById('ruta-b-grid-status')
 
-  const stopStatus = wireShowcase(() => {
+  const stopStatus = effect(() => {
     if (statusEl === null) return
     const count = cellCount.value
     const hasRowSpan = count >= 1
@@ -134,15 +143,21 @@ export function initGridDemo() {
   addBtn?.addEventListener('click', addCell)
   removeBtn?.addEventListener('click', removeCell)
 
-  return {
+  let disposed = false
+  const instance = {
     cellCount,
     dispose(): void {
+      if (disposed) return
+      disposed = true
       stopStatus()
       addBtn?.removeEventListener('click', addCell)
       removeBtn?.removeEventListener('click', removeCell)
       gridApp.unmount()
+      gridInstances.delete(container)
     },
   }
+  gridInstances.set(container, instance)
+  return instance
 }
 
 // ============================================================
@@ -157,12 +172,12 @@ function initResponsiveDemo(containerWidth: Signal<number>) {
   const BREAKPOINTS = [
     { label: 'xs', min: 0, max: 479, color: 'var(--accent-rose)' },
     { label: 'sm', min: 480, max: 767, color: 'var(--accent-amber)' },
-    { label: 'md', min: 768, max: 1023, color: 'var(--accent-teal)' },
-    { label: 'lg', min: 1024, max: 1279, color: 'var(--accent-sky)' },
-    { label: 'xl', min: 1280, max: 9999, color: 'var(--accent-violet)' },
+    { label: 'md', min: 768, max: 1023, color: 'var(--accent-cyan)' },
+    { label: 'lg', min: 1024, max: 1279, color: 'var(--accent-indigo)' },
+    { label: 'xl', min: 1280, max: 9999, color: 'var(--accent-blue)' },
   ] as const
 
-  return wireShowcase(() => {
+  return effect(() => {
     const w = containerWidth.value
     const active = BREAKPOINTS.find((bp) => matchesBreakpoint(bp.min, bp.max, undefined, undefined, w, 0))
     const cols = resolveLayoutDimension('100%', { maxWidth: w, maxHeight: 600 }, 'width') ?? w
@@ -234,7 +249,7 @@ function initStyleDemo() {
   const resolved = resolveStyleTokens(rawProps, theme)
 
   const label = signal(sampleEl.textContent)
-  const stop = wireShowcase(() => {
+  const stop = effect(() => {
     sampleEl.textContent = label.value
     outputEl.textContent = JSON.stringify(
       {
@@ -284,7 +299,7 @@ function initAnimationDemo() {
   // Animation state has no signal notifications; sample the runtime only while running.
   const progress = signal<number | null>(null)
   const status = signal(`opacity: ${transition.duration}ms ${transition.easing} | backgroundColor: ${bgTransition.duration}ms delay:${bgTransition.delay}ms`)
-  const stop = wireShowcase(() => {
+  const stop = effect(() => {
     if (statusEl !== null) statusEl.textContent = status.value
     if (progressEl !== null && progress.value !== null) progressEl.style.width = `${progress.value * 100}%`
   })
@@ -315,10 +330,8 @@ function initAnimationDemo() {
 
   cancelBtn?.addEventListener('click', () => {
     cancelAnimationFrame(rafId)
-    // cancelTransition limpia el estado; applyImmediately requiere HTMLElement,
-    // así que reseteamos el estado y la barra directamente.
-    animState.activeTransition = null
-    bgAnimState.activeTransition = null
+    cancelTransition(animState)
+    cancelTransition(bgAnimState)
     progress.value = 0
     status.value = 'Transición cancelada'
   })
@@ -347,7 +360,7 @@ function initPluginDemo() {
 
   if (logEl === null) return
   const logText = signal(logEl.textContent)
-  const stop = wireShowcase(() => { logEl.textContent = logText.value })
+  const stop = effect(() => { logEl.textContent = logText.value })
 
   const events: string[] = []
   const MAX_LOG = 12
@@ -423,7 +436,7 @@ function initErrorEnvelopeDemo() {
 
   if (outputEl === null) return
   const output = signal(outputEl.textContent)
-  const stop = wireShowcase(() => { outputEl.textContent = output.value })
+  const stop = effect(() => { outputEl.textContent = output.value })
 
   runBtn?.addEventListener('click', () => {
     const scratch = document.createElement('div')
