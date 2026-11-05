@@ -32,7 +32,7 @@ export type { SSRMetadata, SSRRenderOptions } from './ssr.js'
 export type { HydrationOptions, HydrationResult } from './core/types.js'
 
 // --- Router ---
-export { createRouter, defineAsyncComponent } from './router.js'
+export { createRouter, createRouteOutlet, defineAsyncComponent } from './router.js'
 export type { Route, RouteState, Router, AsyncComponentOptions } from './router.js'
 
 // --- Layout (advanced — for custom rendering pipelines) ---
