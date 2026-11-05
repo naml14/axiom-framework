@@ -102,7 +102,7 @@ export const VALID_JUSTIFY_VALUES: readonly JustifyContent[] = ['start', 'center
 export const VALID_ALIGN_VALUES: readonly AlignItems[] = ['start', 'center', 'end', 'stretch', 'baseline'] as const
 export type FlexDirection = 'row' | 'column'
 export type FlexWrap = 'nowrap' | 'wrap' | 'wrap-reverse'
-export type LayoutDisplay = 'flex' | 'grid'
+export type LayoutDisplay = 'flex' | 'grid' | 'masonry'
 
 // Grid MVP subset (Fase 2, slice inicial):
 // - número fijo de columnas (N)

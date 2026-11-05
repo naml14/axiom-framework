@@ -18,6 +18,7 @@ import {
 import { measureSimple } from './engines/fast-path.js'
 import { measureFlex } from './engines/flex.js'
 import { measureGrid } from './engines/grid.js'
+import { measureMasonry } from './engines/masonry.js'
 import { measureTextChild } from './engines/text-measure.js'
 import { resolveResponsiveLayout } from './strategy/responsive.js'
 import { acquireLayoutResult } from './pool.js'
@@ -117,8 +118,9 @@ function layoutNode(
   const metrics = getMetrics(prepared)
   const hasLayoutProps = layout !== undefined
 
-  if (layout?.display === 'grid') {
-    measureGrid(
+  if (layout?.display === 'grid' || layout?.display === 'masonry') {
+    const measure = layout.display === 'masonry' ? measureMasonry : measureGrid
+    measure(
       prepared,
       childMaxWidth,
       childMaxHeight,

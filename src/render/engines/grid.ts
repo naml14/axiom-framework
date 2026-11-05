@@ -16,6 +16,7 @@ import {
 import { resolveResponsiveLayout } from '../strategy/responsive.js'
 import { measureSimple } from './fast-path.js'
 import { measureFlex } from './flex.js'
+import { measureMasonry } from './masonry.js'
 import { measureTextChild } from './text-measure.js'
 import {
   acquireGridScratch,
@@ -365,7 +366,7 @@ export function measureGrid(
   }
 }
 
-function measureGridChildContents(
+export function measureGridChildContents(
   prepared: PreparedComponent,
   availableWidth: number,
   availableHeight: number,
@@ -377,9 +378,11 @@ function measureGridChildContents(
   const metrics = getMetrics(prepared)
   const hasLayoutProps = layout !== undefined
   const isGrid = layout?.display === 'grid'
+  const isMasonry = layout?.display === 'masonry'
 
-  if (isGrid) {
-    measureGrid(
+  if (isGrid || isMasonry) {
+    const measure = isMasonry ? measureMasonry : measureGrid
+    measure(
       prepared,
       availableWidth,
       availableHeight,
@@ -407,7 +410,7 @@ function measureGridChildContents(
   )
 }
 
-function resolveColumnCount(template: number | string | undefined): number {
+export function resolveColumnCount(template: number | string | undefined): number {
   if (typeof template === 'number') {
     return normalizeColumnCount(template)
   }
