@@ -3,7 +3,7 @@
 // ============================================================
 
 import type { ComponentDefinition } from './core/types.js'
-import { renderToString, type SSRMetadata, type SSRRenderOptions } from './ssr.js'
+import { serializeDocument, type SSRMetadata, type SSRRenderOptions } from './ssr.js'
 
 // ============================================================
 // Types
@@ -19,9 +19,10 @@ export interface StreamSSROptions extends SSRRenderOptions {}
  * Render a component to a ReadableStream containing the HTML produced by
  * `renderToString()`.
  *
- * The current implementation emits a single HTML chunk and then closes the
- * stream. It does not currently support async boundary streaming or
- * replacement updates.
+ * Serializes successive document tokens on demand, without buffering the whole
+ * HTML document. Cancellation releases the active pooled layout. Preparation
+ * and layout remain synchronous; async boundaries/replacement updates are not
+ * supported.
  *
  * @experimental — API may change in minor versions
  */
@@ -40,15 +41,46 @@ export function renderToReadableStream(
   ) {
     throw new Error('renderToReadableStream() requires a valid component definition')
   }
-  const html = renderToString(component, options)
+  const chunks = serializeDocument(component, options)
   const encoder = new TextEncoder()
+  let pendingSurrogate = ''
 
-  return new ReadableStream({
-    start(controller) {
-      controller.enqueue(encoder.encode(html))
-      controller.close()
+  return new ReadableStream<Uint8Array>({
+    pull(controller) {
+      try {
+        // Adjacent text tokens may split a UTF-16 surrogate pair. Retain only
+        // its leading code unit, never an encoded document or subtree buffer.
+        while (true) {
+          const chunk = chunks.next()
+          if (chunk.done) {
+            if (pendingSurrogate) controller.enqueue(encoder.encode(pendingSurrogate))
+            pendingSurrogate = ''
+            controller.close()
+            return
+          }
+          let text = pendingSurrogate + chunk.value
+          pendingSurrogate = ''
+          const last = text.charCodeAt(text.length - 1)
+          if (last >= 0xD800 && last <= 0xDBFF) {
+            pendingSurrogate = text.slice(-1)
+            text = text.slice(0, -1)
+          }
+          if (text.length === 0) continue
+          controller.enqueue(encoder.encode(text))
+          return
+        }
+      } catch (error) {
+        // Also closes the iterator if encoding/enqueuing itself failed.
+        pendingSurrogate = ''
+        chunks.return()
+        controller.error(error)
+      }
     },
-  })
+    cancel() {
+      pendingSurrogate = ''
+      chunks.return()
+    },
+  }, { highWaterMark: 0 })
 }
 
 export { type SSRMetadata, type SSRRenderOptions }
