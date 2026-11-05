@@ -1,5 +1,5 @@
 import type { PreparedComponent, LayoutResult } from '../../core/types.js'
-import { getNodeIndex, getTextHandle, getTextContent } from '../prepare.js'
+import { getNodeIndex, getTextContent, layoutPreparedText } from '../prepare.js'
 
 // ============================================================
 // Shared text measurement helper
@@ -20,15 +20,14 @@ export function measureTextChild(
   lineHeight: number
 ): void {
   const idx = getNodeIndex(prepared)
-  const textHandle = getTextHandle(prepared)
-
-  let text: string | undefined
-  if (textHandle !== undefined) {
-    text = (textHandle as { text: string }).text
-  } else {
-    text = getTextContent(prepared)
+  const engineLayout = layoutPreparedText(prepared, availableWidth, lineHeight)
+  if (engineLayout !== undefined) {
+    result.height[idx] = engineLayout.height
+    result.width[idx] = Math.max(0, availableWidth)
+    return
   }
 
+  const text = getTextContent(prepared)
   if (text !== undefined && text.length > 0) {
     const clampedWidth = Math.max(0, availableWidth)
     const charsPerLine = Math.max(1, Math.floor(clampedWidth / CHAR_WIDTH))

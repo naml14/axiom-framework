@@ -11,11 +11,11 @@ import type { PreparedComponent } from '../src/core/types.js'
 const fakeTextEngine = {
   prepare: mock((text: string, _font: string) => ({ text })),
   layout: mock((_prepared: unknown, maxWidth: number, _lineHeight: number) => {
-    // Simulate text wrapping — used by prepare() for metrics, not by fast-path measureText
+    // Simulate consumer-defined text wrapping used by every measurement path.
     const charWidth = 6
     const charsPerLine = Math.max(1, Math.floor(maxWidth / charWidth))
     const totalChars = (_prepared as { text: string }).text.length
-    const lineCount = Math.max(1, Math.ceil(totalChars / charsPerLine))
+    const lineCount = totalChars === 0 ? 0 : Math.max(1, Math.ceil(totalChars / charsPerLine))
     return { lineCount, height: lineCount * 20 } // 20px line height
   }),
   clearCache: mock(),
@@ -90,9 +90,8 @@ describe('reflow — fast path', () => {
     const prepared = prepareSimple('Hello World') // 11 chars
     const result = reflow(prepared, { maxWidth: 30, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
-    // Fast-path uses charWidth=8 with 1.4x word-wrap factor.
-    // 30/8 = 3 chars/line, 11 chars → ceil((11/3)*1.4) = 6 lines → 120px
-    expect(result.height[1]).toBe(120)
+    // The supplied engine uses 6px per character: ceil(11 / 5) = 3 lines.
+    expect(result.height[1]).toBe(60)
     // Key invariant: constrained width produces taller text than wide width
     const wideResult = reflow(prepared, { maxWidth: 500, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
     expect(result.height[1]).toBeGreaterThan(wideResult.height[1] ?? 0)
@@ -795,8 +794,8 @@ describe('reflow — grid layout MVP', () => {
 
     expect(result.width[1]).toBe(210)
     expect(result.width[2]).toBe(210)
-    expect(result.height[2]).toBe(40)
-    expect(result.height[1]).toBe(40)
+    expect(result.height[2]).toBe(20)
+    expect(result.height[1]).toBe(20)
   })
 
   test('item spanned con width 100% propaga el ancho efectivo a un flex row anidado con gap', () => {
@@ -940,13 +939,13 @@ describe('reflow — grid layout MVP', () => {
     const result = reflow(prepared, { maxWidth: 320, maxHeight: 1000 }, { lineHeight: DEFAULT_LINE_HEIGHT })
 
     expect(result.width[1]).toBe(210)
-    expect(result.height[1]).toBe(120)
+    expect(result.height[1]).toBe(100)
 
     expect(result.x[3]).toBe(220)
     expect(result.y[3]).toBe(0)
 
     expect(result.x[4]).toBe(0)
-    expect(result.y[4]).toBe(120)
+    expect(result.y[4]).toBe(100)
   })
 
   test('auto-placement con span ocupa múltiples columnas y busca siguiente rectángulo libre', () => {
