@@ -27,6 +27,18 @@ bun run demo       # interactive demo in browser
 4. **Follow the commit convention** (see below) — it drives automated versioning.
 5. **Open a Pull Request** against `main` and fill in the template.
 
+### Review Before Merge
+
+Every pull request needs a **written review by the maintainer** (`naml14`) on
+the exact commit that is being merged. The gate is reported as the
+`Maintainer review` commit status, which the `main` branch ruleset requires: the
+pull request stays blocked until that status is green on the head commit.
+
+The review has to carry text, and it has to target the head commit. A review
+that requests changes, an empty review, a dismissed one, or one written for an
+earlier commit does not open the gate. Pushing to the branch again closes it
+again, because the new head has to be reviewed too.
+
 ---
 
 ## Commit Message Convention
