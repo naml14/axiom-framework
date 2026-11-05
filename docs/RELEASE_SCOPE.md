@@ -18,6 +18,66 @@ CI ejecuta el guard en PR y push; calcula la base común y conserva los SHA de l
 
 Este guard cubre los tipos solicitados por S7; no redefine todas las reglas de release-please. Por ejemplo, `perf` también puede producir una versión según la configuración existente y no se incorpora aquí sin ampliar el alcance.
 
+## La puerta de entrada a `main`
+
+`main` no se fusiona con un clic: exige una **revisión escrita del mantenedor**
+(`naml14`) sobre el commit exacto que se va a fusionar.
+
+El código de este repositorio lo escribe el arnés de IA bajo la cuenta del
+mantenedor. GitHub no permite que el autor de un pull request apruebe su
+propio pull request (`Review Can not approve your own pull request`), así que
+la regla de «una revisión aprobatoria» no se podía cumplir sin un bypass de
+administrador. La puerta se expresa por eso como un **estado de commit**,
+`Maintainer review`, y no como un conteo de aprobaciones: en el ruleset
+`Main Protection`, `required_approving_review_count` es `0` y
+`Maintainer review` es un check requerido.
+
+```sh
+bun run scripts/validate-maintainer-review.ts --pr <n> [--publish]
+bun run scripts/validate-maintainer-review.ts --pr <n> --dry-run
+bun run scripts/validate-maintainer-review.ts --help
+```
+
+El verificador acepta la revisión solo cuando la escribió el mantenedor
+(el dueño del repositorio), tiene cuerpo escrito, se hizo contra el SHA de
+cabeza del pull request, no está descartada ni es un borrador, y no tiene
+cambios solicitados. Una revisión de otra cuenta —Sourcery, por ejemplo— no
+abre la puerta.
+
+Con `--publish` publica el veredicto como estado `Maintainer review` en el SHA
+de cabeza. El estado va atado a un commit: si el arnés empuja después, el
+estado deja de aplicar y `main` vuelve a quedar cerrado hasta que se revise el
+nuevo head. Es a propósito, la revisión corresponde al diff final.
+
+**`--publish` rechaza `--repo`, `--head`, `--maintainer` y `--reviews-file`.**
+Un veredicto publicado sale siempre del pull request real: ninguna fixture ni
+ningún override puede abrir la puerta. Los overrides existen para los tests
+(`--reviews-file`), y `--dry-run` muestra el estado que se publicaría sin
+publicarlo.
+
+Si el verificador falla al leer las revisiones, intenta publicar estado
+`failure` en lugar de salirse en silencio, de modo que un `success` anterior en
+ese mismo commit no sobrevive al error, **siempre que GitHub acepte esa
+escritura**. Si el error ocurre antes de conocer el SHA (repositorio o pull
+request ilegibles) no hay estado que publicar, y el `success` anterior sigue en
+pie hasta que se vuelva a ejecutar el verificador. Si la escritura del estado
+falla, el verificador sale con error y el estado anterior permanece: una puerta
+no puede garantizar nada cuando la escritura no llega.
+
+El arnés redacta el texto de la revisión a partir de la evidencia de la
+sesión, el mantenedor lo aprueba y el arnés lo publica. **El arnés nunca
+publica una revisión sin esa aprobación.**
+
+### Riesgos que la puerta no cubre
+
+- El token del mantenedor puede publicar el contexto `Maintainer review`
+  directamente, sin pasar por el verificador: un ruleset no puede atar un
+  status a una aplicación.
+- Si la revisión se descarta después de publicar el estado, el estado no se
+  revoca solo: hay que volver a ejecutar el verificador.
+- El estado pertenece al commit, no a la base del pull request: si `main`
+  avanza y el pull request no cambia, el estado sigue aplicando.
+
 ## Flujo de publicación
 
 La publicación a npm pasa por dos barreras, y ambas son obligatorias:
