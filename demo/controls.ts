@@ -1,4 +1,5 @@
 import type { App } from '../src/index.ts'
+import type { DomReadCounter } from './dom-read-counter.js'
 import { getLayoutPoolSize } from '../src/index.ts'
 
 interface ControlsDeps {
@@ -6,6 +7,7 @@ interface ControlsDeps {
   itemCount: { value: number }
   app: App
   appEl: HTMLElement
+  domReads?: DomReadCounter
 }
 
 export function initControls(deps: ControlsDeps) {
@@ -21,6 +23,23 @@ export function initControls(deps: ControlsDeps) {
   const mTotal = document.getElementById('m-total')!
   const mFps = document.getElementById('m-fps')!
   const mPool = document.getElementById('m-pool')!
+  const mDomReads = document.getElementById('m-dom-reads')
+
+  function updateDomReads() {
+    if (mDomReads && deps.domReads) {
+      mDomReads.textContent = `DOM reads: ${deps.domReads.total()} en el último ciclo`
+    }
+  }
+  // Defer badge writes until after reads, including asynchronous ResizeObserver reads.
+  let badgePending = false
+  deps.domReads?.subscribe(() => {
+    if (badgePending) return
+    badgePending = true
+    requestAnimationFrame(() => {
+      badgePending = false
+      updateDomReads()
+    })
+  })
 
   let frameCount = 0
   let lastFpsTime = performance.now()
@@ -36,12 +55,14 @@ export function initControls(deps: ControlsDeps) {
 
     frameCount++
     const now = performance.now()
-    if (now - lastFpsTime >= 1000) {
-      currentFps = frameCount
+    const elapsed = Math.max(1, now - lastFpsTime)
+    currentFps = Math.round(frameCount * 1000 / elapsed)
+    mFps.textContent = String(currentFps)
+    if (elapsed >= 1000) {
       frameCount = 0
       lastFpsTime = now
-      mFps.textContent = String(currentFps)
     }
+    updateDomReads()
   }
 
   function syncContainerWidth(w: number) {
