@@ -1,5 +1,4 @@
-import { createApp, defineComponent, signal } from '../src/index.ts'
-import { wireShowcase } from './wire-showcase.ts'
+import { createApp, defineComponent, effect, signal } from '../src/index.ts'
 import type { App, AppErrorContext, ProfileEvent } from '../src/index.ts'
 
 interface DxShowcaseDeps {
@@ -45,7 +44,7 @@ export function initDxShowcase(deps: DxShowcaseDeps): () => void {
   const profileText = signal(profileOrder.textContent)
   const devHookText = signal(devHookOutput.textContent)
   const errorText = signal(errorOutput.textContent)
-  const stop = wireShowcase(() => {
+  const stop = effect(() => {
     profileOrder.textContent = profileText.value
     devHookOutput.textContent = devHookText.value
     errorOutput.textContent = errorText.value

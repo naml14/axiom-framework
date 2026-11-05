@@ -1,5 +1,7 @@
 import {
   signal,
+  effect,
+  cancelTransition,
   defineComponent,
   createApp,
   createTransition,
@@ -18,7 +20,6 @@ import {
   resolveLayoutDimension,
 } from '../src/index.ts'
 import type { Signal } from '../src/index.ts'
-import { wireShowcase } from './wire-showcase.ts'
 
 // ============================================================
 // Ruta B Showcase — 6 fases: responsive, grid, style,
@@ -110,7 +111,7 @@ export function initGridDemo() {
   const removeBtn = document.getElementById('ruta-b-grid-remove') as HTMLButtonElement | null
   const statusEl = document.getElementById('ruta-b-grid-status')
 
-  const stopStatus = wireShowcase(() => {
+  const stopStatus = effect(() => {
     if (statusEl === null) return
     const count = cellCount.value
     const hasRowSpan = count >= 1
@@ -162,7 +163,7 @@ function initResponsiveDemo(containerWidth: Signal<number>) {
     { label: 'xl', min: 1280, max: 9999, color: 'var(--accent-blue)' },
   ] as const
 
-  return wireShowcase(() => {
+  return effect(() => {
     const w = containerWidth.value
     const active = BREAKPOINTS.find((bp) => matchesBreakpoint(bp.min, bp.max, undefined, undefined, w, 0))
     const cols = resolveLayoutDimension('100%', { maxWidth: w, maxHeight: 600 }, 'width') ?? w
@@ -234,7 +235,7 @@ function initStyleDemo() {
   const resolved = resolveStyleTokens(rawProps, theme)
 
   const label = signal(sampleEl.textContent)
-  const stop = wireShowcase(() => {
+  const stop = effect(() => {
     sampleEl.textContent = label.value
     outputEl.textContent = JSON.stringify(
       {
@@ -284,7 +285,7 @@ function initAnimationDemo() {
   // Animation state has no signal notifications; sample the runtime only while running.
   const progress = signal<number | null>(null)
   const status = signal(`opacity: ${transition.duration}ms ${transition.easing} | backgroundColor: ${bgTransition.duration}ms delay:${bgTransition.delay}ms`)
-  const stop = wireShowcase(() => {
+  const stop = effect(() => {
     if (statusEl !== null) statusEl.textContent = status.value
     if (progressEl !== null && progress.value !== null) progressEl.style.width = `${progress.value * 100}%`
   })
@@ -315,10 +316,8 @@ function initAnimationDemo() {
 
   cancelBtn?.addEventListener('click', () => {
     cancelAnimationFrame(rafId)
-    // cancelTransition limpia el estado; applyImmediately requiere HTMLElement,
-    // así que reseteamos el estado y la barra directamente.
-    animState.activeTransition = null
-    bgAnimState.activeTransition = null
+    cancelTransition(animState)
+    cancelTransition(bgAnimState)
     progress.value = 0
     status.value = 'Transición cancelada'
   })
@@ -347,7 +346,7 @@ function initPluginDemo() {
 
   if (logEl === null) return
   const logText = signal(logEl.textContent)
-  const stop = wireShowcase(() => { logEl.textContent = logText.value })
+  const stop = effect(() => { logEl.textContent = logText.value })
 
   const events: string[] = []
   const MAX_LOG = 12
@@ -423,7 +422,7 @@ function initErrorEnvelopeDemo() {
 
   if (outputEl === null) return
   const output = signal(outputEl.textContent)
-  const stop = wireShowcase(() => { outputEl.textContent = output.value })
+  const stop = effect(() => { outputEl.textContent = output.value })
 
   runBtn?.addEventListener('click', () => {
     const scratch = document.createElement('div')

@@ -11,12 +11,12 @@
 
 import {
   signal,
+  effect,
   defineComponent,
   createApp,
   For,
   Show,
 } from '../src/index.ts'
-import { wireShowcase } from './wire-showcase.ts'
 
 // ============================================================
 // Subcomponentes JSX — demuestran componentes como funciones
@@ -104,7 +104,7 @@ export function initJsxFeature() {
   const app = createApp(JsxDemo, container)
   app.mount()
 
-  const stop = wireShowcase(() => {
+  const stop = effect(() => {
     outputNode.textContent =
       `visible=${visible.value}  items=${items.value.length}  active=${BADGES[active.value]}`
     toggleBtn.textContent = `Show: ${visible.value ? 'visible' : 'oculto'}`
