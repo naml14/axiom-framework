@@ -21,19 +21,3 @@ export function getTagWidth(label: string): number {
   }
   return Math.ceil(textWidth) + 40
 }
-
-export function distributeToColumns<T extends { estimatedHeight: number }>(
-  items: T[],
-  cols: number
-): T[][] {
-  const columns: T[][] = Array.from({ length: cols }, () => [])
-  const heights = new Array(cols).fill(0)
-
-  for (const item of items) {
-    const shortestCol = heights.indexOf(Math.min(...heights))
-    columns[shortestCol]!.push(item)
-    heights[shortestCol]! += item.estimatedHeight
-  }
-
-  return columns
-}
