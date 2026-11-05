@@ -19,6 +19,11 @@ export interface AxiomServerOptions {
     metadata?: SSRMetadata
   }>
   staticDir?: string
+  /**
+   * `Cache-Control` header applied to static file responses.
+   * Omitted by default, so the current behaviour (no cache policy) is preserved.
+   */
+  staticCacheControl?: string
   port?: number
   ssr?: StreamSSROptions
   allowedOrigins?: string[]
@@ -197,7 +202,7 @@ const RATE_WINDOW = 60_000 // 1 minute
  * @experimental — API may change in minor versions
  */
 export function createServer(options: AxiomServerOptions): AxiomServer {
-  const { routes, staticDir, ssr } = options
+  const { routes, staticDir, ssr, staticCacheControl } = options
   const allowedOrigins = normalizeAllowedOrigins(options.allowedOrigins)
   const configuredPort = options.port ?? 3000
   validateStaticDir(staticDir)
@@ -267,7 +272,11 @@ export function createServer(options: AxiomServerOptions): AxiomServer {
               const file = bun.file(filePath)
               if (await file.exists()) {
                 return new Response(file, {
-                  headers: { ...SECURITY_HEADERS, ...corsHeaders(req, allowedOrigins) },
+                  headers: {
+                    ...SECURITY_HEADERS,
+                    ...corsHeaders(req, allowedOrigins),
+                    ...(staticCacheControl !== undefined ? { 'Cache-Control': staticCacheControl } : {}),
+                  },
                 })
               }
             }
