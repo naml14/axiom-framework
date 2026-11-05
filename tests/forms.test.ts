@@ -508,22 +508,22 @@ describe('bind — textarea and select', () => {
     expect(sig.value).toBe('user typed')
   })
 
-  // Note: HTMLSelectElement tests are skipped because happy-dom v20.8.9 throws when
-  // setting `select.value` on an element created outside a fully-mounted happy-dom Page.
-  // The effect() inside bind() sets `el.value = sig.value` immediately, which triggers
-  // HTMLSelectElement's internal querySelectorAll — and that crashes with
-  // "undefined is not a constructor (evaluating 'new this.window.SyntaxError(...)')" because
-  // `this.window` is not fully initialized for standalone-created elements.
-  // The bind() implementation correctly accepts HTMLSelectElement (type guard + BindableElement union).
-  // Integration coverage for select can be added once we upgrade happy-dom or use a Page context.
-  test.skip('bind works with select: signal→DOM (skipped: happy-dom select.value limitation; decision 2026-10-16, backlog D5: keep skipped until the runner upgrades)', () => {
+  // The DOM→signal direction works with happy-dom v21. The signal→DOM direction
+  // is still skipped: the effect() inside bind() sets `el.value = sig.value`
+  // immediately, which triggers HTMLSelectElement's internal querySelectorAll,
+  // and that crashes with "undefined is not a constructor (evaluating 'new
+  // this.window.SyntaxError(...)')" because `this.window` is not fully
+  // initialized for standalone-created elements. The bind() implementation
+  // correctly accepts HTMLSelectElement (type guard + BindableElement union).
+  // Remaining coverage needs a Page context instead of a standalone window.
+  test.skip('bind works with select: signal→DOM (skipped: happy-dom still crashes setting select.value outside a Page context; decision 2026-10-16, backlog D5)', () => {
     const sig = signal('option2')
     const select = happyWindow.document.createElement('select') as unknown as HTMLSelectElement
     bind(sig, select)
     expect(select.value).toBe('option2')
   })
 
-  test.skip('bind works with select: DOM→signal (skipped: happy-dom select.value limitation; decision 2026-10-16, backlog D5: keep skipped until the runner upgrades)', () => {
+  test('bind works with select: DOM→signal', () => {
     const sig = signal('')
     const select = happyWindow.document.createElement('select') as unknown as HTMLSelectElement
     bind(sig, select)

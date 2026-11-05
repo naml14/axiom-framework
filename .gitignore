@@ -21,6 +21,7 @@ scripts/
 !scripts/
 scripts/*
 !scripts/*.ts
+!scripts/*.js
 !scripts/templates/
 !scripts/templates/**/*
 
@@ -37,7 +38,6 @@ Thumbs.db
 desktop.ini
 
 # --- Bun ---
-bun.lock
 bun.lockb
 .bun/
 
