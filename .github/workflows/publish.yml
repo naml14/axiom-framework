@@ -5,6 +5,11 @@ name: Manual Publish
 # Trigger from: Actions → Manual Publish → Run workflow
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish (for example axiom-framework-v1.2.3)
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -20,13 +25,24 @@ jobs:
   publish:
     name: Publish to npm
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Same protected environment as the automatic publisher.
+    environment: npm
+    concurrency:
+      group: npm-publish
+      cancel-in-progress: false
     # `id-token: write` is the critical permission: it allows GitHub Actions to
     # mint the short-lived OIDC token that npm exchanges for a publish token.
     permissions:
       contents: read
       id-token: write
     steps:
+      # Publish exactly the tag the maintainer named, never an arbitrary ref.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
 
       # npm >= 11.5.1 is the first npm that implements the Trusted Publishing
       # OIDC exchange, and the runner's default Node ships an older npm.
@@ -35,15 +51,20 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
-          node-version: latest
+          node-version: 24
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
         with:
-          bun-version: latest
+          bun-version: 1.4.4
+
+      # The tag, package.json, the release-please manifest and the CHANGELOG must
+      # all name the same version before anything is published.
+      - name: Validate the release tag
+        run: bun run scripts/validate-release-version.ts --tag "${{ inputs.tag }}"
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       # `prepublishOnly` runs typecheck → tests → build through bun, so the
       # published artifact is always verified.
