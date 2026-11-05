@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please inserts new entries above this line -->
 
+## [1.1.0](https://github.com/naml14/axiom-framework/compare/axiom-framework-v1.0.1...axiom-framework-v1.1.0) (2026-11-05)
+
+
+### Features
+
+* **context:** return the provider children result from provideStore ([d1fe29f](https://github.com/naml14/axiom-framework/commit/d1fe29f0a11f3c53428e0521de9f489fb995b808))
+* **layout:** add the masonry engine with shortest-column placement ([539cdfa](https://github.com/naml14/axiom-framework/commit/539cdfa4b32f9425dff43b45141caa2668e17497))
+* **render:** honor the consumer text layout engine contract ([7886f11](https://github.com/naml14/axiom-framework/commit/7886f11e5c644573dc0e7e703e44ff99193f4ae0))
+* **router:** add a signal-only route outlet ([0654bc8](https://github.com/naml14/axiom-framework/commit/0654bc8d14714c974e8dd93a2ce4b6bc0d241f64))
+* **server:** make the static response cache policy configurable ([bb24eff](https://github.com/naml14/axiom-framework/commit/bb24eff43792e718c868c1d58e8a99cc369f318c))
+* **ssr:** serialize the document progressively ([2ccc313](https://github.com/naml14/axiom-framework/commit/2ccc313c605e056e7c9dfee77f5827a9f3b63543))
+
+
+### Bug Fixes
+
+* **scheduler:** give each app its own render queue ([f678e62](https://github.com/naml14/axiom-framework/commit/f678e62d36594739902e2fd9981c8350dcb64144))
+
 ## [1.0.1](https://github.com/naml14/axiom-framework/compare/axiom-framework-v1.0.0...axiom-framework-v1.0.1) (2026-10-22)
 
 
