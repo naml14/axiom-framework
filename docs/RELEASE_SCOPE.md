@@ -34,6 +34,7 @@ administrador. La puerta se expresa por eso como un **estado de commit**,
 
 ```sh
 bun run scripts/validate-maintainer-review.ts --pr <n> [--publish]
+bun run scripts/validate-maintainer-review.ts --pr <n> --dry-run
 bun run scripts/validate-maintainer-review.ts --help
 ```
 
@@ -48,12 +49,31 @@ de cabeza. El estado va atado a un commit: si el arnés empuja después, el
 estado deja de aplicar y `main` vuelve a quedar cerrado hasta que se revise el
 nuevo head. Es a propósito, la revisión corresponde al diff final.
 
+**`--publish` rechaza `--repo`, `--head`, `--maintainer` y `--reviews-file`.**
+Un veredicto publicado sale siempre del pull request real: ninguna fixture ni
+ningún override puede abrir la puerta. Los overrides existen para los tests
+(`--reviews-file`), y `--dry-run` muestra el estado que se publicaría sin
+publicarlo.
+
+Si el verificador falla al leer las revisiones, publica estado `failure` en
+lugar de salirse en silencio, de modo que un `success` anterior en ese mismo
+commit no sobrevive al error. Si el error ocurre antes de conocer el SHA
+(repositorio o pull request ilegibles) no hay estado que publicar, y el
+`success` anterior sigue en pie hasta que se vuelva a ejecutar el verificador.
+
 El arnés redacta el texto de la revisión a partir de la evidencia de la
 sesión, el mantenedor lo aprueba y el arnés lo publica. **El arnés nunca
 publica una revisión sin esa aprobación.**
 
-El estado se publica a mano, después de la revisión: si nadie lo publica, el
-pull request queda bloqueado. La puerta falla cerrada, nunca de contrabando.
+### Riesgos que la puerta no cubre
+
+- El token del mantenedor puede publicar el contexto `Maintainer review`
+  directamente, sin pasar por el verificador: un ruleset no puede atar un
+  status a una aplicación.
+- Si la revisión se descarta después de publicar el estado, el estado no se
+  revoca solo: hay que volver a ejecutar el verificador.
+- El estado pertenece al commit, no a la base del pull request: si `main`
+  avanza y el pull request no cambia, el estado sigue aplicando.
 
 ## Flujo de publicación
 

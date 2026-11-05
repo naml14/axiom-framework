@@ -39,6 +39,9 @@ that requests changes, an empty review, a dismissed one, or one written for an
 earlier commit does not open the gate. Pushing to the branch again closes it
 again, because the new head has to be reviewed too.
 
+The status is published after the review by the maintainer's tooling. If it is
+missing, the pull request stays blocked: the gate fails closed.
+
 ---
 
 ## Commit Message Convention
