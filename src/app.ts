@@ -19,7 +19,7 @@ import { reflow } from './render/reflow.js'
 import { fullDiff, type DOMOperation } from './render/diff.js'
 import { commitFull, commitHydrate, applyOps, fireUnmountEvents, type DOMState } from './render/commit.js'
 import { effect } from './reactivity/signals.js'
-import { scheduleRender, cancelScheduled } from './scheduler.js'
+import { scheduleRender, cancelScheduled, createIsolatedScheduler } from './scheduler.js'
 import { getNodeType, getTag, getChildren, getDebugDisplayName, getDebugRoute } from './render/prepare.js'
 import { resolveComponentDisplayName } from './render/component.js'
 import { applyPluginHook } from './features/plugin.js'
@@ -225,6 +225,9 @@ export function createApp(
   }
 
   const scheduler = options?.scheduler
+  // Each app owns its queue: unmounting one app cannot drop the pending render
+  // of another app that shares the same underlying scheduler.
+  const appScheduler = createIsolatedScheduler(scheduler)
 
   /**
    * Cached layout constraints. Refreshed ONLY on mount and on window/root resize —
@@ -242,7 +245,7 @@ export function createApp(
     // Root height writes also notify the observer. Avoid no-op render loops.
     if (previous === null || Object.keys(next).some(key =>
       next[key as keyof LayoutConstraints] !== previous[key as keyof LayoutConstraints]
-    )) scheduleRender(performUpdate, scheduler)
+    )) scheduleRender(performUpdate, appScheduler)
   }
 
   /**
@@ -550,14 +553,15 @@ export function createApp(
         // Read signals to establish dependencies
         component._fn(undefined as void)
         // Schedule the actual render directly with performUpdate reference
-        scheduleRender(performUpdate, scheduler)
+        scheduleRender(performUpdate, appScheduler)
       })
     },
 
     unmount(): void {
       const wasMounted = state.mounted
       state.stopEffect?.()
-      cancelScheduled()
+      // Cancel only this app's pending render: other apps own their own queue.
+      cancelScheduled(appScheduler)
       if (typeof window !== 'undefined') {
         window.removeEventListener('resize', handleResize)
       }
