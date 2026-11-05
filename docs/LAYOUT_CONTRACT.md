@@ -21,7 +21,8 @@ que tiene el `border-box` emitido por SSR.
 
 Fuentes: [commitFull y commitHydrate](../src/render/commit.ts),
 [renderNode de SSR](../src/ssr.ts), [reflow](../src/render/reflow.ts).
-`renderToReadableStream` delega en `renderToString`, así que comparte el contrato SSR.
+`renderToReadableStream` y `renderToString` comparten el serializador escapado de
+SSR y el mismo contrato de geometría; el stream lo recorre progresivamente.
 
 ## Precedencia real
 
@@ -85,6 +86,42 @@ Fuentes: [Style API y sanitizeInlineStyle](../src/features/style.ts),
   no garantiza restaurar todo inmediatamente. No es una API de desmontaje ni de reflow.
 - **Portales CSS-managed:** permiten que CSS controle sus hijos en el cliente; consulte
   también el [contrato SSR/hidratación](./SSR-HYDRATION-CONTRACT.md).
+
+## Contratos de distribución
+
+- **Flex** (`layout.display: 'flex'`, por defecto al declarar layout): distribuye en
+  columna o fila según `flexDirection`, con `gap`, `padding`, alineación y justificación.
+  Sin altura explícita, la columna suma alturas y separaciones; la fila toma la mayor
+  altura de sus hijos (más padding; el wrap puede formar varias líneas).
+- **Grid** (`layout.display: 'grid'`, helper `grid()`): columnas fijas mediante
+  `gridTemplateColumns` numérico o `repeat(N, 1fr)`, con colocación automática por filas
+  y spans `gridColumnSpan`/`gridRowSpan`. `columnGap` y `rowGap` prevalecen sobre `gap`
+  en cada eje. El ancho útil descuenta padding y gaps antes de repartir las columnas.
+- **Masonry** (`layout.display: 'masonry'`, helper `masonry()`): reutiliza
+  `gridTemplateColumns` para el número de columnas y `gap` como separación por defecto;
+  `columnGap` y `rowGap` lo reemplazan en su eje. El ancho de columna es
+  `max(0, (ancho útil - (N - 1) * columnGap) / N)`, descontando primero el padding.
+  Cada hijo ocupa la columna más corta (la izquierda en caso de empate); `rowGap`
+  separa elementos de esa columna. Sin altura explícita, el contenedor toma la altura
+  de la columna más alta más el padding, sin gap final. No aplica spans de grid.
+  Es aritmética en memoria, sin lecturas DOM, con scratch reciclado del pool de engines.
+
+```typescript
+import { masonry, box } from 'axiom-framework'
+
+const tarjetas = masonry(2, { columnGap: 12, rowGap: 8, padding: 16 },
+  box({ height: 80 }, 'A'),
+  box({ height: 120 }, 'B'),
+  box({ height: 60 }, 'C'),
+)
+```
+
+En masonry, un hijo sin ancho explícito recibe el ancho de columna; un ancho propio
+no cambia el reparto de columnas. La altura se mide desde su contenido o layout.
+El helper admite los mismos overrides `layout` que `grid()`.
+
+Fuentes: [flex](../src/render/engines/flex.ts), [grid](../src/render/engines/grid.ts),
+[masonry](../src/render/engines/masonry.ts), [helpers](../src/syntax/layout.ts).
 
 ## Host menor que la geometría fija (F1)
 
