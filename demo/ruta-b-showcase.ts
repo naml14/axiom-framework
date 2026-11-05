@@ -1,6 +1,5 @@
 import {
   signal,
-  effect,
   defineComponent,
   createApp,
   createTransition,
@@ -19,6 +18,7 @@ import {
   resolveLayoutDimension,
 } from '../src/index.ts'
 import type { Signal } from '../src/index.ts'
+import { wireShowcase } from './wire-showcase.ts'
 
 // ============================================================
 // Ruta B Showcase — 6 fases: responsive, grid, style,
@@ -110,7 +110,7 @@ export function initGridDemo() {
   const removeBtn = document.getElementById('ruta-b-grid-remove') as HTMLButtonElement | null
   const statusEl = document.getElementById('ruta-b-grid-status')
 
-  function updateStatus(): void {
+  const stopStatus = wireShowcase(() => {
     if (statusEl === null) return
     const count = cellCount.value
     const hasRowSpan = count >= 1
@@ -121,7 +121,7 @@ export function initGridDemo() {
     // roto: deshabilitado dice la verdad sin abrir el estado inicial.
     if (addBtn) addBtn.disabled = count >= CELL_LABELS.length
     if (removeBtn) removeBtn.disabled = count <= MIN_CELLS
-  }
+  })
 
   function addCell(): void {
     if (cellCount.value < CELL_LABELS.length) cellCount.value++
@@ -133,7 +133,6 @@ export function initGridDemo() {
 
   addBtn?.addEventListener('click', addCell)
   removeBtn?.addEventListener('click', removeCell)
-  const stopStatus = effect(updateStatus)
 
   return {
     cellCount,
@@ -151,7 +150,7 @@ export function initGridDemo() {
 //    Breakpoints reactivos conectados al signal containerWidth
 // ============================================================
 
-function initResponsiveDemo(containerWidth: Signal<number>): void {
+function initResponsiveDemo(containerWidth: Signal<number>) {
   const bpInfoEl = document.getElementById('ruta-b-responsive-info')
   const bpBarEl = document.getElementById('ruta-b-responsive-bar')
 
@@ -163,7 +162,7 @@ function initResponsiveDemo(containerWidth: Signal<number>): void {
     { label: 'xl', min: 1280, max: 9999, color: 'var(--accent-violet)' },
   ] as const
 
-  function update(): void {
+  return wireShowcase(() => {
     const w = containerWidth.value
     const active = BREAKPOINTS.find((bp) => matchesBreakpoint(bp.min, bp.max, undefined, undefined, w, 0))
     const cols = resolveLayoutDimension('100%', { maxWidth: w, maxHeight: 600 }, 'width') ?? w
@@ -177,21 +176,7 @@ function initResponsiveDemo(containerWidth: Signal<number>): void {
       ;(bpBarEl as HTMLElement).style.width = `${pct}%`
       ;(bpBarEl as HTMLElement).style.background = active?.color ?? 'var(--text-muted)'
     }
-  }
-
-  // Observación ligera del signal con rAF (sin monkey-patching ni setInterval).
-  let last = containerWidth.value
-  function poll(): void {
-    const next = containerWidth.value
-    if (next !== last) {
-      last = next
-      update()
-    }
-    requestAnimationFrame(poll)
-  }
-  requestAnimationFrame(poll)
-
-  update()
+  })
 }
 
 // ============================================================
@@ -200,7 +185,7 @@ function initResponsiveDemo(containerWidth: Signal<number>): void {
 //    applyStyleToElement
 // ============================================================
 
-function initStyleDemo(): void {
+function initStyleDemo() {
   const outputEl = document.getElementById('ruta-b-style-output')
   const sampleEl = document.getElementById('ruta-b-style-sample')
   const applyBtn = document.getElementById('ruta-b-style-apply')
@@ -248,25 +233,30 @@ function initStyleDemo(): void {
   }
   const resolved = resolveStyleTokens(rawProps, theme)
 
-  outputEl.textContent = JSON.stringify(
-    {
-      raw: rawProps,
-      validation: validationResult,
-      resolved,
-    },
-    null,
-    2
-  )
+  const label = signal(sampleEl.textContent)
+  const stop = wireShowcase(() => {
+    sampleEl.textContent = label.value
+    outputEl.textContent = JSON.stringify(
+      {
+        raw: rawProps,
+        validation: validationResult,
+        resolved,
+      },
+      null,
+      2
+    )
+  })
 
   applyBtn?.addEventListener('click', () => {
     applyStyleToElement(sampleEl as HTMLElement, resolved)
-    ;(sampleEl as HTMLElement).textContent = '✓ applyStyleToElement aplicado'
+    label.value = '✓ applyStyleToElement aplicado'
   })
 
   resetBtn?.addEventListener('click', () => {
     ;(sampleEl as HTMLElement).removeAttribute('style')
-    ;(sampleEl as HTMLElement).textContent = 'Elemento de muestra'
+    label.value = 'Elemento de muestra'
   })
+  return stop
 }
 
 // ============================================================
@@ -274,7 +264,7 @@ function initStyleDemo(): void {
 //    createTransition, scheduleTransition, getTransitionProgress
 // ============================================================
 
-function initAnimationDemo(): void {
+function initAnimationDemo() {
   const statusEl = document.getElementById('ruta-b-anim-status')
   const progressEl = document.getElementById('ruta-b-anim-progress')
   const runBtn = document.getElementById('ruta-b-anim-run')
@@ -291,16 +281,20 @@ function initAnimationDemo(): void {
   const bgAnimState = createAnimationState()
 
   let rafId = 0
+  // Animation state has no signal notifications; sample the runtime only while running.
+  const progress = signal<number | null>(null)
+  const status = signal(`opacity: ${transition.duration}ms ${transition.easing} | backgroundColor: ${bgTransition.duration}ms delay:${bgTransition.delay}ms`)
+  const stop = wireShowcase(() => {
+    if (statusEl !== null) statusEl.textContent = status.value
+    if (progressEl !== null && progress.value !== null) progressEl.style.width = `${progress.value * 100}%`
+  })
 
   function tick(): void {
-    const prog = getTransitionProgress(animState)
-    if (progressEl !== null) {
-      progressEl.style.width = `${prog * 100}%`
-    }
+    progress.value = getTransitionProgress(animState)
     if (isTransitioning(animState) || isTransitioning(bgAnimState)) {
       rafId = requestAnimationFrame(tick)
     } else {
-      if (statusEl !== null) statusEl.textContent = 'Transición completada'
+      status.value = 'Transición completada'
     }
   }
 
@@ -314,7 +308,7 @@ function initAnimationDemo(): void {
     scheduleTransition(animState, transition, { from: '0', to: '1' }, scheduler)
     scheduleTransition(bgAnimState, bgTransition, { from: '#111128', to: '#7c3aed33' }, scheduler)
 
-    if (statusEl !== null) statusEl.textContent = `Transición activa — duration: ${transition.duration}ms, easing: ${transition.easing}`
+    status.value = `Transición activa — duration: ${transition.duration}ms, easing: ${transition.easing}`
 
     rafId = requestAnimationFrame(tick)
   })
@@ -325,13 +319,13 @@ function initAnimationDemo(): void {
     // así que reseteamos el estado y la barra directamente.
     animState.activeTransition = null
     bgAnimState.activeTransition = null
-    if (progressEl !== null) progressEl.style.width = '0%'
-    if (statusEl !== null) statusEl.textContent = 'Transición cancelada'
+    progress.value = 0
+    status.value = 'Transición cancelada'
   })
 
-  // Mostrar info inicial
-  if (statusEl !== null) {
-    statusEl.textContent = `opacity: ${transition.duration}ms ${transition.easing} | backgroundColor: ${bgTransition.duration}ms delay:${bgTransition.delay}ms`
+  return () => {
+    cancelAnimationFrame(rafId)
+    stop()
   }
 }
 
@@ -340,7 +334,7 @@ function initAnimationDemo(): void {
 //    createPlugin, registerPlugin, applyPluginHook
 // ============================================================
 
-function initPluginDemo(): void {
+function initPluginDemo() {
   const logEl = document.getElementById('ruta-b-plugin-log')
   const mountBtn = document.getElementById('ruta-b-plugin-mount')
   const updateBtn = document.getElementById('ruta-b-plugin-update')
@@ -352,7 +346,8 @@ function initPluginDemo(): void {
   // If rendered by Axiom, handlers should live in `on: { click: ... }`.
 
   if (logEl === null) return
-  const log = logEl
+  const logText = signal(logEl.textContent)
+  const stop = wireShowcase(() => { logEl.textContent = logText.value })
 
   const events: string[] = []
   const MAX_LOG = 12
@@ -361,7 +356,7 @@ function initPluginDemo(): void {
     const ts = new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     events.unshift(`[${ts}] ${msg}`)
     if (events.length > MAX_LOG) events.pop()
-    log.textContent = events.join('\n')
+    logText.value = events.join('\n')
   }
 
   // Limpiar registry global para que este demo sea idempotente en hot-reload
@@ -409,8 +404,12 @@ function initPluginDemo(): void {
 
   clearBtn?.addEventListener('click', () => {
     events.length = 0
-    log.textContent = 'Log limpiado.'
+    logText.value = 'Log limpiado.'
   })
+  return () => {
+    stop()
+    demoApp.unmount()
+  }
 }
 
 // ============================================================
@@ -418,11 +417,13 @@ function initPluginDemo(): void {
 //    Demuestra AppErrorContext con phase + nodeKey (P0-B)
 // ============================================================
 
-function initErrorEnvelopeDemo(): void {
+function initErrorEnvelopeDemo() {
   const outputEl = document.getElementById('ruta-b-error-output')
   const runBtn = document.getElementById('ruta-b-error-run')
 
   if (outputEl === null) return
+  const output = signal(outputEl.textContent)
+  const stop = wireShowcase(() => { outputEl.textContent = output.value })
 
   runBtn?.addEventListener('click', () => {
     const scratch = document.createElement('div')
@@ -463,21 +464,28 @@ function initErrorEnvelopeDemo(): void {
       probeApp.unmount()
     }
 
-    outputEl.textContent = captured !== null
+    output.value = captured !== null
       ? JSON.stringify(captured, null, 2)
       : '⚠ No se capturó contexto — revisa que onError esté conectado'
   })
+  return stop
 }
 
 // ============================================================
 // Entry point
 // ============================================================
 
-export function initRutaBShowcase(deps: RutaBShowcaseDeps): void {
-  initGridDemo()
-  initResponsiveDemo(deps.containerWidth)
-  initStyleDemo()
-  initAnimationDemo()
-  initPluginDemo()
-  initErrorEnvelopeDemo()
+export function initRutaBShowcase(deps: RutaBShowcaseDeps): () => void {
+  const grid = initGridDemo()
+  const stops = [
+    initResponsiveDemo(deps.containerWidth),
+    initStyleDemo(),
+    initAnimationDemo(),
+    initPluginDemo(),
+    initErrorEnvelopeDemo(),
+  ]
+  return () => {
+    for (const stop of stops) stop?.()
+    grid?.dispose()
+  }
 }

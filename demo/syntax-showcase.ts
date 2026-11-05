@@ -13,25 +13,23 @@ import {
   Switch,
   Match,
 } from '../src/index.ts'
+import { wireShowcase } from './wire-showcase.ts'
 // ============================================================
 // ============================================================
 // Syntax v2 Showcase — 5 features interactivas
 // Patrón: HTML estático con ids → initXxxShowcase(deps) → app.ts
 // ============================================================
 
-export function initSyntaxShowcase(): void {
-  initHComparison()
-  initLayoutDSL()
-  initFlowControl()
-  initEventsAttrs()
-  initBenchmark()
+export function initSyntaxShowcase(): () => void {
+  const stops = [initHComparison(), initLayoutDSL(), initFlowControl(), initEventsAttrs(), initBenchmark()]
+  return () => { for (const stop of stops) stop?.() }
 }
 
 // ============================================================
 // Feature 1 — h() vs API Literal
 // ============================================================
 
-function initHComparison(): void {
+function initHComparison() {
   const literalRoot = document.getElementById('syntax-h-literal-root')
   const v2Root      = document.getElementById('syntax-h-v2-root')
   const output      = document.getElementById('syntax-h-output')
@@ -88,6 +86,7 @@ function initHComparison(): void {
   v2App.mount()
 
   output.textContent = '✅ Both trees mounted — h() compiles to the same ComponentNode as the literal API.'
+  return () => { literalApp.unmount(); v2App.unmount() }
 }
 
 // ============================================================
@@ -96,7 +95,7 @@ function initHComparison(): void {
 
 type LayoutMode = 'stack' | 'row' | 'grid'
 
-function initLayoutDSL(): void {
+function initLayoutDSL() {
   const container   = document.getElementById('syntax-layout-root')
   const outputEl    = document.getElementById('syntax-layout-output')
   const stackBtn    = document.getElementById('syntax-layout-stack-btn')
@@ -135,25 +134,25 @@ function initLayoutDSL(): void {
   const app = createApp(LayoutDemo, container)
   app.mount()
 
-  function activate(btn: HTMLElement, newMode: LayoutMode) {
-    for (const b of [stackButton, rowButton, gridButton]) b.classList.remove('active')
-    btn.classList.add('active')
-    mode.value = newMode
-    output.textContent = `mode: ${newMode} — ${ITEMS.length} items`
-  }
+  const stop = wireShowcase(() => {
+    const current = mode.value
+    for (const [button, value] of [[stackButton, 'stack'], [rowButton, 'row'], [gridButton, 'grid']] as const) {
+      button.classList.toggle('active', current === value)
+    }
+    output.textContent = `mode: ${current} — ${ITEMS.length} items`
+  })
 
-  stackButton.addEventListener('click', () => activate(stackButton, 'stack'))
-  rowButton.addEventListener('click',   () => activate(rowButton, 'row'))
-  gridButton.addEventListener('click',  () => activate(gridButton, 'grid'))
-
-  output.textContent = 'mode: stack — 4 items'
+  stackButton.addEventListener('click', () => { mode.value = 'stack' })
+  rowButton.addEventListener('click', () => { mode.value = 'row' })
+  gridButton.addEventListener('click', () => { mode.value = 'grid' })
+  return () => { stop(); app.unmount() }
 }
 
 // ============================================================
 // Feature 3 — Control de flujo: Show / For / Switch
 // ============================================================
 
-function initFlowControl(): void {
+function initFlowControl() {
   const container   = document.getElementById('syntax-flow-root')
   const outputEl    = document.getElementById('syntax-flow-output')
   const toggleBtn   = document.getElementById('syntax-flow-toggle-btn')
@@ -204,30 +203,29 @@ function initFlowControl(): void {
 
   toggleBtn.addEventListener('click', () => {
     visible.value = !visible.value
-    toggleBtn.textContent = `Show: ${visible.value ? 'visible' : 'oculto'}`
-    if (visible.value) toggleBtn.classList.add('active')
-    else toggleBtn.classList.remove('active')
-    outputEl.textContent = `Show.when=${visible.value}  For.length=${items.value.length}  Switch=${SWITCH_LABELS[switchStep.value % SWITCH_LABELS.length]}`
   })
 
   addBtn.addEventListener('click', () => {
     items.value = [...items.value, `Ítem ${items.value.length + 1}`]
-    outputEl.textContent = `Show.when=${visible.value}  For.length=${items.value.length}  Switch=${SWITCH_LABELS[switchStep.value % SWITCH_LABELS.length]}`
   })
 
   switchBtn.addEventListener('click', () => {
     switchStep.value = switchStep.value + 1
-    outputEl.textContent = `Show.when=${visible.value}  For.length=${items.value.length}  Switch=${SWITCH_LABELS[switchStep.value % SWITCH_LABELS.length]}`
   })
 
-  outputEl.textContent = `Show.when=true  For.length=2  Switch=alpha`
+  const stop = wireShowcase(() => {
+    toggleBtn.textContent = `Show: ${visible.value ? 'visible' : 'oculto'}`
+    toggleBtn.classList.toggle('active', visible.value)
+    outputEl.textContent = `Show.when=${visible.value}  For.length=${items.value.length}  Switch=${SWITCH_LABELS[switchStep.value % SWITCH_LABELS.length]}`
+  })
+  return () => { stop(); app.unmount() }
 }
 
 // ============================================================
 // Feature 4 — Eventos + Attrs inspector
 // ============================================================
 
-function initEventsAttrs(): void {
+function initEventsAttrs() {
   const container = document.getElementById('syntax-events-root')
   const outputEl  = document.getElementById('syntax-events-output')
   if (!container || !outputEl) return
@@ -256,13 +254,10 @@ function initEventsAttrs(): void {
 
   const output = outputEl as HTMLElement
 
-  function updateOutput(): void {
+  const stop = wireShowcase(() => {
     output.textContent = `onClick disparado: ${clickCount.value}x  |  onMouseEnter: ${hoverCount.value}x\naria: { label: "Botón de click" }  data: { testid: "click-btn" }`
-  }
-
-  container.addEventListener('click', updateOutput)
-  container.addEventListener('mouseenter', updateOutput, true)
-  updateOutput()
+  })
+  return () => { stop(); app.unmount() }
 }
 
 // ============================================================
@@ -272,38 +267,49 @@ function initEventsAttrs(): void {
 const GOLDEN_MS   = 2.228  // Golden Standard registrado en benchmarks/.golden.json (5000 nodos)
 const GOLDEN_N    = 500    // Demo: 500 nodos (10% del golden — escala linealmente)
 
-function initBenchmark(): void {
+function initBenchmark() {
   const runBtn   = document.getElementById('syntax-bench-run-btn')
   const barEl    = document.getElementById('syntax-bench-bar')
   const outputEl = document.getElementById('syntax-bench-output')
   if (!runBtn || !barEl || !outputEl) return
 
+  const resultView = signal({ text: outputEl.textContent, width: barEl.style.width, overBudget: barEl.classList.contains('over-budget') })
+  const stop = wireShowcase(() => {
+    const view = resultView.value
+    outputEl.textContent = view.text
+    barEl.style.width = view.width
+    barEl.classList.toggle('over-budget', view.overBudget)
+  })
+  const timers = new Set<ReturnType<typeof setTimeout>>()
   runBtn.addEventListener('click', () => {
-    outputEl.textContent = '⏳ Ejecutando…'
-    barEl.style.width = '0%'
-    ;(barEl as HTMLElement).classList.remove('over-budget')
+    resultView.value = { text: '⏳ Ejecutando…', width: '0%', overBudget: false }
 
     // defer para que el repaint del UI ocurra antes del benchmark
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      timers.delete(timer)
       const result  = runLiveBenchmark()
       // Golden fue medido con 5000 nodos; escalamos proporcionalmente a GOLDEN_N
       const goldenScaled = GOLDEN_MS * (GOLDEN_N / 5000)
       const ratio   = result / goldenScaled
       const pct     = Math.min(ratio * 60, 100)
 
-      barEl.style.width = `${pct}%`
-      if (ratio > 1.05) (barEl as HTMLElement).classList.add('over-budget')
-
       const delta = ((ratio - 1) * 100).toFixed(1)
       const sign  = ratio >= 1 ? '+' : ''
-      outputEl.textContent =
+      const text =
         `prepare()  ${result.toFixed(3)}ms  (${GOLDEN_N} nodos con h() + stack + For)\n` +
         `Golden escalado (${GOLDEN_N}/${5000}): ${goldenScaled.toFixed(3)}ms   Delta: ${sign}${delta}%\n` +
         (ratio <= 1.05
           ? '✅ Dentro del presupuesto (≤ +5% golden)'
           : '⚠️  Por encima del presupuesto — revisar regresión')
+      resultView.value = { text, width: `${pct}%`, overBudget: ratio > 1.05 }
     }, 16)
+    timers.add(timer)
   })
+  return () => {
+    for (const timer of timers) clearTimeout(timer)
+    timers.clear()
+    stop()
+  }
 }
 
 function runLiveBenchmark(): number {

@@ -16,6 +16,7 @@ import {
   For,
   Show,
 } from '../src/index.ts'
+import { wireShowcase } from './wire-showcase.ts'
 
 // ============================================================
 // Subcomponentes JSX — demuestran componentes como funciones
@@ -67,7 +68,7 @@ function ItemList({ items, visible }: ItemListProps) {
 // Main export
 // ============================================================
 
-export function initJsxFeature(): void {
+export function initJsxFeature() {
   const container = document.getElementById('syntax-jsx-root')
   const outputEl  = document.getElementById('syntax-jsx-output')
   const toggleBtn = document.getElementById('syntax-jsx-toggle-btn')
@@ -103,22 +104,19 @@ export function initJsxFeature(): void {
   const app = createApp(JsxDemo, container)
   app.mount()
 
-  function syncOutput() {
+  const stop = wireShowcase(() => {
     outputNode.textContent =
       `visible=${visible.value}  items=${items.value.length}  active=${BADGES[active.value]}`
-  }
+    toggleBtn.textContent = `Show: ${visible.value ? 'visible' : 'oculto'}`
+    toggleBtn.classList.toggle('active', visible.value)
+  })
 
   toggleBtn.addEventListener('click', () => {
     visible.value = !visible.value
-    toggleBtn.textContent = `Show: ${visible.value ? 'visible' : 'oculto'}`
-    if (visible.value) toggleBtn.classList.add('active')
-    else toggleBtn.classList.remove('active')
-    syncOutput()
   })
 
   addBtn.addEventListener('click', () => {
     items.value = [...items.value, `Item ${items.value.length + 1}`]
-    syncOutput()
   })
 
   container.addEventListener('click', (e) => {
@@ -126,9 +124,8 @@ export function initJsxFeature(): void {
     const idx = BADGES.findIndex((b) => target.textContent?.trim() === b)
     if (idx !== -1) {
       active.value = idx
-      syncOutput()
     }
   })
 
-  syncOutput()
+  return () => { stop(); app.unmount() }
 }
