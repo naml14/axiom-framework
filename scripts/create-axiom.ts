@@ -87,7 +87,7 @@ export function installProjectDependencies(projectDir: string): number {
 // Main
 // ============================================================
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
 	const args = process.argv.slice(2);
 	const projectName = args[0] || "my-axiom-app";
 
