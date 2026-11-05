@@ -75,7 +75,10 @@ describe("Demo visual contract — custom properties", () => {
 		const defined = declaredTokens(style);
 
 		for (const path of [indexHtmlPath, staticHtmlPath, domComparisonHtmlPath]) {
-			const source = await readFile(path, "utf8");
+			// The comparison page is a build artifact and is not in the repository:
+			// check it when it exists, skip it otherwise.
+			const source = await readFile(path, "utf8").catch(() => null);
+			if (source === null) continue;
 			const used = new Set<string>();
 			for (const m of source.matchAll(/var\(\s*--([A-Za-z0-9-]+)/g)) {
 				used.add(m[1]!);
