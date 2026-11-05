@@ -1,14 +1,8 @@
 // ============================================================
 // demo/streaming-route.ts — /ssr-stream route handler
 //
-// Usa renderToReadableStream() para emitir el HTML como un ReadableStream.
-// Como la implementación actual emite en un solo chunk, este handler hace
-// chunking artificial: parte el HTML en dos (head + body) y los emite con
-// un delay para que el cliente pueda ver la diferencia entre una respuesta
-// clásica y una streaming en DevTools (Network → Response → Timing).
-//
-// En una versión futura, renderToReadableStream() soportará async boundaries
-// y emitirá múltiples chunks naturalmente.
+// Sirve directamente el ReadableStream del core, que serializa el documento
+// progresivamente según la demanda del lector, sin buffers ni delays locales.
 // ============================================================
 
 /// <reference types="../src/jsx.d.ts" />
@@ -106,29 +100,14 @@ body { background:#090b13; color:#eef0f7; font-family:system-ui,sans-serif; padd
 }
 `
 
-function injectStyleIntoHead(html: string, style: string): string {
-  const headEnd = html.indexOf('</head>')
-  if (headEnd === -1) return html
-  return html.slice(0, headEnd) + `<style>${style}</style>` + html.slice(headEnd)
-}
-
-/**
- * Render the streaming page with artificial chunking to demonstrate the
- * ReadableStream API. The body is split at the </head> boundary and emitted
- * as two chunks with a small delay.
- *
- * renderToReadableStream() already returns a complete HTML document
- * (<!DOCTYPE html>...</html>) because it wraps renderToString(). We inject
- * extra <style> for the demo shell, then split at </head> to demonstrate
- * chunked transfer-encoding.
- */
+/** Serve the core's progressive HTML stream with the demo shell's inline CSS. */
 export async function renderStreamingSSRPage(url: URL): Promise<Response> {
   const metadata: SSRMetadata = {
     title: 'Axiom Streaming SSR Demo',
-    description: 'Demo de renderToReadableStream con chunking artificial.',
+    description: 'Demo de renderToReadableStream con serialización progresiva del core.',
+    inlineStyles: STREAMING_CSS,
   }
 
-  // 1. Generate full HTML using the framework's stream entry point
   const stream = renderToReadableStream(StreamingDemoPage, {
     width: 800,
     height: 600,
@@ -137,40 +116,7 @@ export async function renderStreamingSSRPage(url: URL): Promise<Response> {
     metadata,
   })
 
-  // 2. Read the (currently single-chunk) output into a string so we can
-  //    re-emit it in multiple chunks. This is the "artificial chunking" that
-  //    makes the streaming behaviour visible without modifying the core.
-  const decoder = new TextDecoder()
-  const reader = stream.getReader()
-  let rawHtml = ''
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    rawHtml += decoder.decode(value, { stream: true })
-  }
-  rawHtml += decoder.decode()
-
-  // 3. Inject extra <style> for the demo shell (renderToReadableStream already
-  //    returns a complete HTML document, so we don't wrap it).
-  const fullHtml = injectStyleIntoHead(rawHtml, STREAMING_CSS)
-
-  // 4. Split at </head> boundary so the head arrives before the body.
-  const headEndIdx = fullHtml.indexOf('</head>') + '</head>'.length
-  const headChunk = fullHtml.slice(0, headEndIdx)
-  const bodyChunk = fullHtml.slice(headEndIdx)
-
-  // 5. Emit as two chunks with a 100ms gap (artificial streaming)
-  const encoder = new TextEncoder()
-  const chunkedStream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      controller.enqueue(encoder.encode(headChunk))
-      await new Promise((resolve) => setTimeout(resolve, 100))
-      controller.enqueue(encoder.encode(bodyChunk))
-      controller.close()
-    },
-  })
-
-  return new Response(chunkedStream, {
+  return new Response(stream, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Transfer-Encoding': 'chunked',
