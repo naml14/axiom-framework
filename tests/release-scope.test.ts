@@ -1,5 +1,5 @@
 import { afterAll, expect, test } from 'bun:test'
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -27,9 +27,18 @@ function repo() {
   const base = commit(dir, 'chore: initial', 'README.md')
   return { dir, base }
 }
-function run(dir: string, args: string[]) {
+function run(dir: string, args: string[], scopeEnv?: Record<string, string>) {
   const before = git(dir, 'status', '--porcelain=v1') + git(dir, 'rev-parse', 'HEAD')
-  const r = Bun.spawnSync([process.execPath, script, ...args], { cwd: dir })
+  const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
+  const scopeStep = workflow.split("      - name: Check each commit's release scope\n")[1]!
+    .split('\n  release-notes:')[0]!.split('        run: |\n')[1]!
+    .replace(/^          /gm, '')
+    .replace('bun run scripts/validate-release-scope.ts', '"$BUN_EXEC" "$SCOPE_SCRIPT"')
+  const r = Bun.spawnSync(scopeEnv ? ['bash', '-e', '-o', 'pipefail', '-c', scopeStep]
+    : [process.execPath, script, ...args], {
+    cwd: dir,
+    env: { ...process.env, BUN_EXEC: process.execPath, SCOPE_SCRIPT: script, ...scopeEnv },
+  })
   expect(git(dir, 'status', '--porcelain=v1') + git(dir, 'rev-parse', 'HEAD')).toBe(before)
   return { code: r.exitCode, out: r.stdout.toString().replaceAll('\r\n', '\n'),
     err: r.stderr.toString().replaceAll('\r\n', '\n') }
@@ -54,6 +63,48 @@ for (const [message, path] of [['feat(src): add', 'src/main.ts'], ['chore(demo):
     expect(run(dir, ['--base', base])).toEqual({ code: 0, out: 'release-scope: OK (1 commit checked)\n', err: '' })
   })
 }
+test('rejects a hyphenated breaking type outside src', () => {
+  const { dir, base } = repo()
+  const subject = 'docs-site!: revise the contract'
+  const sha = commit(dir, subject, 'contract.md')
+  expect(run(dir, ['--base', base])).toEqual({ code: 1, out: '', err: rejection(sha, subject, 'contract.md') })
+})
+test('accepts hyphenated non-breaking types without treating feat/fix prefixes as bumps', () => {
+  const { dir, base } = repo()
+  for (const type of ['docs-site', 'feat-site', 'fix-site', 'docs2-site']) {
+    commit(dir, `${type}: revise the contract`, 'contract.md')
+  }
+  expect(run(dir, ['--base', base])).toEqual({ code: 0, out: 'release-scope: OK (4 commits checked)\n', err: '' })
+})
+test('new branch uses the default-branch merge base, excluding historical non-src features', () => {
+  const { dir } = repo()
+  commit(dir, 'feat: historical demo application', 'demo.txt')
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'HEAD')
+  git(dir, 'switch', '-c', 'release-please--new')
+  commit(dir, 'chore(main): release 1.0.2', 'CHANGELOG.md')
+  expect(run(dir, [], {
+    SCOPE_BASE: '0'.repeat(40), SCOPE_HEAD: 'HEAD', SCOPE_DEFAULT_BRANCH: 'main',
+  })).toEqual({ code: 0, out: 'release-scope: OK (1 commit checked)\n', err: '' })
+})
+test('new branch without shared history falls back to its own root', () => {
+  const { dir } = repo()
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'HEAD')
+  git(dir, 'switch', '--orphan', 'unrelated')
+  commit(dir, 'chore: unrelated root', 'unrelated.txt')
+  commit(dir, 'docs: unrelated follow-up', 'contract.md')
+  expect(run(dir, [], {
+    SCOPE_BASE: '0'.repeat(40), SCOPE_HEAD: 'HEAD', SCOPE_DEFAULT_BRANCH: 'main',
+  })).toEqual({ code: 0, out: 'release-scope: OK (1 commit checked)\n', err: '' })
+})
+test('workflow preserves an existing push base instead of scanning default-branch history', () => {
+  const { dir, base } = repo()
+  git(dir, 'update-ref', 'refs/remotes/origin/main', base)
+  const before = commit(dir, 'feat: already checked demo', 'demo.txt')
+  commit(dir, 'docs: current push', 'contract.md')
+  expect(run(dir, [], {
+    SCOPE_BASE: before, SCOPE_HEAD: 'HEAD', SCOPE_DEFAULT_BRANCH: 'main',
+  })).toEqual({ code: 0, out: 'release-scope: OK (1 commit checked)\n', err: '' })
+})
 test('mixed PR still rejects isolated demo fix even when another commit touches src', () => {
   const { dir, base } = repo()
   const sha = commit(dir, 'fix(demo): update', 'demo.txt')

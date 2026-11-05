@@ -69,6 +69,7 @@ jobs:
     env:
       SCOPE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
       SCOPE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      SCOPE_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -85,7 +86,9 @@ jobs:
         shell: bash
         run: |
           if [[ "$SCOPE_BASE" == 0000000000000000000000000000000000000000 ]]; then
-            SCOPE_BASE="$(git rev-list --max-parents=0 "$SCOPE_HEAD" | tail -1)"
+            if ! SCOPE_BASE="$(git merge-base "origin/$SCOPE_DEFAULT_BRANCH" "$SCOPE_HEAD")"; then
+              SCOPE_BASE="$(git rev-list --max-parents=0 "$SCOPE_HEAD" | tail -1)"
+            fi
           fi
           base="$(git merge-base "$SCOPE_BASE" "$SCOPE_HEAD")"
           bun run scripts/validate-release-scope.ts --base "$base" --head "$SCOPE_HEAD"
