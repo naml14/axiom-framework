@@ -75,6 +75,17 @@ test('rejects a changelog whose heading disagrees with package.json', () => {
   expect(result.err).toContain('CHANGELOG version')
 })
 
+test('accepts the release-please changelog heading format', () => {
+  const { dir } = repo()
+  writeFileSync(
+    join(dir, 'CHANGELOG.md'),
+    '# Changelog\n\n## [1.2.3](https://github.com/naml14/axiom-framework/compare/axiom-framework-v1.2.2...axiom-framework-v1.2.3) (2026-11-05)\n\n- feat: something\n',
+  )
+  const result = run(dir, 'axiom-framework-v1.2.3')
+  expect(result.code).toBe(0)
+  expect(result.out).toContain('release-version: OK')
+})
+
 test('rejects a missing tag', () => {
   const { dir } = repo()
   const result = run(dir, 'axiom-framework-v4.5.6')
