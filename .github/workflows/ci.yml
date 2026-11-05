@@ -42,6 +42,54 @@ jobs:
       - name: Build
         run: bun run build
 
+  demo:
+    name: Demo build
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build demo and verify artifacts
+        run: |
+          bun run demo:build
+          test -s demo/app.js && test -s demo/static-out/index.html
+
+  release-scope:
+    name: Release scope guard
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      SCOPE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+      SCOPE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Check each commit's release scope
+        shell: bash
+        run: |
+          if [[ "$SCOPE_BASE" == 0000000000000000000000000000000000000000 ]]; then
+            SCOPE_BASE="$(git rev-list --max-parents=0 "$SCOPE_HEAD" | tail -1)"
+          fi
+          base="$(git merge-base "$SCOPE_BASE" "$SCOPE_HEAD")"
+          bun run scripts/validate-release-scope.ts --base "$base" --head "$SCOPE_HEAD"
+
   release-notes:
     name: Release notes guard
     runs-on: ubuntu-latest
