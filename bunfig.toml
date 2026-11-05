@@ -1,0 +1,11 @@
+# Coverage scope: the quality gate measures the framework (src/), not the demo,
+# the benchmarks, or the temporary build copies a test creates outside the repo.
+[test]
+coveragePathIgnorePatterns = [
+  "**/demo/**",
+  "**/benchmarks/**",
+  "**/scripts/**",
+  "**/tests/**",
+  "**/dist/**",
+  "**/node_modules/**",
+]
