@@ -481,7 +481,7 @@ test('handles component error', () => {
 
 ## Coverage Gate
 
-Axiom enforces a global **85% minimum line coverage** gate in CI.
+Axiom enforces an **85% minimum line coverage** gate over the framework sources in CI. The measured scope is `src/`: the demo, the benchmarks, the scripts and the test files are excluded, and so are the temporary build copies a test creates outside the repository, which would otherwise make the number unstable. The threshold applies to the aggregate `All files` row Bun reports for that scope.
 
 ### Run the same gate locally
 
@@ -491,7 +491,7 @@ bun run test:coverage
 
 What this command does:
 
-- Runs `bun test --coverage` once from the repository root.
+- Runs `bun test --coverage` once from the repository root, with the scope pinned in `bunfig.toml` (`coveragePathIgnorePatterns`).
 - Parses the final `All files` / `% Lines` summary emitted by Bun.
 - Fails clearly if tests fail, if the coverage summary cannot be parsed, or if line coverage drops below `85%`.
 
