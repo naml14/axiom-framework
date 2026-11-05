@@ -80,7 +80,7 @@ try {
 } catch {
   fail('cannot read CHANGELOG.md')
 }
-const changelogVersion = /^##\s+(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\s*$/m.exec(changelog)
+const changelogVersion = /^##\s+\[?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\]?/m.exec(changelog)
 if (changelogVersion === null) fail('CHANGELOG.md has no version heading')
 if (changelogVersion[1] !== packageVersion) {
   fail(`CHANGELOG version ${changelogVersion[1]} does not match package.json ${packageVersion}`)
