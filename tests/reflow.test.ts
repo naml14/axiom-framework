@@ -42,10 +42,12 @@ describe('createLayoutResult', () => {
     const result = createLayoutResult(prepared)
 
     expect(result.nodeCount).toBe(2) // root element + text node
-    expect(result.x.length).toBe(2)
-    expect(result.y.length).toBe(2)
-    expect(result.width.length).toBe(2)
-    expect(result.height.length).toBe(2)
+    // The pool may hand back a buffer with extra capacity from an earlier
+    // tree; nodeCount is the authoritative valid range (src/core/types.ts).
+    expect(result.x.length).toBeGreaterThanOrEqual(result.nodeCount)
+    expect(result.y.length).toBeGreaterThanOrEqual(result.nodeCount)
+    expect(result.width.length).toBeGreaterThanOrEqual(result.nodeCount)
+    expect(result.height.length).toBeGreaterThanOrEqual(result.nodeCount)
   })
 
   test('allocates for deeply nested tree', () => {
