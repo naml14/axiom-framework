@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Axiom · comparativo DOM</title>
+  <style>
+    body { margin: 16px; font: 14px system-ui; color: #e9eef5; background: #111827; }
+    main { max-width: 1000px; margin: auto; }
+    .scenes { display: flex; gap: 20px; flex-wrap: wrap; }
+    .scene { background: #202d42; }
+    .card { background: #437b98; color: white; font: 5px/10px monospace; white-space: nowrap; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid #8191aa; padding: 12px; }
+    button { padding: 10px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Axiom frente a reemplazo DOM completo</h1>
+  <button id="run" type="button">Ejecutar comparativo</button>
+  <div class="scenes">
+    <section><h2>Axiom</h2><div class="scene" id="axiom"></div></section>
+    <section><h2>DOM nativo sin diff</h2><div class="scene" id="native"></div></section>
+  </div>
+  <h2>Resultados y metodología</h2>
+  <p>500 tarjetas de 16 × 10 px, texto 0–499, fuente monospace de 5 px, 20 columnas,
+    paso horizontal 20 px y vertical 14 px; contenedor 396 × 350 px.
+    En el paso n, slot = (id + 17n) mod 500. Ambas escenas permanecen conectadas,
+    sin ocultarlas ni usar content-visibility. En pantallas pequeñas desplázate para verlas.</p>
+  <p>Base: crear 500 tarjetas nuevas y reemplazar todo el contenedor, sin diff.
+    Axiom usa signal → prepare → layout aritmético → diff → commit.
+    Etiquetas de una línea con geometría fija, sin medición de fuentes/canvas.
+    Montaje excluido; 5 calentamientos y 30 repeticiones por alternativa, mismo paso por pareja,
+    alternando cuál va primero. Cada actualización espera su commit en requestAnimationFrame.</p>
+  <p>Tiempo: mediana de performance.now() desde solicitar la actualización hasta el commit
+    y una lectura getBoundingClientRect() del host. Incluye espera de frame, trabajo JS,
+    planificación y barrera de layout; NO es tiempo puro de CPU ni tiempo de pintura/FPS.
+    Las muestras individuales se conservan debajo, junto a fecha y navegador.</p>
+  <p>Lecturas raíz/viewport: getters interceptados de clientWidth/clientHeight solo de #axiom
+    y window.innerWidth/innerHeight durante cada muestra, para ambas alternativas.
+    No cuenta todo acceso al DOM (estilos, texto, atributos ni otros elementos).
+    Las barreras getBoundingClientRect se cuentan aparte: una por muestra, 30 por alternativa.
+    La instrumentación añade coste y se restaura antes de repetir.</p>
+  <p><strong>Reflows del navegador: no disponible.</strong> No hay contador portátil de reflows.
+    Una lectura de layout puede forzar layout, reutilizar un resultado o incluir invalidaciones
+    de ambas escenas: NO equivale a un reflow. La fase «reflow» de Axiom es aritmética en memoria,
+    tampoco es un reflow del navegador. Para investigarlos usa una traza de Performance del navegador,
+    fuera de estos resultados; no se deriva ningún número de las lecturas.</p>
+  <p>Mantén la pestaña en primer plano, sin redimensionar ni interactuar durante la ejecución.
+    Repite con la misma ventana, zoom, navegador y hardware. No hay umbral ni ganador automático;
+    el coste de espera de frame puede dominar. Esto no compara React ni el golden de prepare.</p>
+  <div id="results" aria-live="polite"></div>
+</main>
+<script src="./dom-comparison.js"></script>
+</body>
+</html>

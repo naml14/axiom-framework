@@ -5,7 +5,7 @@
   top: 0;
   z-index: 10;
   flex-shrink: 0;
-  max-height: min(180px, 18vh);
+  max-height: min(220px, 24vh);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 8px 16px;

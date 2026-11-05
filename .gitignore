@@ -4,6 +4,8 @@
 
 # --- Build Output ---
 demo/app.js
+demo/dom-comparison.js
+demo/dom-comparison.html
 demo/static-out/
 dist/
 
